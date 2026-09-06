@@ -1,0 +1,108 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Work+Sans:ital,wght@0,300..800;1,300..800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-parchment: #FAF7F1;
+  --color-ink: #2A2420;
+  --color-terracotta: #C97A3D;
+  --color-marigold: #C97A3D;
+  --color-deep-teal: #2F6E5D;
+  --color-brick: #B54A3A;
+  --color-sage: #6B8F5E;
+  --color-soft-border: #E4DDD0;
+
+  --font-serif: 'Fraunces', serif;
+  --font-sans: 'Work Sans', sans-serif;
+}
+
+:root {
+  --background: #FAF7F1;
+  --foreground: #2A2420;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Work Sans', sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6, .font-serif {
+  font-family: 'Fraunces', serif;
+}
+
+/* Custom Heritage Component Utilities (Light Archival Museum) */
+.heritage-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E4DDD0;
+  border-radius: 0.5rem;
+  transition: border-color 0.2s ease;
+}
+
+.heritage-card:hover {
+  border-color: #C97A3D;
+}
+
+.heritage-badge-critical {
+  background-color: rgba(181, 74, 58, 0.1);
+  color: #B54A3A;
+  border: 1px solid rgba(181, 74, 58, 0.3);
+}
+
+.heritage-badge-vulnerable {
+  background-color: rgba(201, 122, 61, 0.1);
+  color: #C97A3D;
+  border: 1px solid rgba(201, 122, 61, 0.3);
+}
+
+.heritage-badge-safer {
+  background-color: rgba(107, 143, 94, 0.1);
+  color: #6B8F5E;
+  border: 1px solid rgba(107, 143, 94, 0.3);
+}
+
+.heritage-badge-teal {
+  background-color: rgba(47, 110, 93, 0.1);
+  color: #2F6E5D;
+  border: 1px solid rgba(47, 110, 93, 0.3);
+}
+
+/* Custom Leaflet Tooltip & Map Styling */
+.dharohar-leaflet-tooltip {
+  background-color: #171B33 !important;
+  border: 1px solid rgba(232, 163, 61, 0.45) !important;
+  border-radius: 6px !important;
+  color: #F3ECDD !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6) !important;
+  padding: 4px 8px !important;
+}
+
+.dharohar-leaflet-tooltip::before {
+  border-top-color: #171B33 !important;
+}
+
+.leaflet-container {
+  background-color: #121526 !important;
+  font-family: 'Work Sans', sans-serif !important;
+}
+
+.leaflet-bar {
+  border: none !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(18, 21, 38, 0.85) !important;
+  color: rgba(243, 236, 221, 0.5) !important;
+  font-size: 10px !important;
+  padding: 2px 6px !important;
+}
+
+.leaflet-control-attribution a {
+  color: #E8A33D !important;
+  text-decoration: none !important;
+}
+

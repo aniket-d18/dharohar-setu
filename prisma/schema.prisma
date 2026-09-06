@@ -1,0 +1,248 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Region {
+  id             String           @id @default(uuid())
+  name           String
+  level          RegionLevel
+  parentRegionId String?
+  geoJsonData    Json?
+  vitalityStatus VitalityStatus   @default(VULNERABLE)
+  vitalityScore  Float            @default(0.0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  contributors   Contributor[]
+  records        Record[]
+  parentRegion   Region?          @relation("RegionHierarchy", fields: [parentRegionId], references: [id])
+  childRegions   Region[]         @relation("RegionHierarchy")
+  crafts         RegionCraft[]
+  languages      RegionLanguage[]
+}
+
+model Language {
+  id                String           @id @default(uuid())
+  name              String           @unique
+  scriptName        String?
+  estimatedSpeakers Int?
+  averageSpeakerAge Int?
+  vitalityStatus    VitalityStatus   @default(VULNERABLE)
+  yearsToCritical   Int?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  records           Record[]
+  regions           RegionLanguage[]
+}
+
+model Craft {
+  id                     String         @id @default(uuid())
+  name                   String         @unique
+  description            String?
+  estimatedPractitioners Int?
+  vitalityStatus         VitalityStatus @default(VULNERABLE)
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  records                Record[]
+  regions                RegionCraft[]
+}
+
+model RegionLanguage {
+  regionId   String
+  languageId String
+  language   Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+  region     Region   @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  @@id([regionId, languageId])
+}
+
+model RegionCraft {
+  regionId String
+  craftId  String
+  craft    Craft  @relation(fields: [craftId], references: [id], onDelete: Cascade)
+  region   Region @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  @@id([regionId, craftId])
+}
+
+model Contributor {
+  id               String            @id @default(uuid())
+  displayName      String?
+  email            String?           @unique
+  phoneNumber      String?           @unique
+  passwordHash     String?
+  authMethod       AuthMethod        @default(ANONYMOUS)
+  role             UserRole          @default(CONTRIBUTOR)
+  points           Int               @default(0)
+  badges           Json?
+  assignedRegionId String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  assignedRegion   Region?           @relation(fields: [assignedRegionId], references: [id])
+  records          Record[]
+  verifications    VerificationLog[]
+}
+
+model Record {
+  id                    String                @id @default(uuid())
+  mediaType             MediaType
+  mediaUrl              String
+  thumbnailUrl          String?
+  regionId              String
+  languageId            String?
+  craftId               String?
+  category              Category
+  tags                  String[]
+  speakerName           String?
+  speakerAge            Int?
+  visibility            Visibility            @default(PUBLIC)
+  transcriptionText     String?
+  translationText       String?
+  summaryText           String?
+  verificationStatus    VerificationStatus    @default(UNVERIFIED)
+  similarityHash        String?
+  contributorId         String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  consentRecord         ConsentRecord?
+  contributor           Contributor?          @relation(fields: [contributorId], references: [id])
+  craft                 Craft?                @relation(fields: [craftId], references: [id])
+  language              Language?             @relation(fields: [languageId], references: [id])
+  region                Region                @relation(fields: [regionId], references: [id])
+  untranslatableEntries UntranslatableEntry[]
+  verifications         VerificationLog[]
+  translations          RecordTranslation[]
+
+  @@index([regionId])
+  @@index([languageId])
+}
+
+model RecordTranslation {
+  id                String   @id @default(uuid())
+  recordId          String
+  languageCode      String
+  translatedTitle   String?
+  translatedSummary String?
+  translatedText    String?
+  translatedTags    String[]
+  aiModel           String   @default("gemini-1.5-flash")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  record            Record   @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  @@unique([recordId, languageCode])
+  @@index([recordId, languageCode])
+}
+
+model ConsentRecord {
+  id             String   @id @default(uuid())
+  recordId       String   @unique
+  consentVersion String   @default("v1.0")
+  scopesGranted  String[]
+  isAnonymous    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  record         Record   @relation(fields: [recordId], references: [id], onDelete: Cascade)
+}
+
+model VerificationLog {
+  id                     String             @id @default(uuid())
+  recordId               String
+  reviewerId             String
+  action                 VerificationAction
+  submittedTranscription String?
+  submittedTranslation   String?
+  notes                  String?
+  documentUrl            String?
+  documentName           String?
+  createdAt              DateTime           @default(now())
+  record                 Record             @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  reviewer               Contributor        @relation(fields: [reviewerId], references: [id])
+}
+
+model UntranslatableEntry {
+  id             String   @id @default(uuid())
+  recordId       String
+  term           String
+  script         String?
+  phonetic       String?
+  literalMeaning String?
+  explanation    String
+  isFeatured     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  record         Record   @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  @@index([recordId])
+  @@index([isFeatured, createdAt])
+}
+
+enum RegionLevel {
+  STATE
+  DISTRICT
+  VILLAGE
+}
+
+enum VitalityStatus {
+  SAFE
+  VULNERABLE
+  ENDANGERED
+  CRITICAL
+}
+
+enum MediaType {
+  AUDIO
+  VIDEO
+  IMAGE
+  TEXT
+}
+
+enum Category {
+  LULLABY
+  PROVERB
+  STORY
+  FESTIVAL
+  CRAFT_TECHNIQUE
+  RECIPE
+  RITUAL
+  LIFE_SKILL
+  OTHER
+}
+
+enum Visibility {
+  PUBLIC
+  COMMUNITY_ONLY
+  PRIVATE
+  STEWARD_ONLY
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  COMMUNITY_VERIFIED
+  STEWARD_ENDORSED
+  EXPERT_REVIEWED
+}
+
+enum AuthMethod {
+  ANONYMOUS
+  EMAIL_OTP
+  PHONE_OTP
+}
+
+enum UserRole {
+  CONTRIBUTOR
+  REVIEWER
+  STEWARD
+  EXPERT
+  ADMIN
+}
+
+enum VerificationAction {
+  AGREE
+  EDIT
+  DISPUTE
+  ENDORSE
+}
