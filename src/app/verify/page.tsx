@@ -56,7 +56,7 @@ interface QueueItem {
   transcriptionText?: string | null;
   translationText?: string | null;
   summaryText?: string | null;
-  verificationStatus: 'UNVERIFIED' | 'COMMUNITY_VERIFIED' | 'STEWARD_ENDORSED' | 'EXPERT_REVIEWED';
+  verificationStatus: 'UNVERIFIED' | 'COMMUNITY_SUPPORTED' | 'COMMUNITY_VERIFIED' | 'STEWARD_ENDORSED' | 'EXPERT_REVIEWED';
   createdAt: string;
   region?: {
     id: string;
@@ -89,7 +89,7 @@ export default function VerificationConsolePage() {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<QueueItem | null>(null);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<'ALL' | 'UNVERIFIED' | 'COMMUNITY_VERIFIED'>('ALL');
+  const [filterStatus, setFilterStatus] = useState<'ALL' | 'UNVERIFIED' | 'COMMUNITY_SUPPORTED' | 'COMMUNITY_VERIFIED'>('ALL');
 
   // Workspace Form State
   const [editedTranscription, setEditedTranscription] = useState('');
@@ -432,6 +432,7 @@ export default function VerificationConsolePage() {
 
   const filteredQueue = queue.filter((item) => {
     if (filterStatus === 'UNVERIFIED') return item.verificationStatus === 'UNVERIFIED';
+    if (filterStatus === 'COMMUNITY_SUPPORTED') return item.verificationStatus === 'COMMUNITY_SUPPORTED';
     if (filterStatus === 'COMMUNITY_VERIFIED') return item.verificationStatus === 'COMMUNITY_VERIFIED';
     return true;
   });
@@ -541,7 +542,27 @@ export default function VerificationConsolePage() {
                       : 'text-[#2A2420]/60 hover:text-[#2A2420]'
                   }`}
                 >
-                  Unverified
+                  Unreviewed
+                </button>
+                <button
+                  onClick={() => setFilterStatus('COMMUNITY_SUPPORTED')}
+                  className={`px-2 py-1 rounded transition-colors ${
+                    filterStatus === 'COMMUNITY_SUPPORTED'
+                      ? 'bg-[#C97A3D] text-white font-medium'
+                      : 'text-[#2A2420]/60 hover:text-[#2A2420]'
+                  }`}
+                >
+                  Supported
+                </button>
+                <button
+                  onClick={() => setFilterStatus('COMMUNITY_VERIFIED')}
+                  className={`px-2 py-1 rounded transition-colors ${
+                    filterStatus === 'COMMUNITY_VERIFIED'
+                      ? 'bg-[#C97A3D] text-white font-medium'
+                      : 'text-[#2A2420]/60 hover:text-[#2A2420]'
+                  }`}
+                >
+                  Verified
                 </button>
               </div>
             </div>
@@ -598,13 +619,15 @@ export default function VerificationConsolePage() {
                         <span
                           className={
                             item.verificationStatus === 'COMMUNITY_VERIFIED'
-                              ? 'text-[#2F6E5D]'
+                              ? 'text-[#2F6E5D] font-medium'
+                              : item.verificationStatus === 'COMMUNITY_SUPPORTED'
+                              ? 'text-[#D97706] font-medium'
                               : item.verificationStatus === 'STEWARD_ENDORSED'
-                              ? 'text-[#C97A3D]'
+                              ? 'text-[#C97A3D] font-medium'
                               : 'text-[#2A2420]/40'
                           }
                         >
-                          {item.verificationStatus.toLowerCase().replace('_', ' ')}
+                          {item.verificationStatus === 'COMMUNITY_SUPPORTED' ? 'community supported' : item.verificationStatus.toLowerCase().replace('_', ' ')}
                         </span>
                       </div>
                     </div>

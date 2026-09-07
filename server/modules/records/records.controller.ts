@@ -116,9 +116,23 @@ export class RecordsController {
     return this.service.triggerAiEnrichment(id);
   }
 
+  @Post(':id/upvote')
+  async toggleUpvote(
+    @Param('id') id: string,
+    @Body() body: { userId: string },
+  ) {
+    if (!body?.userId) {
+      throw new BadRequestException('userId is required to upvote');
+    }
+    return this.service.toggleUpvote(id, body.userId);
+  }
+
   @Get(':id')
-  async getRecordById(@Param('id') id: string) {
-    return this.service.getRecordById(id);
+  async getRecordById(
+    @Param('id') id: string,
+    @Query('userId') userId?: string,
+  ) {
+    return this.service.getRecordById(id, userId);
   }
 
   @Delete(':id')

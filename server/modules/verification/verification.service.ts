@@ -1,6 +1,6 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
-import { VerificationAction, VerificationStatus } from '@prisma/client';
+import { VerificationAction, VerificationStatus, Category } from '@prisma/client';
 
 export class SubmitVerificationDto {
   action!: VerificationAction;
@@ -23,13 +23,28 @@ export class VerificationService {
 
   // 1. Get verification queue of unverified or pending records
   async getQueue(regionId?: string, status?: VerificationStatus) {
+    const gatedCategories: Category[] = (process.env.COMMUNITY_GATE_CATEGORIES || 'RECIPE,STORY')
+      .split(',')
+      .map((c) => c.trim() as Category)
+      .filter(Boolean);
+
     const where: any = {};
     if (status) {
       where.verificationStatus = status;
     } else {
-      where.verificationStatus = {
-        in: ['UNVERIFIED', 'COMMUNITY_VERIFIED'],
-      };
+      // General cultural heritage categories (Festivals, Crafts, Rituals, Proverbs, Lullabies, etc.)
+      // enter the reviewer queue directly upon submission (UNVERIFIED, COMMUNITY_SUPPORTED, COMMUNITY_VERIFIED).
+      // Personal/family-origin content (RECIPE, STORY) requires community upvoting (COMMUNITY_SUPPORTED) before entering.
+      where.OR = [
+        {
+          category: { notIn: gatedCategories },
+          verificationStatus: { in: ['UNVERIFIED', 'COMMUNITY_SUPPORTED', 'COMMUNITY_VERIFIED'] },
+        },
+        {
+          category: { in: gatedCategories },
+          verificationStatus: { in: ['COMMUNITY_SUPPORTED', 'COMMUNITY_VERIFIED'] },
+        },
+      ];
     }
     if (regionId) {
       where.regionId = regionId;

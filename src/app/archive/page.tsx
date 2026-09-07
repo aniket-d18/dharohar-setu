@@ -421,6 +421,7 @@ export default function ArchivePage() {
               options={[
                 { value: '', label: tCommon('allStatuses') },
                 { value: 'UNVERIFIED', label: tCommon('pendingReview') },
+                { value: 'COMMUNITY_SUPPORTED', label: tCommon('communitySupported') || 'Community Supported' },
                 { value: 'COMMUNITY_VERIFIED', label: tCommon('communityVerified') },
                 { value: 'STEWARD_ENDORSED', label: tCommon('stewardEndorsed') },
                 { value: 'EXPERT_REVIEWED', label: tCommon('expertReviewed') },

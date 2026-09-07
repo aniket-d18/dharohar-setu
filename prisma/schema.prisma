@@ -86,6 +86,7 @@ model Contributor {
   assignedRegion   Region?           @relation(fields: [assignedRegionId], references: [id])
   records          Record[]
   verifications    VerificationLog[]
+  upvotes          RecordUpvote[]
 }
 
 model Record {
@@ -117,6 +118,7 @@ model Record {
   untranslatableEntries UntranslatableEntry[]
   verifications         VerificationLog[]
   translations          RecordTranslation[]
+  upvotes               RecordUpvote[]
 
   @@index([regionId])
   @@index([languageId])
@@ -221,6 +223,7 @@ enum Visibility {
 
 enum VerificationStatus {
   UNVERIFIED
+  COMMUNITY_SUPPORTED
   COMMUNITY_VERIFIED
   STEWARD_ENDORSED
   EXPERT_REVIEWED
@@ -246,3 +249,17 @@ enum VerificationAction {
   DISPUTE
   ENDORSE
 }
+
+model RecordUpvote {
+  id        String      @id @default(uuid())
+  recordId  String
+  userId    String
+  createdAt DateTime    @default(now())
+  record    Record      @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  user      Contributor @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([recordId, userId])
+  @@index([recordId])
+  @@index([userId])
+}
+

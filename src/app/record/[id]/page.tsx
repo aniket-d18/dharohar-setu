@@ -38,6 +38,9 @@ import {
   Trash2,
   AlertTriangle,
   X,
+  ThumbsUp,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 
 interface VerificationLog {
@@ -84,9 +87,13 @@ interface RecordDetail {
   transcriptionText?: string | null;
   translationText?: string | null;
   summaryText?: string | null;
-  verificationStatus: 'UNVERIFIED' | 'COMMUNITY_VERIFIED' | 'STEWARD_ENDORSED' | 'EXPERT_REVIEWED';
+  verificationStatus: 'UNVERIFIED' | 'COMMUNITY_SUPPORTED' | 'COMMUNITY_VERIFIED' | 'STEWARD_ENDORSED' | 'EXPERT_REVIEWED';
+  upvoteCount?: number;
+  hasUpvoted?: boolean;
+  upvoteThreshold?: number;
   similarityHash?: string | null;
   createdAt: string;
+  isAiProcessing?: boolean;
   region?: {
     id: string;
     name: string;
@@ -135,6 +142,12 @@ export default function RecordDetailPage() {
   const [flagExplanation, setFlagExplanation] = useState('');
   const [flagSubmitted, setFlagSubmitted] = useState(false);
 
+  // AI Live Processing & Auto-Refresh State
+  const [isAiProcessing, setIsAiProcessing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isReEnriching, setIsReEnriching] = useState(false);
+  const [enrichmentNotice, setEnrichmentNotice] = useState<string | null>(null);
+
   // Audio Player State
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -147,6 +160,13 @@ export default function RecordDetailPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Community Upvote State (Pre-verification trust pipeline)
+  const [upvoteCount, setUpvoteCount] = useState<number>(0);
+  const [hasUpvoted, setHasUpvoted] = useState<boolean>(false);
+  const [isUpvoting, setIsUpvoting] = useState<boolean>(false);
+  const [upvoteThreshold, setUpvoteThreshold] = useState<number>(10);
+  const [currentVerificationStatus, setCurrentVerificationStatus] = useState<string>('UNVERIFIED');
 
   // Strictly restricted to Admin or Verifiers (Reviewer, Steward, Expert)
   const canDelete = Boolean(
@@ -176,35 +196,156 @@ export default function RecordDetailPage() {
     }
   };
 
-  useEffect(() => {
-    if (!recordId) return;
+  const handleUpvote = async () => {
+    if (!user) {
+      router.push(`/login?redirect=/record/${recordId}&message=login_to_upvote`);
+      return;
+    }
+    if (isUpvoting) return;
 
-    async function fetchDetail() {
-      try {
-        setLoading(true);
-        const data = await cachedFetch<RecordDetail>(`${apiUrl}/api/records/${recordId}`, { ttl: 60 * 1000 });
-        if (!data) throw new Error('Record not found');
-        setRecord(data);
+    const nextHasUpvoted = !hasUpvoted;
+    const nextCount = nextHasUpvoted ? upvoteCount + 1 : Math.max(0, upvoteCount - 1);
+    setHasUpvoted(nextHasUpvoted);
+    setUpvoteCount(nextCount);
 
-        // Fetch related records from same region or language
-        const relUrl = (data as any).languageId
-          ? `${apiUrl}/api/records?languageId=${(data as any).languageId}&limit=4`
-          : `${apiUrl}/api/records?regionId=${(data as any).regionId}&limit=4`;
-        const relData = await cachedFetch<any>(relUrl, { ttl: 60 * 1000 });
-        if (relData && Array.isArray(relData.data)) {
-          setRelatedRecords(
-            relData.data.filter((r: RecordCardData) => r.id !== recordId).slice(0, 3)
-          );
-        }
-      } catch (err) {
-        console.error('Error fetching record detail:', err);
-      } finally {
-        setLoading(false);
-      }
+    if (nextCount >= upvoteThreshold && currentVerificationStatus === 'UNVERIFIED') {
+      setCurrentVerificationStatus('COMMUNITY_SUPPORTED');
+    } else if (nextCount < upvoteThreshold && currentVerificationStatus === 'COMMUNITY_SUPPORTED') {
+      setCurrentVerificationStatus('UNVERIFIED');
     }
 
+    try {
+      setIsUpvoting(true);
+      const res = await fetch(`${apiUrl}/api/records/${recordId}/upvote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUpvoteCount(data.upvoteCount);
+        setHasUpvoted(data.hasUpvoted);
+        if (data.verificationStatus) {
+          setCurrentVerificationStatus(data.verificationStatus);
+        }
+      } else {
+        setHasUpvoted(!nextHasUpvoted);
+        setUpvoteCount(upvoteCount);
+      }
+    } catch (err) {
+      console.error('Error toggling upvote:', err);
+      setHasUpvoted(!nextHasUpvoted);
+      setUpvoteCount(upvoteCount);
+    } finally {
+      setIsUpvoting(false);
+    }
+  };
+
+  const fetchDetail = async (silent = false) => {
+    if (!recordId) return;
+    try {
+      if (!silent) setLoading(true);
+      else setIsRefreshing(true);
+
+      const userParam = user?.id ? `?userId=${encodeURIComponent(user.id)}` : '';
+      const separator = userParam ? '&' : '?';
+      const res = await fetch(`${apiUrl}/api/records/${recordId}${userParam}${separator}_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
+      });
+      if (!res.ok) throw new Error('Record not found');
+      const data: RecordDetail = await res.json();
+      setRecord(data);
+      setUpvoteCount(data.upvoteCount ?? 0);
+      setHasUpvoted(Boolean(data.hasUpvoted));
+      setUpvoteThreshold(data.upvoteThreshold ?? 10);
+      setCurrentVerificationStatus(data.verificationStatus);
+
+      const isPending = Boolean(
+        data.isAiProcessing ||
+        (data.transcriptionText && data.transcriptionText.includes('Transcribing audio with AI')) ||
+        (data.summaryText && data.summaryText.includes('Generating cultural summary'))
+      );
+      setIsAiProcessing(isPending);
+
+      // Fetch related records from same region or language
+      const relUrl = (data as any).languageId
+        ? `${apiUrl}/api/records?languageId=${(data as any).languageId}&limit=4`
+        : `${apiUrl}/api/records?regionId=${(data as any).regionId}&limit=4`;
+      const relData = await cachedFetch<any>(relUrl, { ttl: 60 * 1000 });
+      if (relData && Array.isArray(relData.data)) {
+        setRelatedRecords(
+          relData.data.filter((r: RecordCardData) => r.id !== recordId).slice(0, 3)
+        );
+      }
+    } catch (err) {
+      console.error('Error fetching record detail:', err);
+    } finally {
+      if (!silent) setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
     fetchDetail();
-  }, [recordId, apiUrl]);
+  }, [recordId, apiUrl, user?.id]);
+
+  // Real-time polling when AI is transcribing or generating translation
+  useEffect(() => {
+    if (!recordId || !isAiProcessing) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const userParam = user?.id ? `?userId=${encodeURIComponent(user.id)}` : '';
+        const separator = userParam ? '&' : '?';
+        const res = await fetch(`${apiUrl}/api/records/${recordId}${userParam}${separator}_t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
+        });
+        if (res.ok) {
+          const data: RecordDetail = await res.json();
+          const isStillPending = Boolean(
+            data.isAiProcessing ||
+            (data.transcriptionText && data.transcriptionText.includes('Transcribing audio with AI')) ||
+            (data.summaryText && data.summaryText.includes('Generating cultural summary'))
+          );
+
+          setRecord(data);
+          if (data.upvoteCount !== undefined) setUpvoteCount(data.upvoteCount);
+          if (data.verificationStatus) setCurrentVerificationStatus(data.verificationStatus);
+
+          if (!isStillPending) {
+            setIsAiProcessing(false);
+            setEnrichmentNotice('✨ AI native transcription & cultural translation completed!');
+            setTimeout(() => setEnrichmentNotice(null), 8000);
+          }
+        }
+      } catch (pollErr) {
+        console.warn('[RecordDetail] Live polling error:', pollErr);
+      }
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [recordId, isAiProcessing, apiUrl, user?.id]);
+
+  const handleTriggerAiEnrichment = async () => {
+    if (!recordId || isReEnriching) return;
+    try {
+      setIsReEnriching(true);
+      setEnrichmentNotice('⚡ Re-triggering Gemini AI enrichment...');
+      const res = await fetch(`${apiUrl}/api/records/${recordId}/ai-enrich`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        setIsAiProcessing(true);
+        await fetchDetail(true);
+      }
+    } catch (err) {
+      console.error('Failed to trigger AI enrichment:', err);
+    } finally {
+      setIsReEnriching(false);
+    }
+  };
 
   // Audio playback controls
   const togglePlay = () => {
@@ -218,19 +359,42 @@ export default function RecordDetailPage() {
           playPromise.then(() => {
             setIsPlaying(true);
           }).catch((err) => {
-            console.error("Audio playback failed:", err);
-            setIsPlaying(false);
+            console.warn('Playback error, trying fallback:', err);
+            if (audioRef.current) {
+              audioRef.current.src = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+              audioRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+            }
           });
         }
       }
     }
   };
 
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.muted = isMuted;
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    setProgress(val);
+    if (audioRef.current && duration) {
+      audioRef.current.currentTime = (val / 100) * duration;
     }
-  }, [isMuted]);
+  };
+
+  const toggleMute = () => {
+    if (audioRef.current) {
+      audioRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
+  };
+
+  const handleRestart = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      setCurrentTime(0);
+      setProgress(0);
+      if (!isPlaying) {
+        audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+      }
+    }
+  };
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -281,12 +445,21 @@ export default function RecordDetailPage() {
             {tCommon('communityVerified')}
           </span>
         );
+      case 'COMMUNITY_SUPPORTED':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded text-xs font-sans font-medium bg-[#D97706]/10 text-[#D97706] border border-[#D97706]/30">
+            <ThumbsUp className="w-3.5 h-3.5 mr-1.5 text-[#D97706]" />
+            {tCommon('communitySupported') || 'Community Supported'}
+          </span>
+        );
       case 'UNVERIFIED':
       default:
         return (
           <span className="inline-flex items-center px-3 py-1 rounded text-xs font-sans font-medium border border-[#E4DDD0] text-[#2A2420]/70 bg-[#FAF7F1]">
             <Clock className="w-3.5 h-3.5 mr-1.5 text-[#C97A3D]" />
-            {tCommon('pendingReview')}
+            {upvoteCount < upvoteThreshold
+              ? `${tCommon('awaitingCommunitySupport') || 'Awaiting community support'} (${upvoteCount}/${upvoteThreshold} ${tCommon('upvotes') || 'upvotes'})`
+              : (tCommon('pendingReview') || 'Pending review')}
           </span>
         );
     }
@@ -354,6 +527,23 @@ export default function RecordDetailPage() {
                   <span className="hidden sm:inline">{t('deleteRecord')}</span>
                 </button>
               )}
+              <button
+                type="button"
+                onClick={handleUpvote}
+                disabled={isUpvoting}
+                className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded border text-xs font-sans transition-colors font-medium ${
+                  hasUpvoted
+                    ? 'bg-[#C97A3D] text-[#FAF7F1] border-[#C97A3D]'
+                    : 'bg-[#FAF7F1] text-[#2A2420]/80 border-[#E4DDD0] hover:bg-[#FFFFFF] hover:border-[#C97A3D] hover:text-[#C97A3D]'
+                }`}
+                title={user ? (hasUpvoted ? 'Remove your community upvote' : 'Upvote this record for community verification') : 'Sign in to upvote'}
+              >
+                <ThumbsUp className={`w-3.5 h-3.5 ${hasUpvoted ? 'fill-current text-[#FAF7F1]' : 'text-[#C97A3D]'}`} />
+                <span>{hasUpvoted ? 'Upvoted' : 'Upvote'}</span>
+                <span className="font-mono text-[11px] ml-0.5 px-1 py-0.2 rounded bg-black/5">
+                  {upvoteCount}
+                </span>
+              </button>
               <button
                 onClick={handleCopyLink}
                 className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded border border-[#E4DDD0] bg-[#FAF7F1] text-xs font-sans text-[#2A2420]/80 hover:bg-[#FFFFFF] hover:border-[#C97A3D] hover:text-[#C97A3D] transition-colors"
@@ -601,7 +791,7 @@ export default function RecordDetailPage() {
                     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
                     .join(' ')}
               </span>
-              <div>{getVerificationBadge(record.verificationStatus)}</div>
+              <div>{getVerificationBadge(currentVerificationStatus)}</div>
             </div>
 
             {/* Artifact Title in Serif Fraunces */}
@@ -611,6 +801,152 @@ export default function RecordDetailPage() {
 
             {/* Divider */}
             <hr className="border-[#E4DDD0] my-6" />
+
+            {/* AI Active Processing Banner */}
+            {isAiProcessing && (
+              <div className="mb-6 p-4 rounded-xl border border-[#C97A3D]/40 bg-gradient-to-r from-[#FAF7F1] via-[#FFF9EE] to-[#FAF7F1] shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start sm:items-center space-x-3">
+                    <div className="w-9 h-9 rounded-full bg-[#C97A3D] text-[#FAF7F1] flex items-center justify-center shrink-0">
+                      <Sparkles className="w-5 h-5 animate-spin" />
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs font-mono uppercase tracking-wider text-[#C97A3D] font-bold">
+                          AI Multilingual Processing Active
+                        </span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-100 text-amber-800 border border-amber-300">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1 animate-ping" />
+                          Live Auto-Updating
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#2A2420]/80 mt-0.5">
+                        Gemini is transcribing indigenous oral phonetics, preparing English/Hindi translation, and identifying untranslatable terms. This screen updates automatically.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
+                    <button
+                      onClick={() => fetchDetail(true)}
+                      disabled={isRefreshing}
+                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-md border border-[#C97A3D]/40 bg-white text-xs font-medium text-[#C97A3D] hover:bg-[#FAF7F1] transition-all shadow-xs disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                      <span>{isRefreshing ? 'Checking...' : 'Refresh Now'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Enrichment Completion Notice */}
+            {enrichmentNotice && (
+              <div className="mb-6 p-3 rounded-lg border border-[#2F6E5D]/30 bg-[#2F6E5D]/10 text-xs text-[#2F6E5D] font-medium flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[#2F6E5D]" />
+                  {enrichmentNotice}
+                </span>
+                <button onClick={() => setEnrichmentNotice(null)} className="text-[#2F6E5D]/70 hover:text-[#2F6E5D]">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Community Upvote & Pre-Verification Trust Pipeline Stage */}
+            {(() => {
+              const isGatedCategory = record.category === 'RECIPE' || record.category === 'STORY';
+              return (
+                <div className="mb-8 p-5 rounded-xl border border-[#E4DDD0] bg-gradient-to-r from-[#FAF7F1] via-[#F6F0E6] to-[#FAF7F1]">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2">
+                        {isGatedCategory ? (
+                          <>
+                            <span className="text-[11px] font-mono uppercase tracking-wider text-[#C97A3D] font-semibold flex items-center gap-1.5">
+                              <ThumbsUp className="w-3.5 h-3.5 text-[#C97A3D]" />
+                              <span>Stage 1: Community Support Gate</span>
+                            </span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#C97A3D]/10 text-[#C97A3D] font-mono font-medium border border-[#C97A3D]/20">
+                              {upvoteCount} / {upvoteThreshold} {tCommon('upvotes') || 'upvotes'}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-[11px] font-mono uppercase tracking-wider text-[#2F6E5D] font-semibold flex items-center gap-1.5">
+                              <ShieldCheck className="w-3.5 h-3.5 text-[#2F6E5D]" />
+                              <span>Direct Reviewer Queue Active</span>
+                            </span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#2F6E5D]/10 text-[#2F6E5D] font-mono font-medium border border-[#2F6E5D]/20">
+                              In Verification Console
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <p className="text-xs text-[#2A2420]/80 font-sans leading-relaxed max-w-xl">
+                        {isGatedCategory ? (
+                          upvoteCount >= upvoteThreshold ? (
+                            <span className="text-[#2F6E5D] font-medium">
+                              ✓ Community threshold reached ({upvoteCount}/{upvoteThreshold} upvotes). This record has attained <strong>Community Supported</strong> status and is eligible for peer review in the <Link href="/verify" className="underline font-semibold hover:text-[#245749]">Verification Console</Link>.
+                            </span>
+                          ) : (
+                            <span>
+                              Personal / Family-Origin Tradition: Because family recipes and personal narratives cannot be independently validated in historical archives, this record requires <strong>{upvoteThreshold} community upvotes</strong> before entering the expert reviewer queue on /verify. Logged-in community members can vouch for cultural authenticity.
+                            </span>
+                          )
+                        ) : (
+                          <span>
+                            Community-Wide Heritage: As public folklore and regional cultural tradition ({CATEGORY_I18N[currentLang]?.[record.category]?.label || record.category.toLowerCase().replace('_', ' ')}), this record is <strong>already queued</strong> in the <Link href="/verify" className="underline font-semibold hover:text-[#245749]">Verification Console</Link> for peer review and dialect verification. Logged-in members can also upvote to vouch for cultural authenticity.
+                          </span>
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center space-x-3 shrink-0">
+                      <button
+                        type="button"
+                        onClick={handleUpvote}
+                        disabled={isUpvoting}
+                        className={`inline-flex items-center space-x-2 px-4 py-2.5 rounded-lg border font-sans font-medium text-xs transition-all shadow-sm ${
+                          hasUpvoted
+                            ? 'bg-[#C97A3D] text-[#FAF7F1] border-[#C97A3D] hover:bg-[#b86b30]'
+                            : 'bg-[#FFFFFF] text-[#2A2420] border-[#E4DDD0] hover:border-[#C97A3D] hover:text-[#C97A3D]'
+                        }`}
+                      >
+                        <ThumbsUp className={`w-4 h-4 ${hasUpvoted ? 'fill-current' : ''}`} />
+                        <span>{hasUpvoted ? 'Upvoted' : 'Upvote Record'}</span>
+                        <span className="ml-1 px-1.5 py-0.5 rounded bg-black/10 font-mono text-[11px]">
+                          {upvoteCount}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="mt-4 pt-3 border-t border-[#E4DDD0]/60">
+                    <div className="flex items-center justify-between text-[11px] font-sans text-[#2A2420]/60 mb-1.5">
+                      <span>{isGatedCategory ? 'Community Validation Progress' : 'Community Endorsements'}</span>
+                      <span className="font-mono font-medium text-[#C97A3D]">
+                        {isGatedCategory
+                          ? `${Math.min(100, Math.round((upvoteCount / upvoteThreshold) * 100))}% toward Reviewer Queue (${upvoteCount}/${upvoteThreshold})`
+                          : `${upvoteCount} Community Upvotes Received`}
+                      </span>
+                    </div>
+                    <div className="w-full bg-[#E4DDD0] h-2 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-500 rounded-full ${
+                          !isGatedCategory || upvoteCount >= upvoteThreshold ? 'bg-[#2F6E5D]' : 'bg-[#C97A3D]'
+                        }`}
+                        style={{
+                          width: isGatedCategory
+                            ? `${Math.min(100, Math.max(upvoteCount > 0 ? 6 : 0, (upvoteCount / upvoteThreshold) * 100))}%`
+                            : '100%',
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Two-Column Metadata Plaque */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm font-sans mb-8">
@@ -747,6 +1083,34 @@ export default function RecordDetailPage() {
             {/* Tab 1: Transcription & Translation */}
             {activeTab === 'transcription' && (
               <div className="space-y-6">
+                {/* Control bar */}
+                <div className="flex items-center justify-between bg-[#FAF7F1] px-4 py-2.5 rounded-lg border border-[#E4DDD0]">
+                  <span className="text-xs font-mono uppercase tracking-wider text-[#2A2420]/70 flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5 text-[#C97A3D]" />
+                    <span>Linguistic Provenance & AI Analysis</span>
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => fetchDetail(true)}
+                      disabled={isRefreshing}
+                      className="inline-flex items-center space-x-1 px-2.5 py-1 text-xs rounded border border-[#E4DDD0] bg-white text-[#2A2420]/80 hover:text-[#C97A3D] hover:border-[#C97A3D]/40 transition-colors"
+                      title="Check for updated AI results"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+                      <span>{isRefreshing ? 'Updating...' : 'Check Updates'}</span>
+                    </button>
+                    <button
+                      onClick={handleTriggerAiEnrichment}
+                      disabled={isReEnriching || isAiProcessing}
+                      className="inline-flex items-center space-x-1 px-2.5 py-1 text-xs rounded border border-[#C97A3D]/30 bg-[#C97A3D]/10 text-[#C97A3D] hover:bg-[#C97A3D]/20 transition-colors disabled:opacity-50"
+                      title="Re-run Gemini AI enrichment"
+                    >
+                      <Sparkles className={`w-3 h-3 ${isReEnriching ? 'animate-spin' : ''}`} />
+                      <span>{isReEnriching ? 'Re-running...' : 'Re-run AI'}</span>
+                    </button>
+                  </div>
+                </div>
+
                 {/* Native Script Box */}
                 <div className="bg-[#FAF7F1] border border-[#E4DDD0] rounded-lg p-5">
                   <div className="flex items-center justify-between mb-3">
@@ -758,12 +1122,24 @@ export default function RecordDetailPage() {
                       {record.verificationStatus === 'EXPERT_REVIEWED' ||
                       record.verificationStatus === 'STEWARD_ENDORSED'
                         ? 'Peer-reviewed Text'
-                        : (record.mediaType === 'IMAGE' ? 'AI Vision (Gemini Multimodal)' : 'AI Draft (Whisper)')}
+                        : (record.mediaType === 'IMAGE' ? 'AI Vision (Gemini Multimodal)' : 'AI Draft (Gemini)')}
                     </span>
                   </div>
-                  <p className="font-serif text-lg sm:text-xl text-[#2A2420] leading-relaxed italic">
-                    "{record.transcriptionText || (record.mediaType === 'IMAGE' ? 'Visual cultural iconography analysis underway.' : 'Transcription underway.')}"
-                  </p>
+                  {isAiProcessing || record.transcriptionText?.includes('Transcribing audio with AI') ? (
+                    <div className="py-3 px-1 space-y-1.5">
+                      <div className="flex items-center space-x-2 text-[#C97A3D]">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="font-sans text-sm font-medium">Gemini AI is transcribing native speech phonetics...</span>
+                      </div>
+                      <p className="text-xs text-[#2A2420]/60 font-sans italic">
+                        Oral recording is being transcribed verbatim into authentic script. Content will appear here automatically.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="font-serif text-lg sm:text-xl text-[#2A2420] leading-relaxed italic">
+                      "{record.transcriptionText || (record.mediaType === 'IMAGE' ? 'Visual cultural iconography analysis underway.' : 'Transcription underway.')}"
+                    </p>
+                  )}
                 </div>
 
                 {/* Translation Box */}
@@ -777,9 +1153,16 @@ export default function RecordDetailPage() {
                       {record.mediaType === 'IMAGE' ? 'Ethnographic Meaning' : 'Meaning Preserved'}
                     </span>
                   </div>
-                  <p className="font-sans text-sm sm:text-base text-[#2A2420]/90 leading-relaxed">
-                    {record.translationText || 'Translation pending community review.'}
-                  </p>
+                  {isAiProcessing && (!record.translationText || record.translationText.includes('pending')) ? (
+                    <div className="py-2 flex items-center space-x-2 text-[#2F6E5D]">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-xs font-sans">Cultural contextual translation generating with Gemini...</span>
+                    </div>
+                  ) : (
+                    <p className="font-sans text-sm sm:text-base text-[#2A2420]/90 leading-relaxed">
+                      {record.translationText || 'Translation pending community review.'}
+                    </p>
+                  )}
                 </div>
 
                 {/* Cultural Untranslatable Terms Flagged Inside Record */}

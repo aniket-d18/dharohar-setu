@@ -1,7 +1,9 @@
 'use client';
 
-import { Mic, Video, Image as ImageIcon, FileText, MapPin, Volume2, ShieldCheck, CheckCircle2, Sparkles, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
+import { Mic, Video, Image as ImageIcon, FileText, MapPin, Volume2, ShieldCheck, CheckCircle2, Sparkles, RefreshCw, ThumbsUp } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 import { useTranslations, useLanguage } from '@/context/LanguageContext';
 import { useRecordTranslation } from '@/hooks/useRecordTranslation';
 import { getCategoryCover } from '@/utils/categoryCovers';
@@ -20,7 +22,10 @@ export interface RecordCardData {
   transcriptionText?: string | null;
   translationText?: string | null;
   summaryText?: string | null;
-  verificationStatus: 'UNVERIFIED' | 'COMMUNITY_VERIFIED' | 'STEWARD_ENDORSED' | 'EXPERT_REVIEWED';
+  verificationStatus: 'UNVERIFIED' | 'COMMUNITY_SUPPORTED' | 'COMMUNITY_VERIFIED' | 'STEWARD_ENDORSED' | 'EXPERT_REVIEWED';
+  upvoteCount?: number;
+  hasUpvoted?: boolean;
+  upvoteThreshold?: number;
   region?: {
     id: string;
     name: string;
@@ -41,6 +46,62 @@ export interface RecordCardData {
 
 export default function RecordCard({ record }: { record: RecordCardData }) {
   const t = useTranslations('common');
+  const { user } = useAuth();
+
+  const [upvoteCount, setUpvoteCount] = useState<number>(record.upvoteCount ?? 0);
+  const [hasUpvoted, setHasUpvoted] = useState<boolean>(record.hasUpvoted ?? false);
+  const [isUpvoting, setIsUpvoting] = useState(false);
+  const [status, setStatus] = useState(record.verificationStatus);
+  const threshold = record.upvoteThreshold ?? 10;
+
+  const handleUpvote = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!user) {
+      window.location.href = `/login?redirect=/archive&message=login_to_upvote`;
+      return;
+    }
+
+    if (isUpvoting) return;
+
+    const nextHasUpvoted = !hasUpvoted;
+    const nextCount = nextHasUpvoted ? upvoteCount + 1 : Math.max(0, upvoteCount - 1);
+    setHasUpvoted(nextHasUpvoted);
+    setUpvoteCount(nextCount);
+
+    if (nextCount >= threshold && status === 'UNVERIFIED') {
+      setStatus('COMMUNITY_SUPPORTED');
+    } else if (nextCount < threshold && status === 'COMMUNITY_SUPPORTED') {
+      setStatus('UNVERIFIED');
+    }
+
+    try {
+      setIsUpvoting(true);
+      const res = await fetch(`${getApiUrl()}/api/records/${record.id}/upvote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUpvoteCount(data.upvoteCount);
+        setHasUpvoted(data.hasUpvoted);
+        if (data.verificationStatus) {
+          setStatus(data.verificationStatus);
+        }
+      } else {
+        setHasUpvoted(!nextHasUpvoted);
+        setUpvoteCount(upvoteCount);
+      }
+    } catch (err) {
+      console.error('Error upvoting record:', err);
+      setHasUpvoted(!nextHasUpvoted);
+      setUpvoteCount(upvoteCount);
+    } finally {
+      setIsUpvoting(false);
+    }
+  };
 
   const {
     language,
@@ -85,9 +146,9 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
     }
   };
 
-  // Verification trust badge styling as specified in design doc
-  const getVerificationBadge = (status: string) => {
-    switch (status) {
+  // Verification trust badge styling as specified in trust hierarchy
+  const getVerificationBadge = (currStatus: string) => {
+    switch (currStatus) {
       case 'EXPERT_REVIEWED':
         return (
           <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-sans font-medium bg-[#B54A3A]/10 text-[#B54A3A] border border-[#B54A3A]/30">
@@ -106,11 +167,19 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
             {t('communityVerified')}
           </span>
         );
+      case 'COMMUNITY_SUPPORTED':
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-sans font-medium bg-[#D97706]/10 text-[#D97706] border border-[#D97706]/30">
+            {t('communitySupported') || 'Community Supported'}
+          </span>
+        );
       case 'UNVERIFIED':
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-sans font-medium border border-[#E4DDD0] text-[#2A2420]/50">
-            {t('pendingReview')}
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-sans font-medium border border-[#E4DDD0] text-[#2A2420]/60 bg-[#FAF7F1]">
+            {upvoteCount < threshold
+              ? `${t('awaitingCommunitySupport') || 'Awaiting community support'} (${upvoteCount}/${threshold})`
+              : (t('pendingReview') || 'Pending review')}
           </span>
         );
     }
@@ -290,20 +359,77 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
         </div>
       </div>
 
-      {/* Card Footer: Speaker & Trust Badge */}
-      <div className="px-4 sm:px-5 py-3 border-t border-[#E4DDD0] bg-[#FAF7F1] flex items-center justify-between text-xs">
-        <span className="text-[#2A2420]/65 truncate">
-          {record.speakerName ? (
-            <span>
-              {t('by')} {record.speakerName}
-              {record.speakerAge ? ` (${record.speakerAge}y)` : ''}
-            </span>
-          ) : (
-            <span className="italic">{t('anonymousSpeaker')}</span>
-          )}
-        </span>
+      {/* Community Support Progress Bar */}
+      {(() => {
+        const isGatedCategory = record.category === 'RECIPE' || record.category === 'STORY';
+        return (
+          <div className="px-4 sm:px-5 pt-2 pb-1 bg-[#FAF7F1]/80 border-t border-[#E4DDD0]/60">
+            <div className="flex items-center justify-between text-[10px] font-sans text-[#2A2420]/70 mb-1">
+              <span className="flex items-center gap-1 font-medium">
+                <ThumbsUp className={`w-3 h-3 ${hasUpvoted ? 'text-[#C97A3D] fill-[#C97A3D]' : 'text-[#C97A3D]'}`} />
+                {isGatedCategory ? (
+                  status === 'COMMUNITY_SUPPORTED' || status === 'COMMUNITY_VERIFIED' || status === 'STEWARD_ENDORSED' || status === 'EXPERT_REVIEWED' ? (
+                    <span className="text-[#2F6E5D] font-semibold">✓ Community Threshold Reached</span>
+                  ) : (
+                    <span>Community Support ({upvoteCount}/{threshold})</span>
+                  )
+                ) : (
+                  <span className="text-[#2F6E5D] font-medium">✓ In Reviewer Queue</span>
+                )}
+              </span>
+              <span className="font-mono text-[#2A2420]/50">
+                {isGatedCategory ? `${Math.min(100, Math.round((upvoteCount / threshold) * 100))}%` : `${upvoteCount} votes`}
+              </span>
+            </div>
+            <div className="w-full bg-[#E4DDD0] h-1.5 rounded-full overflow-hidden">
+              <div 
+                className={`h-full transition-all duration-500 rounded-full ${
+                  !isGatedCategory || upvoteCount >= threshold ? 'bg-[#2F6E5D]' : 'bg-[#C97A3D]'
+                }`}
+                style={{
+                  width: isGatedCategory
+                    ? `${Math.min(100, Math.max(upvoteCount > 0 ? 8 : 0, (upvoteCount / threshold) * 100))}%`
+                    : '100%',
+                }}
+              />
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Card Footer: Speaker, Upvote Button & Trust Badge */}
+      <div className="px-4 sm:px-5 py-2.5 border-t border-[#E4DDD0] bg-[#FAF7F1] flex items-center justify-between text-xs gap-2">
+        <div className="flex items-center gap-2 max-w-[55%]">
+          {/* Quick Upvote Toggle Button */}
+          <button
+            type="button"
+            onClick={handleUpvote}
+            disabled={isUpvoting}
+            title={user ? (hasUpvoted ? 'Remove your upvote' : 'Upvote this record for community verification') : 'Sign in to upvote'}
+            className={`inline-flex items-center space-x-1.5 px-2 py-1 rounded border text-xs font-sans font-medium transition-all ${
+              hasUpvoted
+                ? 'bg-[#C97A3D] text-[#FAF7F1] border-[#C97A3D] shadow-xs'
+                : 'bg-[#FFFFFF] text-[#2A2420]/80 border-[#E4DDD0] hover:border-[#C97A3D] hover:text-[#C97A3D]'
+            }`}
+          >
+            <ThumbsUp className={`w-3 h-3 ${hasUpvoted ? 'fill-current' : ''}`} />
+            <span className="font-mono text-[11px]">{upvoteCount}</span>
+          </button>
+
+          <span className="text-[#2A2420]/65 truncate text-[11px]">
+            {record.speakerName ? (
+              <span>
+                {t('by')} {record.speakerName}
+                {record.speakerAge ? ` (${record.speakerAge}y)` : ''}
+              </span>
+            ) : (
+              <span className="italic">{t('anonymousSpeaker')}</span>
+            )}
+          </span>
+        </div>
+
         <Link href={`/record/${record.id}`}>
-          {getVerificationBadge(record.verificationStatus)}
+          {getVerificationBadge(status)}
         </Link>
       </div>
     </div>

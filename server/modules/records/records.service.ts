@@ -332,8 +332,30 @@ export class RecordsService {
       }),
     ]);
 
+    const threshold = Number(process.env.COMMUNITY_UPVOTE_THRESHOLD || process.env.NEXT_PUBLIC_COMMUNITY_UPVOTE_THRESHOLD || 10);
+    const upvoteMap: Record<string, number> = {};
+    if (records.length > 0) {
+      try {
+        const counts: any[] = await this.prisma.$queryRawUnsafe(
+          `SELECT "recordId", COUNT(*)::int as count FROM "RecordUpvote" WHERE "recordId" = ANY($1::text[]) GROUP BY "recordId"`,
+          records.map(r => r.id)
+        );
+        for (const row of counts) {
+          upvoteMap[row.recordId] = Number(row.count) || 0;
+        }
+      } catch (err) {
+        console.warn('[Records] Error loading upvote counts:', err);
+      }
+    }
+
+    const recordsWithUpvotes = records.map(r => ({
+      ...r,
+      upvoteCount: upvoteMap[r.id] || 0,
+      upvoteThreshold: threshold,
+    }));
+
     const result = {
-      data: records,
+      data: recordsWithUpvotes,
       pagination: {
         page,
         limit,
@@ -347,8 +369,8 @@ export class RecordsService {
   }
 
   // 4. Detailed record with provenance and consent
-  async getRecordById(id: string) {
-    const cacheKey = `records:detail:${id}`;
+  async getRecordById(id: string, userId?: string) {
+    const cacheKey = userId ? `records:detail:${id}:${userId}` : `records:detail:${id}`;
     const cached = serverCache.get(cacheKey);
     if (cached) return cached;
 
@@ -395,8 +417,120 @@ export class RecordsService {
       throw new NotFoundException(`Cultural record with id ${id} not found`);
     }
 
-    serverCache.set(cacheKey, record, 60 * 1000); // 60s TTL
-    return record;
+    let upvoteCount = 0;
+    let hasUpvoted = false;
+    const threshold = Number(process.env.COMMUNITY_UPVOTE_THRESHOLD || process.env.NEXT_PUBLIC_COMMUNITY_UPVOTE_THRESHOLD || 10);
+
+    try {
+      const counts: any[] = await this.prisma.$queryRawUnsafe(
+        `SELECT COUNT(*)::int as count FROM "RecordUpvote" WHERE "recordId" = $1`,
+        id
+      );
+      upvoteCount = Number(counts[0]?.count) || 0;
+
+      if (userId) {
+        const userVote: any[] = await this.prisma.$queryRawUnsafe(
+          `SELECT id FROM "RecordUpvote" WHERE "recordId" = $1 AND "userId" = $2 LIMIT 1`,
+          id,
+          userId
+        );
+        hasUpvoted = Boolean(userVote && userVote.length > 0);
+      }
+    } catch (err) {
+      console.warn('[Records] Error fetching upvote details for record:', err);
+    }
+
+    const isAiProcessing = Boolean(
+      (record.transcriptionText && record.transcriptionText.includes('Transcribing audio with AI')) ||
+      (record.summaryText && record.summaryText.includes('Generating cultural summary'))
+    );
+
+    const result = {
+      ...record,
+      upvoteCount,
+      hasUpvoted,
+      upvoteThreshold: threshold,
+      isAiProcessing,
+    };
+
+    if (!isAiProcessing) {
+      serverCache.set(cacheKey, result, 30 * 1000); // 30s TTL only when AI processing is complete
+    }
+    return result;
+  }
+
+  // 4b. Community Upvoting Mechanism (Pre-verification trust stage)
+  async toggleUpvote(recordId: string, userId: string) {
+    if (!recordId || !userId) {
+      throw new BadRequestException('recordId and userId are required to upvote');
+    }
+
+    const record = await this.prisma.record.findUnique({
+      where: { id: recordId },
+      select: { id: true, verificationStatus: true },
+    });
+
+    if (!record) {
+      throw new NotFoundException(`Cultural record with id ${recordId} not found`);
+    }
+
+    const existing: any[] = await this.prisma.$queryRawUnsafe(
+      `SELECT id FROM "RecordUpvote" WHERE "recordId" = $1 AND "userId" = $2 LIMIT 1`,
+      recordId,
+      userId
+    );
+
+    let hasUpvoted = false;
+    if (existing && existing.length > 0) {
+      await this.prisma.$executeRawUnsafe(
+        `DELETE FROM "RecordUpvote" WHERE "recordId" = $1 AND "userId" = $2`,
+        recordId,
+        userId
+      );
+      hasUpvoted = false;
+    } else {
+      await this.prisma.$executeRawUnsafe(
+        `INSERT INTO "RecordUpvote" ("id", "recordId", "userId", "createdAt") VALUES (gen_random_uuid(), $1, $2, NOW())`,
+        recordId,
+        userId
+      );
+      hasUpvoted = true;
+    }
+
+    const counts: any[] = await this.prisma.$queryRawUnsafe(
+      `SELECT COUNT(*)::int as count FROM "RecordUpvote" WHERE "recordId" = $1`,
+      recordId
+    );
+    const upvoteCount = Number(counts[0]?.count) || 0;
+
+    const threshold = Number(process.env.COMMUNITY_UPVOTE_THRESHOLD || process.env.NEXT_PUBLIC_COMMUNITY_UPVOTE_THRESHOLD || 10);
+    let currentStatus = record.verificationStatus;
+
+    // Threshold gating:
+    // When upvotes >= threshold and record is UNVERIFIED, transition to COMMUNITY_SUPPORTED
+    if (upvoteCount >= threshold && currentStatus === 'UNVERIFIED') {
+      await this.prisma.record.update({
+        where: { id: recordId },
+        data: { verificationStatus: 'COMMUNITY_SUPPORTED' as any },
+      });
+      currentStatus = 'COMMUNITY_SUPPORTED' as any;
+    } else if (upvoteCount < threshold && currentStatus === 'COMMUNITY_SUPPORTED') {
+      await this.prisma.record.update({
+        where: { id: recordId },
+        data: { verificationStatus: 'UNVERIFIED' as any },
+      });
+      currentStatus = 'UNVERIFIED' as any;
+    }
+
+    serverCache.invalidatePrefix('records:');
+
+    return {
+      success: true,
+      hasUpvoted,
+      upvoteCount,
+      threshold,
+      verificationStatus: currentStatus,
+    };
   }
 
   // 5. Live AI Translation with PostgreSQL Database Caching
@@ -859,6 +993,7 @@ Respond strictly in valid JSON mapping each record id to its translated object:
             scriptName: true,
           },
         },
+        untranslatableEntries: true,
         verifications: {
           include: {
             reviewer: {
@@ -922,6 +1057,9 @@ Respond strictly in valid JSON mapping each record id to its translated object:
       where: { id: recordId },
       data: updateData,
     });
+
+    serverCache.invalidatePrefix('records:');
+    serverCache.invalidatePrefix('analytics:');
 
     return {
       success: true,
@@ -1141,6 +1279,8 @@ Respond strictly in JSON format:
               },
             });
             console.log(`[GeminiWorker] AI Draft transcription successfully saved for ${recordId}`);
+            serverCache.invalidatePrefix('records:');
+            serverCache.invalidatePrefix('analytics:');
           } catch (e) {
             console.warn('[GeminiWorker] Failed to parse JSON transcription response:', e);
           }
@@ -1221,6 +1361,8 @@ Respond strictly in JSON format:
               },
             });
             console.log(`[GeminiWorker] AI Multimodal Vision analysis successfully saved for Record ${recordId}`);
+            serverCache.invalidatePrefix('records:');
+            serverCache.invalidatePrefix('analytics:');
           } catch (e) {
             console.warn('[GeminiWorker] Failed to parse JSON vision response:', e);
           }
@@ -1275,6 +1417,8 @@ Return strictly the 1-2 sentence English summary.`;
           },
         });
         console.log(`[GeminiWorker] AI Summary saved for ${recordId}: "${activeSummary}"`);
+        serverCache.invalidatePrefix('records:');
+        serverCache.invalidatePrefix('analytics:');
       }
     }
 
@@ -1341,6 +1485,8 @@ If there are no distinct untranslatable words, return [].`;
               }
             }
             console.log(`[GeminiWorker] Persisted ${terms.length} untranslatable terms for record ${recordId}`);
+            serverCache.invalidatePrefix('records:');
+            serverCache.invalidatePrefix('untranslatable:');
           }
         } catch (err) {
           console.warn('[GeminiWorker] Failed to parse untranslatable terms JSON:', err);
@@ -1348,6 +1494,8 @@ If there are no distinct untranslatable words, return [].`;
       }
     }
 
+    serverCache.invalidatePrefix('records:');
+    serverCache.invalidatePrefix('analytics:');
     console.log(`[GeminiWorker] Completed AI enrichment for record ${recordId}`);
   }
 
@@ -1361,6 +1509,16 @@ If there are no distinct untranslatable words, return [].`;
     if (!record) {
       throw new NotFoundException(`Record ${recordId} not found`);
     }
+
+    await this.prisma.record.update({
+      where: { id: recordId },
+      data: {
+        transcriptionText: 'Transcribing audio with AI (Gemini Draft)...',
+        summaryText: 'Generating cultural summary with AI...',
+      },
+    });
+    serverCache.invalidatePrefix('records:');
+    serverCache.invalidatePrefix('analytics:');
 
     // Run asynchronously
     setImmediate(() => {

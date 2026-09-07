@@ -100,6 +100,7 @@ interface ContributorRecord {
   createdAt: string;
   region?: { id: string; name: string } | null;
   language?: { id: string; name: string } | null;
+  untranslatableEntries?: { id: string; term: string; explanation?: string }[];
   verifications?: {
     id: string;
     action: string;
@@ -124,6 +125,7 @@ export default function DashboardPage() {
   // Contributor Records & Re-edit State
   const [myRecords, setMyRecords] = useState<ContributorRecord[]>([]);
   const [loadingMyRecords, setLoadingMyRecords] = useState(false);
+  const [isRefreshingMyRecords, setIsRefreshingMyRecords] = useState(false);
   const [editingRecord, setEditingRecord] = useState<ContributorRecord | null>(null);
   const [editSummary, setEditSummary] = useState('');
   const [editTranscription, setEditTranscription] = useState('');
@@ -177,11 +179,15 @@ export default function DashboardPage() {
     }
   }, [user?.id, activeTab]);
 
-  const fetchMyRecords = async () => {
+  const fetchMyRecords = async (silent = false) => {
     if (!user?.id) return;
     try {
-      setLoadingMyRecords(true);
-      const res = await fetch(`${apiUrl}/api/records/contributor/${user.id}`);
+      if (!silent) setLoadingMyRecords(true);
+      else setIsRefreshingMyRecords(true);
+      const res = await fetch(`${apiUrl}/api/records/contributor/${user.id}?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
+      });
       if (res.ok) {
         const records = await res.json();
         setMyRecords(records);
@@ -189,9 +195,29 @@ export default function DashboardPage() {
     } catch (err) {
       console.error('Error fetching contributor records:', err);
     } finally {
-      setLoadingMyRecords(false);
+      if (!silent) setLoadingMyRecords(false);
+      setIsRefreshingMyRecords(false);
     }
   };
+
+  // Auto-poll contributor records if any are currently in AI transcription
+  useEffect(() => {
+    if (!user?.id || activeTab !== 'my_contributions') return;
+
+    const hasPendingAi = myRecords.some(
+      (r) =>
+        r.transcriptionText?.includes('Transcribing audio with AI') ||
+        r.summaryText?.includes('Generating cultural summary')
+    );
+
+    if (!hasPendingAi) return;
+
+    const interval = setInterval(() => {
+      fetchMyRecords(true);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [user?.id, activeTab, myRecords, apiUrl]);
 
   const handleExport = () => {
     setExported(true);
@@ -792,7 +818,7 @@ export default function DashboardPage() {
         {/* Tab 2: My Contributions & Reviewer Feedback Loop */}
         {activeTab === 'my_contributions' && (
           <div className="max-w-6xl mx-auto px-4 sm:px-8 mt-8 space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="font-serif text-2xl text-[#2A2420] font-medium">
                   Your Archival Submissions
@@ -801,12 +827,23 @@ export default function DashboardPage() {
                   Track the status of your documented cultural records, review expert corrections, examine attached reference documents, and resubmit updates.
                 </p>
               </div>
-              <Link
-                href="/capture"
-                className="inline-flex items-center space-x-2 px-4 py-2 rounded bg-[#C97A3D] text-[#FAF7F1] font-sans font-medium text-xs hover:bg-[#B86B30] transition-colors"
-              >
-                <span>+ Document New Tradition</span>
-              </Link>
+              <div className="flex items-center space-x-2 shrink-0">
+                <button
+                  onClick={() => fetchMyRecords(false)}
+                  disabled={loadingMyRecords || isRefreshingMyRecords}
+                  className="inline-flex items-center space-x-1.5 px-3 py-2 rounded border border-[#E4DDD0] bg-white text-[#2A2420] font-sans font-medium text-xs hover:bg-[#FAF7F1] hover:border-[#C97A3D] transition-colors disabled:opacity-50"
+                  title="Refresh your submissions list"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingMyRecords || loadingMyRecords ? 'animate-spin' : ''}`} />
+                  <span>Refresh</span>
+                </button>
+                <Link
+                  href="/capture"
+                  className="inline-flex items-center space-x-2 px-4 py-2 rounded bg-[#C97A3D] text-[#FAF7F1] font-sans font-medium text-xs hover:bg-[#B86B30] transition-colors"
+                >
+                  <span>+ Document New Tradition</span>
+                </Link>
+              </div>
             </div>
 
             {loadingMyRecords ? (
@@ -879,9 +916,20 @@ export default function DashboardPage() {
                           <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                             <div className="flex items-center space-x-2">
                               {getVerificationStatusBadge(record.verificationStatus)}
+                              {record.transcriptionText?.includes('Transcribing audio with AI') && (
+                                <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[11px] font-sans font-medium bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
+                                  <Sparkles className="w-3 h-3 text-amber-600 animate-spin" />
+                                  <span>AI Transcribing...</span>
+                                </span>
+                              )}
                               {record.language && (
                                 <span className="text-xs text-[#2F6E5D] font-medium bg-[#2F6E5D]/10 px-2 py-0.5 rounded border border-[#2F6E5D]/20">
                                   {record.language.name}
+                                </span>
+                              )}
+                              {record.untranslatableEntries && record.untranslatableEntries.length > 0 && (
+                                <span className="text-[11px] text-[#C97A3D] font-medium bg-[#C97A3D]/10 px-2 py-0.5 rounded border border-[#C97A3D]/25">
+                                  {record.untranslatableEntries.length} Untranslatable Concept(s)
                                 </span>
                               )}
                               {record.region && (
@@ -977,12 +1025,13 @@ export default function DashboardPage() {
                           )}
 
                           {/* Action Buttons: Edit & Resubmit or View Detail */}
-                          <div className="mt-4 flex items-center justify-end space-x-3 pt-2">
+                          <div className="mt-4 flex flex-wrap items-center justify-end gap-3 pt-2">
                             <Link
                               href={`/record/${record.id}`}
-                              className="px-3.5 py-1.5 rounded text-xs font-medium text-[#2A2420]/75 hover:text-[#2A2420] border border-[#E4DDD0] hover:bg-[#FAF7F1] transition-colors"
+                              className="inline-flex items-center space-x-1 px-3.5 py-1.5 rounded text-xs font-medium text-[#FAF7F1] bg-[#C97A3D] hover:bg-[#B86B30] transition-colors shadow-xs"
                             >
-                              View Public Record
+                              <span>View Plaque & AI Results</span>
+                              <ArrowRight className="w-3 h-3 ml-0.5" />
                             </Link>
 
                             <button
