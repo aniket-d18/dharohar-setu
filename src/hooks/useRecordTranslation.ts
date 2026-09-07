@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useLanguage, SupportedLanguage } from '@/context/LanguageContext';
+import { getApiUrl } from '@/utils/apiUrl';
 
 export interface TranslatedContent {
   translatedTitle?: string | null;
@@ -61,7 +62,7 @@ export function useRecordTranslation(
     })
       .then(async (res) => {
         if (!res.ok) {
-          const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+          const API_URL = getApiUrl();
           return fetch(`${API_URL}/api/records/translate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

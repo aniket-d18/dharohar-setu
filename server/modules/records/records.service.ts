@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import { existsSync } from 'fs';
 import { join, extname } from 'path';
+import { serverCache } from '../../common/cache.service';
 
 export class CreateRecordDto {
   mediaType!: MediaType;
@@ -211,6 +212,8 @@ export class RecordsService {
 
     // Trigger non-blocking asynchronous AI background enrichment job
     console.log(`[AI Worker] Triggering background Gemini enrichment for Record: ${record.id}`);
+    serverCache.invalidatePrefix('records:');
+    serverCache.invalidatePrefix('analytics:');
     setImmediate(() => {
       this.processAiEnrichmentBackground(record.id).catch((err) => {
         console.error(`[AI Worker] Background job error for record ${record.id}:`, err);
@@ -222,6 +225,10 @@ export class RecordsService {
 
   // 3. Search and filter records
   async getRecords(query: RecordFilterQuery) {
+    const cacheKey = `records:list:${JSON.stringify(query)}`;
+    const cached = serverCache.get(cacheKey);
+    if (cached) return cached;
+
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 50));
     const skip = (page - 1) * limit;
@@ -335,11 +342,16 @@ export class RecordsService {
       },
     };
 
+    serverCache.set(cacheKey, result, 45 * 1000); // 45s TTL
     return result;
   }
 
   // 4. Detailed record with provenance and consent
   async getRecordById(id: string) {
+    const cacheKey = `records:detail:${id}`;
+    const cached = serverCache.get(cacheKey);
+    if (cached) return cached;
+
     const record = await this.prisma.record.findUnique({
       where: { id },
       include: {
@@ -383,6 +395,7 @@ export class RecordsService {
       throw new NotFoundException(`Cultural record with id ${id} not found`);
     }
 
+    serverCache.set(cacheKey, record, 60 * 1000); // 60s TTL
     return record;
   }
 
@@ -873,6 +886,7 @@ Respond strictly in valid JSON mapping each record id to its translated object:
       transcriptionText?: string;
       translationText?: string;
       resubmissionNotes?: string;
+      mediaUrl?: string;
     },
   ) {
     const record = await this.prisma.record.findUnique({
@@ -899,6 +913,9 @@ Respond strictly in valid JSON mapping each record id to its translated object:
     }
     if (dto.translationText !== undefined) {
       updateData.translationText = dto.translationText.trim() || null;
+    }
+    if (dto.mediaUrl !== undefined && dto.mediaUrl.trim()) {
+      updateData.mediaUrl = dto.mediaUrl.trim();
     }
 
     const updated = await this.prisma.record.update({
@@ -1413,6 +1430,8 @@ If there are no distinct untranslatable words, return [].`;
       where: { id: recordId },
     });
 
+    serverCache.invalidatePrefix('records:');
+    serverCache.invalidatePrefix('analytics:');
     console.log(`[RecordsService] Record ${recordId} permanently deleted.`);
 
     return {

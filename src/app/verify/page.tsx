@@ -8,6 +8,7 @@ import Footer from '@/components/Footer';
 import { useAuth } from '@/context/AuthContext';
 import { useTranslations } from '@/context/LanguageContext';
 import { getCategoryCover } from '@/utils/categoryCovers';
+import { getApiUrl } from '@/utils/apiUrl';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -112,7 +113,7 @@ export default function VerificationConsolePage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const apiUrl = getApiUrl();
 
   // Role-Gating: Only REVIEWER, STEWARD, EXPERT, or ADMIN can access /verify
   useEffect(() => {

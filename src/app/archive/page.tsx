@@ -21,6 +21,9 @@ import {
 } from 'lucide-react';
 
 import { useTranslations, useLanguage } from '@/context/LanguageContext';
+import { getApiUrl } from '@/utils/apiUrl';
+import { cachedFetch } from '@/utils/apiCache';
+import { CATEGORY_I18N } from '@/utils/captureI18n';
 
 interface RegionItem {
   id: string;
@@ -185,6 +188,8 @@ export default function ArchivePage() {
   const t = useTranslations('archive');
   const tCommon = useTranslations('common');
   const { language } = useLanguage();
+  const curLang = (language === 'mr' || language === 'hi') ? language : 'en';
+  const catMap = CATEGORY_I18N[curLang] || CATEGORY_I18N.en;
 
   const [records, setRecords] = useState<RecordCardData[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -201,7 +206,7 @@ export default function ArchivePage() {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedSort, setSelectedSort] = useState<'newest' | 'urgency' | 'verified'>('newest');
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const API_URL = getApiUrl();
 
   // Debounce search input
   useEffect(() => {
@@ -222,8 +227,7 @@ export default function ArchivePage() {
 
   // Load Regions for the filter dropdown
   useEffect(() => {
-    fetch(`${API_URL}/api/regions`, { cache: 'no-store' })
-      .then(res => res.json())
+    cachedFetch(`${API_URL}/api/regions`, { maxAgeMs: 30 * 60 * 1000 })
       .then(data => {
         if (Array.isArray(data)) {
           setRegions(data);
@@ -245,8 +249,7 @@ export default function ArchivePage() {
     if (selectedSort) params.append('sort', selectedSort);
     params.append('limit', '30');
 
-    fetch(`${API_URL}/api/records?${params.toString()}`, { cache: 'no-store' })
-      .then(res => res.json())
+    cachedFetch(`${API_URL}/api/records?${params.toString()}`, { maxAgeMs: 30 * 1000 })
       .then(data => {
         if (data && Array.isArray(data.data)) {
           setRecords(data.data);
@@ -371,14 +374,14 @@ export default function ArchivePage() {
               onChange={setSelectedCategory}
               options={[
                 { value: '', label: tCommon('allCategories') },
-                { value: 'LULLABY', label: 'Lullaby' },
-                { value: 'PROVERB', label: 'Proverb' },
-                { value: 'STORY', label: 'Story / Folktale' },
-                { value: 'CRAFT_TECHNIQUE', label: 'Craft Technique' },
-                { value: 'FESTIVAL', label: 'Festival Practice' },
-                { value: 'RECIPE', label: 'Ancestral Recipe' },
-                { value: 'RITUAL', label: 'Sacred Ritual' },
-                { value: 'LIFE_SKILL', label: 'Life Skill / Indigenous Knowledge' },
+                { value: 'LULLABY', label: catMap.LULLABY?.label || 'Lullaby' },
+                { value: 'PROVERB', label: catMap.PROVERB?.label || 'Proverb' },
+                { value: 'STORY', label: catMap.STORY?.label || 'Story / Folktale' },
+                { value: 'CRAFT_TECHNIQUE', label: catMap.CRAFT_TECHNIQUE?.label || 'Craft Technique' },
+                { value: 'FESTIVAL', label: catMap.FESTIVAL?.label || 'Festival Practice' },
+                { value: 'RECIPE', label: catMap.RECIPE?.label || 'Ancestral Recipe' },
+                { value: 'RITUAL', label: catMap.RITUAL?.label || 'Sacred Ritual' },
+                { value: 'LIFE_SKILL', label: catMap.LIFE_SKILL?.label || 'Life Skill / Indigenous Knowledge' },
               ]}
             />
 
@@ -388,25 +391,25 @@ export default function ArchivePage() {
               value={selectedMediaType}
               onChange={setSelectedMediaType}
               options={[
-                { value: '', label: 'All Media' },
-                { value: 'AUDIO', label: 'Audio Recording' },
-                { value: 'VIDEO', label: 'Video Demonstration' },
-                { value: 'IMAGE', label: 'Image / Artifact' },
-                { value: 'TEXT', label: 'Native Text' },
+                { value: '', label: t('allMedia') },
+                { value: 'AUDIO', label: t('audioRecording') },
+                { value: 'VIDEO', label: t('videoDemonstration') },
+                { value: 'IMAGE', label: t('imageArtifact') },
+                { value: 'TEXT', label: t('nativeText') },
               ]}
             />
 
             {/* Vitality Urgency */}
             <CustomSelect
-              label="Vitality Status"
+              label={t('vitalityStatus')}
               value={selectedVitality}
               onChange={setSelectedVitality}
               options={[
-                { value: '', label: 'All Urgencies' },
-                { value: 'CRITICAL', label: 'Critical' },
-                { value: 'ENDANGERED', label: 'Endangered' },
-                { value: 'VULNERABLE', label: 'Vulnerable' },
-                { value: 'SAFE', label: 'Safer' },
+                { value: '', label: t('allUrgencies') },
+                { value: 'CRITICAL', label: t('critical') },
+                { value: 'ENDANGERED', label: t('endangered') },
+                { value: 'VULNERABLE', label: t('vulnerable') },
+                { value: 'SAFE', label: t('safe') },
               ]}
             />
 
@@ -426,13 +429,13 @@ export default function ArchivePage() {
 
             {/* Sort Order */}
             <CustomSelect
-              label="Sort By"
+              label={t('sortBy')}
               value={selectedSort}
               onChange={setSelectedSort}
               options={[
-                { value: 'newest', label: 'Newest First' },
-                { value: 'urgency', label: 'Highest Urgency' },
-                { value: 'verified', label: 'Most Verified' },
+                { value: 'newest', label: t('newestFirst') },
+                { value: 'urgency', label: t('highestUrgency') },
+                { value: 'verified', label: t('mostVerified') },
               ]}
             />
           </div>
@@ -442,14 +445,14 @@ export default function ArchivePage() {
             <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#E4DDD0]">
               <span className="text-xs text-[#C97A3D] flex items-center space-x-1">
                 <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span>Filters applied</span>
+                <span>{t('filtersApplied')}</span>
               </span>
 
               <button
                 onClick={clearFilters}
                 className="text-xs text-[#2A2420]/60 hover:text-[#2A2420] underline"
               >
-                Reset all filters
+                {t('resetFilters')}
               </button>
             </div>
           )}

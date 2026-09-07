@@ -7,6 +7,8 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import RecordCard, { RecordCardData } from '@/components/RecordCard';
 import { useTranslations } from '@/context/LanguageContext';
+import { getApiUrl } from '@/utils/apiUrl';
+import { cachedFetch } from '@/utils/apiCache';
 import {
   Sparkles,
   ArrowRight,
@@ -59,7 +61,7 @@ export default function HomePage() {
   const [activeTickerIndex, setActiveTickerIndex] = useState(0);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const API_URL = getApiUrl();
 
   const CAROUSEL_CARDS = [
     {
@@ -157,9 +159,8 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    // 1. Fetch live counters
-    fetch(`${API_URL}/api/analytics/live-counters`, { cache: 'no-store' })
-      .then(res => res.json())
+    // 1. Fetch live counters (cached for 30s)
+    cachedFetch<any>(`${API_URL}/api/analytics/live-counters`, { ttl: 30 * 1000 })
       .then(data => {
         if (data && typeof data.totalRecords === 'number') {
           setCounters(data);
@@ -167,9 +168,8 @@ export default function HomePage() {
       })
       .catch(err => console.error('Failed to load counters:', err));
 
-    // 2. Fetch fading fastest languages
-    fetch(`${API_URL}/api/languages/fading-fastest?limit=5`, { cache: 'no-store' })
-      .then(res => res.json())
+    // 2. Fetch fading fastest languages (cached for 5m)
+    cachedFetch<any[]>(`${API_URL}/api/languages/fading-fastest?limit=5`, { ttl: 5 * 60 * 1000 })
       .then(data => {
         if (Array.isArray(data)) {
           setFadingLanguages(data);
@@ -177,9 +177,8 @@ export default function HomePage() {
       })
       .catch(err => console.error('Failed to load fading languages:', err));
 
-    // 3. Fetch featured records
-    fetch(`${API_URL}/api/records?limit=6&sort=urgency`, { cache: 'no-store' })
-      .then(res => res.json())
+    // 3. Fetch featured records (cached for 60s)
+    cachedFetch<any>(`${API_URL}/api/records?limit=6&sort=urgency`, { ttl: 60 * 1000 })
       .then(data => {
         if (data && Array.isArray(data.data)) {
           setFeaturedRecords(data.data);

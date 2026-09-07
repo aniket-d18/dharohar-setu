@@ -35,9 +35,12 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '@/context/AuthContext';
-import { useTranslations } from '@/context/LanguageContext';
+import { useTranslations, useLanguage } from '@/context/LanguageContext';
 import { INDIA_REGION_HIERARCHY, StaticState } from '@/data/indiaHierarchy';
 import { getCategoryCover } from '@/utils/categoryCovers';
+import { getApiUrl } from '@/utils/apiUrl';
+import { CAPTURE_I18N, CATEGORY_I18N, SupportedLang } from '@/utils/captureI18n';
+import { cachedFetch } from '@/utils/apiCache';
 
 interface LanguageItem {
   id: string;
@@ -69,11 +72,15 @@ function RegionHierarchySelect({
   selectedDistrict,
   onChange,
   error,
+  label,
+  sublabel,
 }: {
   selectedState: string;
   selectedDistrict: string;
   onChange: (stateName: string, districtName?: string) => void;
   error?: string;
+  label?: string;
+  sublabel?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -93,6 +100,9 @@ function RegionHierarchySelect({
     setExpandedStates((prev) => ({ ...prev, [stateId]: !prev[stateId] }));
   };
 
+  const { language } = useLanguage();
+  const curLang = (language === 'mr' || language === 'hi') ? language : 'en';
+
   const query = searchQuery.trim().toLowerCase();
   const filteredStates = INDIA_REGION_HIERARCHY.map((st) => {
     if (!query) return st;
@@ -110,12 +120,12 @@ function RegionHierarchySelect({
     return null;
   }).filter((st): st is StaticState => st !== null);
 
-  let selectedLabel = 'Select Region / District *';
+  let selectedLabel = curLang === 'mr' ? 'प्रदेश / जिल्हा निवडा *' : curLang === 'hi' ? 'क्षेत्र / ज़िला चुनें *' : 'Select Region / District *';
   if (selectedState) {
     if (selectedDistrict) {
       selectedLabel = `${selectedDistrict} (${selectedState})`;
     } else {
-      selectedLabel = `${selectedState} (Entire State)`;
+      selectedLabel = `${selectedState} (${curLang === 'mr' ? 'संपूर्ण राज्य' : curLang === 'hi' ? 'संपूर्ण राज्य' : 'Entire State'})`;
     }
   }
 
@@ -123,10 +133,10 @@ function RegionHierarchySelect({
     <div className="relative font-sans" ref={ref}>
       <div className="flex items-center justify-between mb-1.5">
         <label className="block text-xs text-[#2A2420]/80 font-medium">
-          Region / District *
+          {label || (curLang === 'mr' ? 'प्रदेश / जिल्हा *' : curLang === 'hi' ? 'क्षेत्र / ज़िला *' : 'Region / District *')}
         </label>
         <span className="text-[11px] text-[#C97A3D]">
-          36 States & Union Territories (Reference)
+          {sublabel || (curLang === 'mr' ? '३६ राज्ये व केंद्रशासित प्रदेश (संदर्भ)' : curLang === 'hi' ? '३६ राज्य एवं केंद्र शासित प्रदेश (संदर्भ)' : '36 States & Union Territories (Reference)')}
         </span>
       </div>
 
@@ -157,7 +167,7 @@ function RegionHierarchySelect({
           <div className="p-2 border-b border-[#E4DDD0] bg-[#FAF7F1]">
             <input
               type="text"
-              placeholder="Search Indian state or district (e.g. Maharashtra, Buldhana, Kerala)..."
+              placeholder={curLang === 'mr' ? 'भारतीय राज्य किंवा जिल्हा शोधा (उदा. महाराष्ट्र, बुलढाणा, केरळ)...' : curLang === 'hi' ? 'भारतीय राज्य या ज़िला खोजें (उदा. महाराष्ट्र, बुलढाणा, केरल)...' : 'Search Indian state or district (e.g. Maharashtra, Buldhana, Kerala)...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onClick={(e) => e.stopPropagation()}
@@ -169,7 +179,7 @@ function RegionHierarchySelect({
           <div className="overflow-y-auto max-h-60 py-1">
             {filteredStates.length === 0 ? (
               <div className="px-3 py-4 text-center text-xs text-[#2A2420]/50">
-                No matching state or district found.
+                {curLang === 'mr' ? 'कोणतेही जुळणारे राज्य किंवा जिल्हा आढळला नाही.' : curLang === 'hi' ? 'कोई मेल खाता राज्य या ज़िला नहीं मिला।' : 'No matching state or district found.'}
               </div>
             ) : (
               filteredStates.map((state) => {
@@ -192,7 +202,7 @@ function RegionHierarchySelect({
                       <span className="truncate flex-1 font-serif font-medium">
                         {state.name}{' '}
                         <span className="text-[10px] text-[#2A2420]/50 font-sans">
-                          ({state.districts.length} districts)
+                          ({state.districts.length} {curLang === 'mr' ? 'जिल्हे' : curLang === 'hi' ? 'ज़िले' : 'districts'})
                         </span>
                       </span>
 
@@ -255,10 +265,14 @@ function LanguageCombobox({
   value,
   onChange,
   suggestions,
+  label,
+  autoCatalogLabel,
 }: {
   value: string;
   onChange: (val: string) => void;
   suggestions: LanguageItem[];
+  label?: string;
+  autoCatalogLabel?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -273,6 +287,9 @@ function LanguageCombobox({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const { language } = useLanguage();
+  const curLang = (language === 'mr' || language === 'hi') ? language : 'en';
+
   const query = value.trim().toLowerCase();
   const matchedLang = suggestions.find((l) => l.name.toLowerCase() === query);
   const isCustom = value.trim().length > 0 && !matchedLang;
@@ -281,22 +298,32 @@ function LanguageCombobox({
     ? suggestions.filter((l) => l.name.toLowerCase().includes(query))
     : suggestions;
 
+  const registeredLabel = curLang === 'mr' ? 'अभिलेखागारात नोंदणीकृत' : curLang === 'hi' ? 'अभिलेखागार में पंजीकृत' : 'Registered in Archive';
+  const typeFreelyLabel = curLang === 'mr' ? 'मुक्तपणे टाइप करा किंवा निवडा' : curLang === 'hi' ? 'स्वतंत्र रूप से लिखें या सुझाव चुनें' : 'Type freely or choose suggestion';
+  const placeholderText = curLang === 'mr' ? 'कोणतीही भाषा किंवा बोली टाइप करा (उदा. तोडा, गोंडी, अहिरणी, वारली, कुवी)...' : curLang === 'hi' ? 'कोई भी भाषा या बोली लिखें (उदा. तोडा, गोंडी, अहिरानी, वारली, कुवी)...' : 'Type any language or dialect (e.g. Toda, Gondi, Ahirani, Warli, Kuvi)...';
+  const quickSuggestionsLabel = curLang === 'mr' ? 'द्रुत सूचना:' : curLang === 'hi' ? 'त्वरित सुझाव:' : 'Quick suggestions:';
+  const keepLabel = curLang === 'mr' ? `✦ "${value.trim()}" ठेवा` : curLang === 'hi' ? `✦ "${value.trim()}" रखें` : `✦ Keep "${value.trim()}"`;
+  const rareDialectNote = curLang === 'mr' ? 'दुर्मिळ बोली — सबमिट केल्यावर डेटाबेसमध्ये नोंदणीकृत केली जाईल' : curLang === 'hi' ? 'दुर्लभ बोली — सबमिट करने पर डेटाबेस में पंजीकृत की जाएगी' : 'Rare dialect — will be registered in the database on submission';
+  const registeredLangsHeader = curLang === 'mr' ? `नोंदणीकृत भाषा (${suggestions.length})` : curLang === 'hi' ? `पंजीकृत भाषाएँ (${suggestions.length})` : `Registered Languages (${suggestions.length})`;
+
   return (
     <div className="relative font-sans" ref={containerRef}>
       <div className="flex items-center justify-between mb-1.5">
         <label className="block text-xs text-[#2A2420]/80 font-medium">
-          Native Language / Dialect
+          {label || (curLang === 'mr' ? 'स्थानिक भाषा / बोली' : curLang === 'hi' ? 'स्थानीय भाषा / बोली' : 'Native Language / Dialect')}
         </label>
         <div className="text-[11px]">
           {matchedLang ? (
             <span className="text-[#2F6E5D] flex items-center space-x-1 font-medium">
               <Check className="w-3 h-3" />
-              <span>Registered in Archive</span>
+              <span>{registeredLabel}</span>
             </span>
           ) : isCustom ? (
-            <span className="text-[#C97A3D] font-medium">✦ Rare / Custom dialect (Auto-cataloged)</span>
+            <span className="text-[#C97A3D] font-medium">
+              ✦ {autoCatalogLabel || (curLang === 'mr' ? 'दुर्मिळ / सानुकूल बोली (स्वयं-कॅटलॉग)' : curLang === 'hi' ? 'दुर्लभ / कस्टम बोली (स्वतः-कैटलॉग)' : 'Rare / Custom dialect (Auto-cataloged)')}
+            </span>
           ) : (
-            <span className="text-[#2A2420]/50">Type freely or choose suggestion</span>
+            <span className="text-[#2A2420]/50">{typeFreelyLabel}</span>
           )}
         </div>
       </div>
@@ -310,7 +337,7 @@ function LanguageCombobox({
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
-          placeholder="Type any language or dialect (e.g. Toda, Gondi, Ahirani, Warli, Kuvi)..."
+          placeholder={placeholderText}
           className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-3 py-2.5 pr-16 text-xs text-[#2A2420] placeholder-[#2A2420]/40 focus:outline-none focus:border-[#C97A3D] transition-colors"
         />
 
@@ -342,7 +369,7 @@ function LanguageCombobox({
       {/* Suggested Quick Chips */}
       {suggestions.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 mt-2">
-          <span className="text-[10px] text-[#2A2420]/60">Quick suggestions:</span>
+          <span className="text-[10px] text-[#2A2420]/60">{quickSuggestionsLabel}</span>
           {suggestions.slice(0, 6).map((s) => (
             <button
               key={s.id}
@@ -373,9 +400,9 @@ function LanguageCombobox({
               onClick={() => setIsOpen(false)}
             >
               <div className="truncate">
-                <span className="font-medium">✦ Keep "{value.trim()}"</span>
+                <span className="font-medium">{keepLabel}</span>
                 <span className="text-[10px] text-[#2A2420]/70 block">
-                  Rare dialect — will be registered in the database on submission
+                  {rareDialectNote}
                 </span>
               </div>
               <Check className="w-3.5 h-3.5 text-[#C97A3D] shrink-0 ml-2" />
@@ -383,12 +410,12 @@ function LanguageCombobox({
           )}
 
           <div className="px-2.5 py-1 text-[10px] uppercase tracking-wider text-[#C97A3D] font-medium">
-            Registered Languages ({suggestions.length})
+            {registeredLangsHeader}
           </div>
 
           {filteredSuggestions.length === 0 ? (
             <div className="px-3 py-2 text-xs text-[#2A2420]/60 italic">
-              No registered language matching "{value}". Your custom dialect "{value}" will be created on submission!
+              {curLang === 'mr' ? `"${value}" शी जुळणारी कोणतीही नोंदणीकृत भाषा नाही. तुमची ही बोली सबमिट केल्यावर जतन केली जाईल!` : curLang === 'hi' ? `"${value}" से मेल खाती कोई पंजीकृत भाषा नहीं। आपकी यह बोली सबमिट करने पर पंजीकृत होगी!` : `No registered language matching "${value}". Your custom dialect "${value}" will be created on submission!`}
             </div>
           ) : (
             filteredSuggestions.map((lang) => {
@@ -605,8 +632,10 @@ function CustomAudioPlayer({
 export default function CaptureWizardPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const t = useTranslations('capture');
-  const tCommon = useTranslations('common');
+  const { language } = useLanguage();
+  const curLang: SupportedLang = (language === 'mr' || language === 'hi') ? language : 'en';
+  const strings = CAPTURE_I18N[curLang] || CAPTURE_I18N.en;
+  const catMap = CATEGORY_I18N[curLang] || CATEGORY_I18N.en;
 
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
   const [isOnline, setIsOnline] = useState(true);
@@ -620,7 +649,7 @@ export default function CaptureWizardPage() {
   const [allowAiTraining, setAllowAiTraining] = useState(true);
   const [allowPublicArchive, setAllowPublicArchive] = useState(true);
   const [isAnonymous, setIsAnonymous] = useState(false);
-  const [consentConfirmed, setConsentConfirmed] = useState(false);
+  const [consentConfirmed, setConsentConfirmed] = useState(true);
 
   // Step 2: Metadata
   const [selectedStateName, setSelectedStateName] = useState('Maharashtra');
@@ -660,7 +689,7 @@ export default function CaptureWizardPage() {
   const [step2Errors, setStep2Errors] = useState<Record<string, string>>({});
   const [step3Error, setStep3Error] = useState<string | null>(null);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const apiUrl = getApiUrl();
 
   // Monitor browser network status
   useEffect(() => {
@@ -681,9 +710,8 @@ export default function CaptureWizardPage() {
   useEffect(() => {
     async function loadMeta() {
       try {
-        const langRes = await fetch(`${apiUrl}/api/languages`);
-        if (langRes.ok) {
-          const langData = await langRes.json();
+        const langData = await cachedFetch(`${apiUrl}/api/languages`);
+        if (Array.isArray(langData)) {
           setLanguages(langData);
         }
       } catch (err) {
@@ -833,6 +861,7 @@ export default function CaptureWizardPage() {
 
     if (!hasMedia && !hasTranscription) {
       setStep3Error(
+        strings.step3RequiredError ||
         'At minimum, please attach/record a media file (audio, video, photo) or enter native transcription text before proceeding.'
       );
       return false;
@@ -1003,15 +1032,12 @@ export default function CaptureWizardPage() {
           {isOnline ? (
             <>
               <Wifi className="w-3.5 h-3.5" />
-              <span>Online — Direct upload and AI transcription enabled</span>
+              <span>{strings.onlineStatus}</span>
             </>
           ) : (
             <>
               <WifiOff className="w-3.5 h-3.5" />
-              <span>
-                Offline Mode Active — Recordings will be safely stored in IndexedDB and synced
-                automatically once connection restores
-              </span>
+              <span>{strings.offlineStatus}</span>
             </>
           )}
         </div>
@@ -1024,10 +1050,10 @@ export default function CaptureWizardPage() {
               <div className="flex items-center justify-between relative">
                 <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-[#E4DDD0] z-0" />
                 {[
-                  { step: 1, label: 'Consent & Rights' },
-                  { step: 2, label: 'Metadata' },
-                  { step: 3, label: 'Capture Media' },
-                  { step: 4, label: 'Confirm & Save' },
+                  { step: 1, label: strings.step1Label },
+                  { step: 2, label: strings.step2Label },
+                  { step: 3, label: strings.step3Label },
+                  { step: 4, label: strings.step4Label },
                 ].map((s) => (
                   <div key={s.step} className="relative z-10 flex flex-col items-center">
                     <div
@@ -1057,11 +1083,10 @@ export default function CaptureWizardPage() {
                 <CheckCircle2 className="w-9 h-9" />
               </div>
               <h2 className="font-serif text-3xl text-[#2A2420] font-medium mb-3">
-                Cultural Memory Preserved
+                {strings.successTitle}
               </h2>
               <p className="text-sm text-[#2A2420]/80 max-w-md mx-auto leading-relaxed mb-6">
-                Your oral recording has been documented and queued for linguistic verification and
-                long-term heritage preservation.
+                {strings.successDesc}
               </p>
 
               <div className="bg-[#FAF7F1] border border-[#E4DDD0] rounded-lg p-4 max-w-sm mx-auto mb-8 text-xs font-mono text-[#C97A3D] break-all">
@@ -1073,7 +1098,7 @@ export default function CaptureWizardPage() {
                   href={`/record/${submittedRecordId}`}
                   className="w-full sm:w-auto px-6 py-3 rounded-lg bg-[#C97A3D] text-[#FAF7F1] font-sans font-medium text-sm hover:bg-[#B86B30] transition-colors shadow-none"
                 >
-                  View Museum Plaque
+                  {strings.viewMuseumPlaque}
                 </Link>
                 <button
                   onClick={() => {
@@ -1090,7 +1115,7 @@ export default function CaptureWizardPage() {
                   }}
                   className="w-full sm:w-auto px-6 py-3 rounded-lg border border-[#E4DDD0] text-[#2A2420] font-sans text-sm hover:bg-[#FAF7F1] transition-colors"
                 >
-                  Record another memory
+                  {strings.recordAnother}
                 </button>
               </div>
             </div>
@@ -1101,38 +1126,37 @@ export default function CaptureWizardPage() {
                 <div>
                   <div className="flex items-center space-x-2 text-xs font-sans text-[#C97A3D] mb-1">
                     <ShieldCheck className="w-4 h-4" />
-                    <span>Ethical Stewardship & Consent</span>
+                    <span>{strings.consentBadge}</span>
                   </div>
                   <h2 className="font-serif text-2xl text-[#2A2420] font-medium mb-2">
-                    Elder & Community Informed Consent
+                    {strings.consentTitle}
                   </h2>
                   <p className="text-xs text-[#2A2420]/70 mb-6 leading-relaxed">
-                    Under the Dharohar Heritage Charter, all oral narratives remain the moral
-                    property of their origin clan. Please confirm recording permissions.
+                    {strings.consentDesc}
                   </p>
 
                   <div className="space-y-4 mb-6">
                     {/* Visibility Choice */}
                     <div>
                       <label className="block text-xs font-sans text-[#2A2420]/90 mb-2 font-medium">
-                        Public Accessibility Level
+                        {strings.accessibilityLevel}
                       </label>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                         {[
                           {
                             id: 'PUBLIC',
-                            title: 'Public Archive',
-                            desc: 'Open to researchers and community members worldwide.',
+                            title: strings.publicTitle,
+                            desc: strings.publicDesc,
                           },
                           {
                             id: 'COMMUNITY_ONLY',
-                            title: 'Community Only',
-                            desc: 'Accessible only to verified clan and regional descendants.',
+                            title: strings.communityTitle,
+                            desc: strings.communityDesc,
                           },
                           {
                             id: 'PRIVATE',
-                            title: 'Steward Vault',
-                            desc: 'Restricted to designated cultural elders and linguists.',
+                            title: strings.privateTitle,
+                            desc: strings.privateDesc,
                           },
                         ].map((v) => (
                           <div
@@ -1163,8 +1187,7 @@ export default function CaptureWizardPage() {
                           className="mt-0.5 rounded accent-[#C97A3D]"
                         />
                         <span>
-                          <strong>Preservation Charter:</strong> Permit long-term audio storage for
-                          educational and indigenous revitalization initiatives.
+                          <strong>{strings.preservationCharter}</strong> {strings.preservationCharterDesc}
                         </span>
                       </label>
 
@@ -1176,8 +1199,7 @@ export default function CaptureWizardPage() {
                           className="mt-0.5 rounded accent-[#C97A3D]"
                         />
                         <span>
-                          <strong>Language Technology:</strong> Permit acoustic modeling so speech
-                          recognition engines can learn this endangered dialect.
+                          <strong>{strings.langTechnology}</strong> {strings.langTechnologyDesc}
                         </span>
                       </label>
 
@@ -1189,8 +1211,7 @@ export default function CaptureWizardPage() {
                           className="mt-0.5 rounded accent-[#C97A3D]"
                         />
                         <span>
-                          <strong>Anonymous Custodian:</strong> Withhold elder speaker's legal name
-                          from public display (credited as Anonymous Elder).
+                          <strong>{strings.anonCustodian}</strong> {strings.anonCustodianDesc}
                         </span>
                       </label>
                     </div>
@@ -1205,8 +1226,7 @@ export default function CaptureWizardPage() {
                           className="mt-1 rounded accent-[#C97A3D]"
                         />
                         <span className="text-xs text-[#2A2420]">
-                          I confirm that the speaker has given informed oral permission to record
-                          this memory under the specified terms.
+                          {strings.consentAgreement}
                         </span>
                       </label>
                     </div>
@@ -1218,7 +1238,7 @@ export default function CaptureWizardPage() {
                       onClick={() => setCurrentStep(2)}
                       className="px-6 py-2.5 rounded bg-[#C97A3D] text-[#FAF7F1] font-sans font-medium text-xs flex items-center space-x-1.5 hover:bg-[#B86B30] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                     >
-                      <span>Proceed to Metadata</span>
+                      <span>{strings.proceedMetadata}</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -1230,10 +1250,10 @@ export default function CaptureWizardPage() {
                 <div>
                   <div className="flex items-center space-x-2 text-xs font-sans text-[#C97A3D] mb-1">
                     <MapPin className="w-4 h-4" />
-                    <span>Geographic & Dialect Classification</span>
+                    <span>{strings.contextBadge}</span>
                   </div>
                   <h2 className="font-serif text-2xl text-[#2A2420] font-medium mb-4">
-                    Context & Lineage
+                    {strings.contextTitle}
                   </h2>
 
                   <div className="space-y-4 text-xs font-sans">
@@ -1241,6 +1261,8 @@ export default function CaptureWizardPage() {
                     <RegionHierarchySelect
                       selectedState={selectedStateName}
                       selectedDistrict={selectedDistrictName}
+                      label={strings.regionLabel}
+                      sublabel={strings.regionRef}
                       onChange={(st, dist) => {
                         setSelectedStateName(st);
                         setSelectedDistrictName(dist || '');
@@ -1256,38 +1278,43 @@ export default function CaptureWizardPage() {
                       value={languageName}
                       onChange={setLanguageName}
                       suggestions={languages}
+                      label={strings.langLabel}
+                      autoCatalogLabel={strings.langAutoCatalog}
                     />
 
                     {/* Tradition Genre Grid */}
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
                         <label className="block text-[#2A2420]/80 font-medium text-sm">
-                          Tradition Genre *
+                          {strings.genreLabel}
                         </label>
                         <span className="text-[11px] text-[#2A2420]/50">
-                          Select a heritage category or specify custom
+                          {strings.genrePrompt}
                         </span>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {CATEGORIES.map((c) => (
-                          <div
-                            key={c.id}
-                            onClick={() => {
-                              setCategory(c.id);
-                              if (step2Errors.customCategory) {
-                                setStep2Errors((prev) => ({ ...prev, customCategory: '' }));
-                              }
-                            }}
-                            className={`p-2.5 rounded border cursor-pointer transition-all ${
-                              category === c.id
-                                ? 'bg-[#2F6E5D] border-[#2F6E5D] text-[#FAF7F1] shadow-sm'
-                                : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/75 hover:border-[#C97A3D]/40 hover:text-[#2A2420]'
-                            }`}
-                          >
-                            <span className="font-medium text-xs block">{c.label}</span>
-                            <span className="text-[10px] block opacity-70 mt-0.5 truncate">{c.desc}</span>
-                          </div>
-                        ))}
+                        {CATEGORIES.map((c) => {
+                          const localizedCat = catMap[c.id] || c;
+                          return (
+                            <div
+                              key={c.id}
+                              onClick={() => {
+                                setCategory(c.id);
+                                if (step2Errors.customCategory) {
+                                  setStep2Errors((prev) => ({ ...prev, customCategory: '' }));
+                                }
+                              }}
+                              className={`p-2.5 rounded border cursor-pointer transition-all ${
+                                category === c.id
+                                  ? 'bg-[#2F6E5D] border-[#2F6E5D] text-[#FAF7F1] shadow-sm'
+                                  : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/75 hover:border-[#C97A3D]/40 hover:text-[#2A2420]'
+                              }`}
+                            >
+                              <span className="font-medium text-xs block">{localizedCat.label}</span>
+                              <span className="text-[10px] block opacity-70 mt-0.5 truncate">{localizedCat.desc}</span>
+                            </div>
+                          );
+                        })}
                       </div>
 
                       {/* Custom Category Input if OTHER is selected */}
@@ -1295,11 +1322,11 @@ export default function CaptureWizardPage() {
                         <div className="mt-3 p-3.5 bg-[#FAF7F1] border border-[#C97A3D]/40 rounded-lg shadow-sm">
                           <label className="block text-xs font-semibold text-[#C97A3D] mb-1.5 flex items-center">
                             <Sparkles className="w-3.5 h-3.5 mr-1" />
-                            Specify Custom Tradition Genre / Cultural Category *
+                            {strings.customGenreLabel}
                           </label>
                           <input
                             type="text"
-                            placeholder="e.g. Temple Architecture, Warli Wall Murals, Kalarippayattu Martial Art, Folk Theatre, Ancient Manuscripts..."
+                            placeholder={strings.customGenrePlaceholder}
                             value={customCategory}
                             onChange={(e) => {
                               setCustomCategory(e.target.value);
@@ -1324,11 +1351,11 @@ export default function CaptureWizardPage() {
                     {/* Cultural Title (Validated: min length 5, no keyboard mash) */}
                     <div>
                       <label className="block text-[#2A2420]/80 mb-1.5 font-medium">
-                        Recording Title / Tradition Name *
+                        {strings.titleLabel}
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g. Toda Sacred Dairy Chants at Twilight"
+                        placeholder={strings.titlePlaceholder}
                         value={titleText}
                         onChange={(e) => {
                           setTitleText(e.target.value);
@@ -1350,11 +1377,11 @@ export default function CaptureWizardPage() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-[#2A2420]/80 mb-1.5">
-                            Speaker / Storyteller Name
+                            {strings.speakerLabel}
                           </label>
                           <input
                             type="text"
-                            placeholder="e.g. Smt. Kamala Devi"
+                            placeholder={strings.speakerPlaceholder}
                             value={speakerName}
                             onChange={(e) => setSpeakerName(e.target.value)}
                             className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-3 py-2 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
@@ -1362,7 +1389,7 @@ export default function CaptureWizardPage() {
                         </div>
                         <div>
                           <label className="block text-[#2A2420]/80 mb-1.5">
-                            Speaker Age (0 – 120)
+                            {strings.ageLabel}
                           </label>
                           <input
                             type="number"
@@ -1392,7 +1419,7 @@ export default function CaptureWizardPage() {
                     {/* Description / Cultural Meaning (Validated: min length 10) */}
                     <div>
                       <label className="block text-[#2A2420]/80 mb-1.5 font-medium">
-                        Description & Cultural Meaning *
+                        {strings.descLabel}
                       </label>
                       <textarea
                         rows={3}
@@ -1404,7 +1431,7 @@ export default function CaptureWizardPage() {
                             setStep2Errors((prev) => ({ ...prev, description: '' }));
                           }
                         }}
-                        placeholder="Explain the background, context, clan significance, or symbolism of this lullaby, prayer, or craft technique..."
+                        placeholder={strings.descPlaceholder}
                         className={`w-full bg-[#FFFFFF] border ${
                           step2Errors.description ? 'border-[#B54A3A]' : 'border-[#E4DDD0]'
                         } rounded px-3 py-2 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]`}
@@ -1419,11 +1446,11 @@ export default function CaptureWizardPage() {
                     {/* Tags */}
                     <div>
                       <label className="block text-[#2A2420]/80 mb-1.5">
-                        Tags (comma-separated)
+                        {strings.tagsLabel}
                       </label>
                       <input
                         type="text"
-                        placeholder="harvest, monsoon, lullaby, sacred-forest, pastoral..."
+                        placeholder={strings.tagsPlaceholder}
                         value={tagsInput}
                         onChange={(e) => setTagsInput(e.target.value)}
                         className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-3 py-2 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
@@ -1437,7 +1464,7 @@ export default function CaptureWizardPage() {
                       className="px-4 py-2 rounded text-xs font-sans text-[#2A2420]/70 hover:text-[#2A2420] flex items-center space-x-1"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
-                      <span>Back</span>
+                      <span>{strings.backBtn}</span>
                     </button>
                     <button
                       onClick={() => {
@@ -1447,7 +1474,7 @@ export default function CaptureWizardPage() {
                       }}
                       className="px-6 py-2.5 rounded bg-[#C97A3D] text-[#FAF7F1] font-sans font-medium text-xs flex items-center space-x-1.5 hover:bg-[#B86B30] transition-all"
                     >
-                      <span>Proceed to Media Capture</span>
+                      <span>{strings.proceedMedia}</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -1459,19 +1486,19 @@ export default function CaptureWizardPage() {
                 <div>
                   <div className="flex items-center space-x-2 text-xs font-sans text-[#C97A3D] mb-1">
                     <Sparkles className="w-4 h-4" />
-                    <span>Multi-Modal Field Documentation</span>
+                    <span>{strings.mediaBadge}</span>
                   </div>
                   <h2 className="font-serif text-2xl text-[#2A2420] font-medium mb-4">
-                    Record or Upload Heritage Media
+                    {strings.mediaTitle}
                   </h2>
 
                   {/* Media Type Selector */}
                   <div className="flex items-center space-x-2 bg-[#FAF7F1] p-1.5 rounded-lg border border-[#E4DDD0] mb-6 text-xs font-sans">
                     {[
-                      { id: 'AUDIO', label: 'Oral Audio', icon: Mic },
-                      { id: 'VIDEO', label: 'Field Video', icon: Video },
-                      { id: 'IMAGE', label: 'Artifact Photo', icon: ImageIcon },
-                      { id: 'TEXT', label: 'Native Text', icon: FileText },
+                      { id: 'AUDIO', label: strings.mediaModeAudio, icon: Mic },
+                      { id: 'VIDEO', label: strings.mediaModeVideo, icon: Video },
+                      { id: 'IMAGE', label: strings.mediaModeImage, icon: ImageIcon },
+                      { id: 'TEXT', label: strings.mediaModeText, icon: FileText },
                     ].map((m) => {
                       const Icon = m.icon;
                       return (
@@ -1510,7 +1537,7 @@ export default function CaptureWizardPage() {
                           }`}
                         >
                           <Mic className="w-3.5 h-3.5" />
-                          <span>Live Microphone Recording</span>
+                          <span>{strings.audioLiveTab}</span>
                         </button>
                         <button
                           type="button"
@@ -1522,7 +1549,7 @@ export default function CaptureWizardPage() {
                           }`}
                         >
                           <Upload className="w-3.5 h-3.5" />
-                          <span>Upload Audio File</span>
+                          <span>{strings.audioUploadTab}</span>
                         </button>
                       </div>
 
@@ -1537,7 +1564,7 @@ export default function CaptureWizardPage() {
                             <button
                               onClick={stopRecording}
                               className="w-16 h-16 rounded-full bg-[#B54A3A] text-white flex items-center justify-center hover:scale-105 transition-all shadow-lg animate-pulse"
-                              title="Stop recording"
+                              title={strings.stopRecord}
                             >
                               <Square className="w-6 h-6 fill-current" />
                             </button>
@@ -1545,7 +1572,7 @@ export default function CaptureWizardPage() {
                             <button
                               onClick={startRecording}
                               className="w-16 h-16 rounded-full bg-[#C97A3D] text-[#FAF7F1] flex items-center justify-center hover:bg-[#B86B30] hover:scale-105 transition-all shadow-md"
-                              title="Start live microphone recording"
+                              title={strings.startRecord}
                             >
                               <Mic className="w-7 h-7" />
                             </button>
@@ -1553,17 +1580,17 @@ export default function CaptureWizardPage() {
 
                           <p className="text-xs text-[#2A2420]/70 mt-4">
                             {isRecording
-                              ? 'Recording live from microphone... Speak clearly.'
+                              ? strings.audioPromptRecording
                               : recordedAudioUrl
-                              ? 'Audio clip captured! You may playback, re-record, or proceed.'
-                              : 'Click microphone to begin field audio capture'}
+                              ? strings.audioPromptDone
+                              : strings.audioPromptIdle}
                           </p>
 
                           {recordedAudioUrl && (
                             <div className="mt-4 w-full max-w-md">
                               <CustomAudioPlayer
                                 src={recordedAudioUrl}
-                                title="Field audio buffer ready for upload"
+                                title={strings.recordedSuccess}
                               />
                             </div>
                           )}
@@ -1589,10 +1616,10 @@ export default function CaptureWizardPage() {
                             >
                               <FileAudio className="w-10 h-10 text-[#C97A3D] mb-3" />
                               <span className="text-sm font-medium text-[#2A2420] mb-1">
-                                Click to select an audio file from device
+                                {strings.audioFileClick}
                               </span>
                               <span className="text-xs text-[#2A2420]/60">
-                                MP3, WAV, M4A, AAC, or WebM (up to 100MB)
+                                {strings.audioFileTypes}
                               </span>
                             </label>
                           ) : (
@@ -1611,14 +1638,14 @@ export default function CaptureWizardPage() {
                                   onClick={removeSelectedFile}
                                   className="text-xs text-[#B54A3A] hover:underline shrink-0 ml-2"
                                 >
-                                  Change file
+                                  {strings.changeFile}
                                 </button>
                               </div>
                               {filePreviewUrl && (
                                 <div className="mt-2">
                                   <CustomAudioPlayer
                                     src={filePreviewUrl}
-                                    title={`Ready for upload: ${selectedFile.name}`}
+                                    title={`Ready: ${selectedFile.name}`}
                                   />
                                 </div>
                               )}
@@ -1648,10 +1675,10 @@ export default function CaptureWizardPage() {
                         >
                           <Film className="w-10 h-10 text-[#C97A3D] mb-3" />
                           <span className="text-sm font-medium text-[#2A2420] mb-1">
-                            Click to select field video from camera / device
+                            {strings.videoFileClick}
                           </span>
                           <span className="text-xs text-[#2A2420]/60">
-                            MP4, WebM, or QuickTime video files (up to 100MB)
+                            {strings.videoFileTypes}
                           </span>
                         </label>
                       ) : (
@@ -1672,7 +1699,7 @@ export default function CaptureWizardPage() {
                               onClick={removeSelectedFile}
                               className="text-xs text-[#B54A3A] hover:underline shrink-0 ml-2"
                             >
-                              Remove / Replace
+                              {strings.removeReplace}
                             </button>
                           </div>
 
@@ -1698,8 +1725,8 @@ export default function CaptureWizardPage() {
                           <LinkIcon className="w-3 h-3" />
                           <span>
                             {showManualUrlInput
-                              ? 'Hide direct URL entry'
-                              : 'Or enter external video URL instead'}
+                              ? strings.hideDirectUrl
+                              : strings.enterDirectVideoUrl}
                           </span>
                         </button>
                         {showManualUrlInput && (
@@ -1739,10 +1766,10 @@ export default function CaptureWizardPage() {
                         >
                           <ImageIcon className="w-10 h-10 text-[#C97A3D] mb-3" />
                           <span className="text-sm font-medium text-[#2A2420] mb-1">
-                            Click to select photo / artifact image
+                            {strings.imageFileClick}
                           </span>
                           <span className="text-xs text-[#2A2420]/60">
-                            JPG, PNG, or WebP photo of artifact, elder, or craft
+                            {strings.imageFileTypes}
                           </span>
                         </label>
                       ) : (
@@ -1763,7 +1790,7 @@ export default function CaptureWizardPage() {
                               onClick={removeSelectedFile}
                               className="text-xs text-[#B54A3A] hover:underline shrink-0 ml-2"
                             >
-                              Remove / Replace
+                              {strings.removeReplace}
                             </button>
                           </div>
 
@@ -1789,8 +1816,8 @@ export default function CaptureWizardPage() {
                           <LinkIcon className="w-3 h-3" />
                           <span>
                             {showManualUrlInput
-                              ? 'Hide direct URL entry'
-                              : 'Or enter external image URL instead'}
+                              ? strings.hideDirectUrl
+                              : strings.enterDirectImageUrl}
                           </span>
                         </button>
                         {showManualUrlInput && (
@@ -1815,8 +1842,7 @@ export default function CaptureWizardPage() {
                   {mediaType === 'TEXT' && (
                     <div className="bg-[#FAF7F1] p-4 rounded-xl border border-[#E4DDD0] mb-6 text-xs">
                       <p className="text-[#2A2420]/80 leading-relaxed mb-2">
-                        For oral proverbs, sacred idioms, or manuscripts without audio recordings,
-                        please write the native transcription and translation below.
+                        {strings.textTraditionDesc}
                       </p>
                     </div>
                   )}
@@ -1825,7 +1851,7 @@ export default function CaptureWizardPage() {
                   <div className="space-y-4 text-xs font-sans">
                     <div>
                       <label className="block text-[#2A2420]/80 mb-1 font-medium">
-                        Native Spoken Transcription (Optional / AI will assist)
+                        {strings.nativeTransLabel}
                       </label>
                       <textarea
                         rows={2}
@@ -1834,19 +1860,19 @@ export default function CaptureWizardPage() {
                           setTranscriptionDraft(e.target.value);
                           setStep3Error(null);
                         }}
-                        placeholder="Enter native script transcription or phonetic representation..."
+                        placeholder={strings.nativeTransPlaceholder}
                         className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-3 py-2 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
                       />
                     </div>
                     <div>
                       <label className="block text-[#2A2420]/80 mb-1 font-medium">
-                        English / Hindi Translation (Optional / AI will assist)
+                        {strings.translationLabel}
                       </label>
                       <textarea
                         rows={2}
                         value={translationDraft}
                         onChange={(e) => setTranslationDraft(e.target.value)}
-                        placeholder="Enter direct or interpretative translation..."
+                        placeholder={strings.translationPlaceholder}
                         className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-3 py-2 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
                       />
                     </div>
@@ -1866,7 +1892,7 @@ export default function CaptureWizardPage() {
                       className="px-4 py-2 rounded text-xs font-sans text-[#2A2420]/70 hover:text-[#2A2420] flex items-center space-x-1"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
-                      <span>Back</span>
+                      <span>{strings.backBtn}</span>
                     </button>
                     <button
                       onClick={() => {
@@ -1876,7 +1902,7 @@ export default function CaptureWizardPage() {
                       }}
                       className="px-6 py-2.5 rounded bg-[#C97A3D] text-[#FAF7F1] font-sans font-medium text-xs flex items-center space-x-1.5 hover:bg-[#B86B30] transition-all"
                     >
-                      <span>Review & Confirm</span>
+                      <span>{strings.reviewConfirm}</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -1888,10 +1914,10 @@ export default function CaptureWizardPage() {
                 <div>
                   <div className="flex items-center space-x-2 text-xs font-sans text-[#C97A3D] mb-1">
                     <Sparkles className="w-4 h-4" />
-                    <span>Final Verification & Archival</span>
+                    <span>{strings.reviewBadge}</span>
                   </div>
                   <h2 className="font-serif text-2xl text-[#2A2420] font-medium mb-4">
-                    Review Field Submission
+                    {strings.reviewTitle}
                   </h2>
 
                   {/* Error banner if submission failed */}
@@ -1904,61 +1930,67 @@ export default function CaptureWizardPage() {
 
                   <div className="bg-[#FAF7F1] p-5 rounded-xl border border-[#E4DDD0] space-y-4 text-xs font-sans mb-6">
                     <div className="flex justify-between border-b border-[#E4DDD0] pb-2">
-                      <span className="text-[#2A2420]/60">Tradition Title:</span>
+                      <span className="text-[#2A2420]/60">{strings.reviewTraditionTitle}</span>
                       <span className="text-[#C97A3D] font-medium text-right max-w-xs truncate">
                         {titleText}
                       </span>
                     </div>
 
                     <div className="flex justify-between border-b border-[#E4DDD0] pb-2">
-                      <span className="text-[#2A2420]/60">Region / District:</span>
+                      <span className="text-[#2A2420]/60">{strings.reviewRegion}</span>
                       <span className="text-[#2A2420] font-medium text-right">
                         {selectedRegionLabel}
                       </span>
                     </div>
 
                     <div className="flex justify-between border-b border-[#E4DDD0] pb-2">
-                      <span className="text-[#2A2420]/60">Native Language:</span>
+                      <span className="text-[#2A2420]/60">{strings.reviewNativeLang}</span>
                       <span className="text-[#2A2420] text-right">{selectedLangDisplay}</span>
                     </div>
 
                     <div className="flex justify-between border-b border-[#E4DDD0] pb-2">
-                      <span className="text-[#2A2420]/60">Genre:</span>
-                      <span className="text-[#C97A3D] font-medium">{category}</span>
+                      <span className="text-[#2A2420]/60">{strings.reviewGenre}</span>
+                      <span className="text-[#C97A3D] font-medium">{catMap[category]?.label || category}</span>
                     </div>
 
                     <div className="flex justify-between border-b border-[#E4DDD0] pb-2">
-                      <span className="text-[#2A2420]/60">Media Mode:</span>
+                      <span className="text-[#2A2420]/60">{strings.reviewMediaMode}</span>
                       <span className="text-[#2F6E5D] font-medium">
-                        {mediaType}{' '}
+                        {mediaType === 'AUDIO' ? strings.mediaModeAudio : mediaType === 'VIDEO' ? strings.mediaModeVideo : mediaType === 'IMAGE' ? strings.mediaModeImage : strings.mediaModeText}{' '}
                         {selectedFile
-                          ? `(File: ${selectedFile.name})`
+                          ? `(${selectedFile.name})`
                           : recordedAudioUrl
-                          ? '(Recorded Microphone Clip)'
+                          ? `(${strings.recordedSuccess})`
                           : mediaUrl
-                          ? '(Direct URL)'
+                          ? '(URL)'
                           : ''}
                       </span>
                     </div>
 
                     <div className="flex justify-between border-b border-[#E4DDD0] pb-2">
-                      <span className="text-[#2A2420]/60">Speaker Custodian:</span>
+                      <span className="text-[#2A2420]/60">{strings.reviewSpeaker}</span>
                       <span className="text-[#2A2420]">
                         {isAnonymous
-                          ? 'Anonymous Elder'
-                          : `${speakerName || 'Elder storyteller'}${
+                          ? (strings.anonCustodian.replace(':', '') || 'Anonymous Elder')
+                          : `${speakerName || 'Storyteller'}${
                               speakerAge !== '' ? ` (${speakerAge} yrs)` : ''
                             }`}
                       </span>
                     </div>
 
                     <div className="flex justify-between border-b border-[#E4DDD0] pb-2">
-                      <span className="text-[#2A2420]/60">Access Level:</span>
-                      <span className="text-[#2F6E5D]">{visibility}</span>
+                      <span className="text-[#2A2420]/60">{strings.reviewAccessLevel}</span>
+                      <span className="text-[#2F6E5D]">
+                        {visibility === 'PUBLIC'
+                          ? strings.publicTitle
+                          : visibility === 'COMMUNITY_ONLY'
+                          ? strings.communityTitle
+                          : strings.privateTitle}
+                      </span>
                     </div>
 
                     <div>
-                      <span className="text-[#2A2420]/60 block mb-1">Cultural Meaning:</span>
+                      <span className="text-[#2A2420]/60 block mb-1">{strings.reviewCulturalMeaning}</span>
                       <p className="text-[#2A2420]/90 italic bg-[#FFFFFF] p-2.5 rounded border border-[#E4DDD0] leading-relaxed">
                         "{descriptionText}"
                       </p>
@@ -1971,7 +2003,7 @@ export default function CaptureWizardPage() {
                       className="px-4 py-2 rounded text-xs font-sans text-[#2A2420]/70 hover:text-[#2A2420] flex items-center space-x-1"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
-                      <span>Back</span>
+                      <span>{strings.backBtn}</span>
                     </button>
                     <button
                       disabled={submitting}
@@ -1981,12 +2013,12 @@ export default function CaptureWizardPage() {
                       {submitting ? (
                         <>
                           <div className="w-4 h-4 border-2 border-[#FAF7F1] border-t-transparent rounded-full animate-spin" />
-                          <span>Archiving & uploading file...</span>
+                          <span>{strings.submittingBtn}</span>
                         </>
                       ) : (
                         <>
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>Submit to Living Heritage Archive</span>
+                          <span>{strings.submitArchiveBtn}</span>
                         </>
                       )}
                     </button>

@@ -1,5 +1,9 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
+import { serverCache } from '../../common/cache.service';
+
+const CACHE_TTL_LONG = 30 * 60 * 1000; // 30 minutes
+const CACHE_TTL_MEDIUM = 15 * 60 * 1000; // 15 minutes
 
 @Injectable()
 export class RegionsLanguagesService {
@@ -10,7 +14,11 @@ export class RegionsLanguagesService {
 
   // 1. Hierarchical regions (State -> Districts)
   async getRegionsHierarchy() {
-    return this.prisma.region.findMany({
+    const cacheKey = 'regions:hierarchy';
+    const cached = serverCache.get(cacheKey);
+    if (cached) return cached;
+
+    const data = await this.prisma.region.findMany({
       where: {
         level: 'STATE',
       },
@@ -49,10 +57,17 @@ export class RegionsLanguagesService {
         name: 'asc',
       },
     });
+
+    serverCache.set(cacheKey, data, CACHE_TTL_LONG);
+    return data;
   }
 
   // 2. GeoJSON boundary for a region
   async getRegionGeoJson(id: string) {
+    const cacheKey = `regions:geojson:${id}`;
+    const cached = serverCache.get(cacheKey);
+    if (cached) return cached;
+
     const region = await this.prisma.region.findUnique({
       where: { id },
       select: {
@@ -69,12 +84,7 @@ export class RegionsLanguagesService {
       throw new NotFoundException(`Region with id ${id} not found`);
     }
 
-    // If custom GeoJSON is stored in DB, return it; otherwise return a structured Feature representation
-    if (region.geoJsonData) {
-      return region.geoJsonData;
-    }
-
-    return {
+    const result = region.geoJsonData || {
       type: 'Feature',
       properties: {
         id: region.id,
@@ -88,11 +98,18 @@ export class RegionsLanguagesService {
         coordinates: [78.9629, 20.5937], // Center of India fallback
       },
     };
+
+    serverCache.set(cacheKey, result, CACHE_TTL_LONG);
+    return result;
   }
 
   // 3. Fading fastest languages (sorted by yearsToCritical ascending or CRITICAL status)
   async getFadingFastestLanguages(limit: number = 5) {
-    return this.prisma.language.findMany({
+    const cacheKey = `languages:fading:${limit}`;
+    const cached = serverCache.get(cacheKey);
+    if (cached) return cached;
+
+    const data = await this.prisma.language.findMany({
       where: {
         vitalityStatus: {
           in: ['CRITICAL', 'ENDANGERED'],
@@ -122,11 +139,18 @@ export class RegionsLanguagesService {
         },
       },
     });
+
+    serverCache.set(cacheKey, data, CACHE_TTL_MEDIUM);
+    return data;
   }
 
   // 4. Crafts list with vitality scores and regions
   async getCrafts() {
-    return this.prisma.craft.findMany({
+    const cacheKey = 'crafts:all';
+    const cached = serverCache.get(cacheKey);
+    if (cached) return cached;
+
+    const data = await this.prisma.craft.findMany({
       orderBy: [
         { vitalityStatus: 'desc' },
         { estimatedPractitioners: 'asc' },
@@ -150,11 +174,18 @@ export class RegionsLanguagesService {
         },
       },
     });
+
+    serverCache.set(cacheKey, data, CACHE_TTL_LONG);
+    return data;
   }
 
   // 5. All registered native languages in database
   async getAllLanguages() {
-    return this.prisma.language.findMany({
+    const cacheKey = 'languages:all';
+    const cached = serverCache.get(cacheKey);
+    if (cached) return cached;
+
+    const data = await this.prisma.language.findMany({
       orderBy: {
         name: 'asc',
       },
@@ -166,5 +197,9 @@ export class RegionsLanguagesService {
         },
       },
     });
+
+    serverCache.set(cacheKey, data, CACHE_TTL_LONG);
+    return data;
   }
 }
+

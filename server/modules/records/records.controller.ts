@@ -105,6 +105,7 @@ export class RecordsController {
       transcriptionText?: string;
       translationText?: string;
       resubmissionNotes?: string;
+      mediaUrl?: string;
     },
   ) {
     return this.service.resubmitRecord(id, body);

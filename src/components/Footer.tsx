@@ -12,8 +12,8 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div className="md:col-span-2">
-            <div className="flex items-center space-x-2 text-[#2A2420] font-serif text-lg font-medium mb-3">
-              <Sparkles className="w-5 h-5 text-[#C97A3D]" />
+            <div className="flex items-center space-x-2.5 text-[#2A2420] font-serif text-lg font-medium mb-3">
+              <img src="/images/logo.png" alt="Dharohar Setu" className="w-8 h-8 object-cover rounded-md" />
               <span>Dharohar Setu</span>
             </div>
             <p className="text-sm text-[#2A2420]/70 max-w-md leading-relaxed">

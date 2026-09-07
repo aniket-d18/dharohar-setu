@@ -58,73 +58,81 @@ export class AuthService {
 
   // 2. Login handler with bcrypt verification
   async login(dto: LoginDto) {
-    if (!dto.email || !dto.password) {
-      throw new BadRequestException('Email and password are required.');
-    }
-
-    const email = dto.email.trim().toLowerCase();
-    const password = dto.password;
-
-    // Check if logging in as Admin using environment credentials
-    const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-
-    if (adminEmail && email === adminEmail) {
-      const admin = await this.syncAdminFromEnv();
-      if (!admin || !admin.passwordHash) {
-        throw new UnauthorizedException('Admin account not configured.');
+    try {
+      if (!dto || !dto.email || !dto.password) {
+        throw new BadRequestException('Email and password are required.');
       }
-      const isMatch = bcrypt.compareSync(password, admin.passwordHash);
-      if (!isMatch) {
-        throw new UnauthorizedException('Invalid credentials.');
+
+      const email = String(dto.email).trim().toLowerCase();
+      const password = String(dto.password);
+
+      // Check if logging in as Admin using environment credentials
+      const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+
+      if (adminEmail && email === adminEmail) {
+        const admin = await this.syncAdminFromEnv();
+        if (!admin || !admin.passwordHash) {
+          throw new UnauthorizedException('Admin account not configured.');
+        }
+        const isMatch = bcrypt.compareSync(password, admin.passwordHash);
+        if (!isMatch) {
+          throw new UnauthorizedException('Invalid credentials for administrator.');
+        }
+        return {
+          user: {
+            id: admin.id,
+            displayName: admin.displayName,
+            email: admin.email,
+            role: admin.role,
+            points: admin.points,
+            badges: admin.badges,
+          },
+          token: `dharohar-session-${randomUUID()}`,
+        };
       }
+
+      // Find user in Contributor database
+      const user = await this.prisma.contributor.findFirst({
+        where: {
+          email: { equals: email, mode: 'insensitive' },
+        },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('No account found with this email address.');
+      }
+
+      // Verify cryptographic bcrypt password hash
+      let isValid = false;
+      if (user.passwordHash) {
+        isValid = bcrypt.compareSync(password, user.passwordHash);
+      } else {
+        // Fallback for demo seed accounts
+        isValid = password === 'dharohar2026';
+      }
+
+      if (!isValid) {
+        throw new UnauthorizedException('Invalid password entered.');
+      }
+
       return {
         user: {
-          id: admin.id,
-          displayName: admin.displayName,
-          email: admin.email,
-          role: admin.role,
-          points: admin.points,
-          badges: admin.badges,
+          id: user.id,
+          displayName: user.displayName,
+          email: user.email,
+          role: user.role,
+          points: user.points,
+          badges: user.badges,
         },
         token: `dharohar-session-${randomUUID()}`,
       };
+    } catch (err: any) {
+      console.error('[AuthService.login Error]:', err);
+      if (err instanceof UnauthorizedException || err instanceof BadRequestException) {
+        throw err;
+      }
+      throw new BadRequestException(err?.message || 'Login verification failed');
     }
-
-    // Find user in Contributor database
-    const user = await this.prisma.contributor.findFirst({
-      where: {
-        email: { equals: email, mode: 'insensitive' },
-      },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('No account found with this email address.');
-    }
-
-    // Verify cryptographic bcrypt password hash
-    let isValid = false;
-    if (user.passwordHash) {
-      isValid = bcrypt.compareSync(password, user.passwordHash);
-    } else {
-      // Fallback for demo seed accounts
-      isValid = password === 'dharohar2026';
-    }
-
-    if (!isValid) {
-      throw new UnauthorizedException('Invalid password entered.');
-    }
-
-    return {
-      user: {
-        id: user.id,
-        displayName: user.displayName,
-        email: user.email,
-        role: user.role,
-        points: user.points,
-        badges: user.badges,
-      },
-      token: `dharohar-session-${randomUUID()}`,
-    };
   }
 
   // 3. Return demo role users for fast client 1-click testing

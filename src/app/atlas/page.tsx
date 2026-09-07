@@ -6,7 +6,11 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import RecordCard, { RecordCardData } from '@/components/RecordCard';
-import { useTranslations } from '@/context/LanguageContext';
+import { useTranslations, useLanguage } from '@/context/LanguageContext';
+import { getApiUrl } from '@/utils/apiUrl';
+import { cachedFetch } from '@/utils/apiCache';
+import type { UserLocation } from '@/utils/coordinates';
+import { getCoordinatesForRegion } from '@/utils/coordinates';
 
 const AtlasMap = dynamic(() => import('@/components/AtlasMap'), {
   ssr: false,
@@ -33,6 +37,7 @@ import {
   Compass,
   Users,
   Search,
+  LocateFixed,
 } from 'lucide-react';
 
 interface LanguageLink {
@@ -68,6 +73,7 @@ interface DistrictRegion {
   // Geospatial coordinate coordinates for SVG overlay pins
   coordinates?: { x: number; y: number };
   stateName?: string;
+  distanceKm?: number;
 }
 
 interface StateRegion {
@@ -101,10 +107,26 @@ const REGION_COORDINATES: Record<string, { x: number; y: number }> = {
   'Mon': { x: 87, y: 38 },
 };
 
+// Haversine formula to compute great-circle distance in kilometers
+function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
 export default function AtlasPage() {
   const t = useTranslations('atlas');
   const tCommon = useTranslations('common');
   const tNav = useTranslations('nav');
+  const { detectedState } = useLanguage();
 
   const [states, setStates] = useState<StateRegion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,15 +137,21 @@ export default function AtlasPage() {
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  // Heritage Near Me geolocation & proximity states
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [nearestDistanceKm, setNearestDistanceKm] = useState<number | null>(null);
+  const [filterNearMeOnly, setFilterNearMeOnly] = useState(false);
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
+
+  const apiUrl = getApiUrl();
 
   useEffect(() => {
     async function loadRegions() {
       try {
         setLoading(true);
-        const res = await fetch(`${apiUrl}/api/regions`, { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
+        const data = await cachedFetch<StateRegion[]>(`${apiUrl}/api/regions`, { ttl: 30 * 60 * 1000 });
+        if (data && Array.isArray(data)) {
           setStates(data);
           // Keep selectedRegion null on initial load so user sees full India map overview
         }
@@ -144,28 +172,19 @@ export default function AtlasPage() {
       return;
     }
 
-    const abortController = new AbortController();
-    const timeoutId = setTimeout(() => abortController.abort(), 6000);
-
     async function loadRegionRecords() {
       try {
         setLoadingRecords(true);
-        const res = await fetch(`${apiUrl}/api/records?regionId=${selectedRegion?.id}&limit=6`, {
-          signal: abortController.signal,
-          cache: 'no-store',
+        const data = await cachedFetch<any>(`${apiUrl}/api/records?regionId=${selectedRegion?.id}&limit=6`, {
+          ttl: 60 * 1000,
         });
-        clearTimeout(timeoutId);
-        if (res.ok) {
-          const data = await res.json();
-          setRegionRecords(data.data || []);
+        if (data && Array.isArray(data.data)) {
+          setRegionRecords(data.data);
         } else {
-          console.warn('API returned non-ok status for region records:', res.status);
           setRegionRecords([]);
         }
       } catch (err: any) {
-        if (err.name !== 'AbortError') {
-          console.error('Error loading region records:', err);
-        }
+        console.error('Error loading region records:', err);
         setRegionRecords([]);
       } finally {
         setLoadingRecords(false);
@@ -173,12 +192,7 @@ export default function AtlasPage() {
     }
 
     loadRegionRecords();
-
-    return () => {
-      clearTimeout(timeoutId);
-      abortController.abort();
-    };
-  }, [selectedRegion, apiUrl]);
+  }, [selectedRegion?.id, apiUrl]);
 
   // Flatten all monitored regions (States and child Districts) for map markers & directory
   const allDistricts: DistrictRegion[] = states.flatMap((s) => {
@@ -214,7 +228,24 @@ export default function AtlasPage() {
     return items;
   });
 
-  const filteredDistricts = allDistricts.filter((d) => {
+  // Calculate distance for all monitored districts relative to the user location
+  const allDistrictsWithDistance: DistrictRegion[] = allDistricts.map((d) => {
+    if (!userLocation) return d;
+    const coords = getCoordinatesForRegion(d.name, d.stateName);
+    const dist = calculateDistanceKm(userLocation.lat, userLocation.lng, coords[0], coords[1]);
+    return { ...d, distanceKm: dist };
+  });
+
+  // Sort by distance when user location is active
+  const sortedDistricts = userLocation
+    ? [...allDistrictsWithDistance].sort((a, b) => (a.distanceKm ?? 99999) - (b.distanceKm ?? 99999))
+    : allDistrictsWithDistance;
+
+  // Filter districts based on search query and proximity mode
+  const filteredDistricts = sortedDistricts.filter((d) => {
+    if (filterNearMeOnly && userLocation && (d.distanceKm ?? 99999) > 850) {
+      return false;
+    }
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -223,6 +254,97 @@ export default function AtlasPage() {
       d.crafts.some((c) => c.craft.name.toLowerCase().includes(q))
     );
   });
+
+  // Fallback: if proximity filter returned 0, display the top 5 closest districts
+  const displayDistricts =
+    filterNearMeOnly && userLocation && filteredDistricts.length === 0
+      ? sortedDistricts.slice(0, 5)
+      : filteredDistricts;
+
+  // Find and select closest district with records or living traditions
+  const findClosestDistrict = (loc: UserLocation, districtList: DistrictRegion[]) => {
+    if (!districtList.length) return;
+
+    let closest: DistrictRegion | null = null;
+    let minDist = Infinity;
+
+    districtList.forEach((d) => {
+      const coords = getCoordinatesForRegion(d.name, d.stateName);
+      if (coords) {
+        const dist = calculateDistanceKm(loc.lat, loc.lng, coords[0], coords[1]);
+        if (dist < minDist) {
+          minDist = dist;
+          closest = { ...d, distanceKm: dist };
+        }
+      }
+    });
+
+    if (closest) {
+      setSelectedRegion(closest);
+      setNearestDistanceKm(minDist);
+      setViewMode('map');
+    }
+  };
+
+  const handleFindNearMe = () => {
+    if (userLocation) {
+      // Toggle off when clicked again
+      setUserLocation(null);
+      setFilterNearMeOnly(false);
+      setNearestDistanceKm(null);
+      setLocationNotice(null);
+      return;
+    }
+
+    setIsLocating(true);
+    setLocationNotice(null);
+
+    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const loc: UserLocation = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracyKm: Math.round((pos.coords.accuracy || 500) / 1000),
+            address: 'Your Position',
+          };
+          setUserLocation(loc);
+          setFilterNearMeOnly(true);
+          findClosestDistrict(loc, allDistricts);
+          setIsLocating(false);
+        },
+        (err) => {
+          console.warn('Geolocation unavailable/denied, fallback to regional centroid:', err);
+          const fallbackState = detectedState || 'Maharashtra';
+          const coords = getCoordinatesForRegion(fallbackState);
+          const loc: UserLocation = {
+            lat: coords[0],
+            lng: coords[1],
+            address: `${fallbackState} (Regional Focus)`,
+          };
+          setUserLocation(loc);
+          setFilterNearMeOnly(true);
+          findClosestDistrict(loc, allDistricts);
+          setLocationNotice(t('locationDenied'));
+          setIsLocating(false);
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    } else {
+      const fallbackState = detectedState || 'Maharashtra';
+      const coords = getCoordinatesForRegion(fallbackState);
+      const loc: UserLocation = {
+        lat: coords[0],
+        lng: coords[1],
+        address: `${fallbackState} (Regional Focus)`,
+      };
+      setUserLocation(loc);
+      setFilterNearMeOnly(true);
+      findClosestDistrict(loc, allDistricts);
+      setLocationNotice(t('locationDenied'));
+      setIsLocating(false);
+    }
+  };
 
   const getMarkerColor = (d: DistrictRegion) => {
     if (activeLayer === 'craft') {
@@ -259,39 +381,100 @@ export default function AtlasPage() {
             </h1>
           </div>
 
-          {/* Layer Selector */}
-          <div className="flex items-center space-x-2 bg-[#FFFFFF] p-1 rounded-lg border border-[#E4DDD0] text-xs font-sans">
-            <span className="text-[#2A2420]/50 px-2 hidden sm:inline">Layer:</span>
+          {/* Heritage Near Me Quick-Locate & Layer Selector */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Heritage Near Me Button */}
             <button
-              onClick={() => setActiveLayer('language')}
-              className={`px-3 py-1 rounded transition-colors ${
-                activeLayer === 'language'
-                  ? 'bg-[#2F6E5D] text-[#FAF7F1] font-medium shadow-none'
-                  : 'text-[#2A2420]/70 hover:text-[#2A2420]'
+              id="atlas-heritage-near-me-btn"
+              onClick={handleFindNearMe}
+              disabled={isLocating}
+              className={`px-3 py-1.5 rounded-lg text-xs font-sans font-medium transition-all flex items-center space-x-2 border ${
+                userLocation
+                  ? 'bg-[#00D2FF]/15 text-[#006688] border-[#00D2FF]/50 shadow-[0_0_12px_rgba(0,210,255,0.25)] hover:bg-[#00D2FF]/25'
+                  : 'bg-[#FFFFFF] text-[#2A2420] border-[#E4DDD0] hover:border-[#C97A3D] hover:text-[#C97A3D] shadow-sm'
               }`}
+              title={userLocation ? t('clearNearMe') : t('heritageNearMe')}
             >
-              Language Vitality
+              <LocateFixed
+                className={`w-3.5 h-3.5 ${
+                  isLocating
+                    ? 'animate-spin text-[#00D2FF]'
+                    : userLocation
+                    ? 'text-[#00B4D8] animate-pulse'
+                    : 'text-[#C97A3D]'
+                }`}
+              />
+              <span className="font-medium">
+                {isLocating
+                  ? t('locating')
+                  : userLocation
+                  ? t('nearMeActive')
+                  : t('heritageNearMe')}
+              </span>
+              {userLocation && (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setUserLocation(null);
+                    setFilterNearMeOnly(false);
+                    setNearestDistanceKm(null);
+                    setLocationNotice(null);
+                  }}
+                  className="ml-1 hover:text-[#B54A3A] p-0.5 rounded cursor-pointer"
+                  title={t('clearNearMe')}
+                >
+                  <X className="w-3 h-3" />
+                </span>
+              )}
             </button>
-            <button
-              onClick={() => setActiveLayer('craft')}
-              className={`px-3 py-1 rounded transition-colors ${
-                activeLayer === 'craft'
-                  ? 'bg-[#2F6E5D] text-[#FAF7F1] font-medium shadow-none'
-                  : 'text-[#2A2420]/70 hover:text-[#2A2420]'
-              }`}
-            >
-              Craft Vitality
-            </button>
-            <button
-              onClick={() => setActiveLayer('density')}
-              className={`px-3 py-1 rounded transition-colors ${
-                activeLayer === 'density'
-                  ? 'bg-[#2F6E5D] text-[#FAF7F1] font-medium shadow-none'
-                  : 'text-[#2A2420]/70 hover:text-[#2A2420]'
-              }`}
-            >
-              Contribution Density
-            </button>
+
+            {locationNotice && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[11px] px-2.5 py-1 rounded-full flex items-center space-x-1.5 animate-fadeIn">
+                <AlertCircle className="w-3 h-3 text-amber-600 flex-shrink-0" />
+                <span>{locationNotice}</span>
+                <button
+                  onClick={() => setLocationNotice(null)}
+                  className="ml-1 text-amber-600 hover:text-amber-900"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Layer Selector */}
+            <div className="flex items-center space-x-2 bg-[#FFFFFF] p-1 rounded-lg border border-[#E4DDD0] text-xs font-sans">
+              <span className="text-[#2A2420]/50 px-2 hidden sm:inline">Layer:</span>
+              <button
+                onClick={() => setActiveLayer('language')}
+                className={`px-3 py-1 rounded transition-colors ${
+                  activeLayer === 'language'
+                    ? 'bg-[#2F6E5D] text-[#FAF7F1] font-medium shadow-none'
+                    : 'text-[#2A2420]/70 hover:text-[#2A2420]'
+                }`}
+              >
+                Language Vitality
+              </button>
+              <button
+                onClick={() => setActiveLayer('craft')}
+                className={`px-3 py-1 rounded transition-colors ${
+                  activeLayer === 'craft'
+                    ? 'bg-[#2F6E5D] text-[#FAF7F1] font-medium shadow-none'
+                    : 'text-[#2A2420]/70 hover:text-[#2A2420]'
+                }`}
+              >
+                Craft Vitality
+              </button>
+              <button
+                onClick={() => setActiveLayer('density')}
+                className={`px-3 py-1 rounded transition-colors ${
+                  activeLayer === 'density'
+                    ? 'bg-[#2F6E5D] text-[#FAF7F1] font-medium shadow-none'
+                    : 'text-[#2A2420]/70 hover:text-[#2A2420]'
+                }`}
+              >
+                Contribution Density
+              </button>
+            </div>
           </div>
 
           {/* View Toggle & Search */}
@@ -343,20 +526,45 @@ export default function AtlasPage() {
             <div className="flex-1 relative bg-[#FAF7F1] flex flex-col overflow-hidden">
               <AtlasMap
                 states={states}
-                districts={filteredDistricts}
+                districts={displayDistricts}
                 selectedRegion={selectedRegion}
                 onSelectRegion={(d) => setSelectedRegion(d)}
                 activeLayer={activeLayer}
+                userLocation={userLocation}
+                onFindNearMe={handleFindNearMe}
+                isLocating={isLocating}
               />
             </div>
           ) : (
             /* Accessible Directory List View */
             <div className="flex-1 p-6 sm:p-10 overflow-y-auto max-w-4xl mx-auto w-full">
-              <h2 className="font-serif text-2xl text-[#2A2420] mb-6">
-                All Monitored Cultural Districts
-              </h2>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="font-serif text-2xl text-[#2A2420]">
+                    {userLocation ? t('nearMeActive') : 'All Monitored Cultural Districts'}
+                  </h2>
+                  {userLocation && (
+                    <p className="text-xs text-[#2A2420]/60 mt-1">
+                      Showing living heritage traditions ordered by geographic proximity to your location.
+                    </p>
+                  )}
+                </div>
+                {userLocation && (
+                  <button
+                    onClick={() => {
+                      setUserLocation(null);
+                      setFilterNearMeOnly(false);
+                      setNearestDistanceKm(null);
+                    }}
+                    className="text-xs text-[#C97A3D] hover:underline flex items-center space-x-1"
+                  >
+                    <span>{t('clearNearMe')}</span>
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
               <div className="space-y-4">
-                {filteredDistricts.map((d) => (
+                {displayDistricts.map((d) => (
                   <div
                     key={d.id}
                     onClick={() => setSelectedRegion(d)}
@@ -392,6 +600,12 @@ export default function AtlasPage() {
                     </div>
 
                     <div className="flex items-center space-x-3">
+                      {d.distanceKm !== undefined && (
+                        <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#00D2FF]/10 text-[#006688] border border-[#00D2FF]/30 font-mono flex items-center space-x-1">
+                          <MapPin className="w-2.5 h-2.5 text-[#00B4D8]" />
+                          <span>~{d.distanceKm} km</span>
+                        </span>
+                      )}
                       <span className="font-mono text-xs text-[#C97A3D]">
                         {d._count.records} {tNav('records')}
                       </span>
@@ -419,6 +633,29 @@ export default function AtlasPage() {
                     <X className="w-4 h-4" />
                   </button>
                 </div>
+
+                {/* Proximity / Nearest Living Heritage Banner */}
+                {userLocation && (
+                  <div className="mb-4 p-3 rounded-lg bg-[#00D2FF]/10 border border-[#00D2FF]/40 flex items-center justify-between text-xs">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 rounded-full bg-[#00D2FF] animate-ping" />
+                      <span className="font-semibold text-[#006688]">
+                        {t('nearestHeritageFound')}
+                      </span>
+                    </div>
+                    <span className="font-mono text-[11px] font-bold text-[#005577] bg-[#FFFFFF] px-2.5 py-0.5 rounded border border-[#00D2FF]/30 shadow-sm">
+                      ~{selectedRegion.distanceKm !== undefined
+                        ? selectedRegion.distanceKm
+                        : calculateDistanceKm(
+                            userLocation.lat,
+                            userLocation.lng,
+                            getCoordinatesForRegion(selectedRegion.name, selectedRegion.stateName)[0],
+                            getCoordinatesForRegion(selectedRegion.name, selectedRegion.stateName)[1]
+                          )}{' '}
+                      km
+                    </span>
+                  </div>
+                )}
 
                 {/* Region Title & Vitality Pill */}
                 <h2 className="font-serif text-2xl sm:text-3xl text-[#2A2420] font-medium mb-1">

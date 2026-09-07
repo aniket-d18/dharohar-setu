@@ -85,7 +85,15 @@
     "dossierSelectPrompt": "নথিভুক্ত মৌখিক রেকর্ড, ভাষা ও সংরক্ষণ ঝুঁকি দেখতে মানচিত্রে কোনো রাজ্য বা পিন নির্বাচন করুন।",
     "directRecords": "নথিভুক্ত রেকর্ড",
     "vitalityStatus": "জীবন্ততার অবস্থা",
-    "viewRegionRecords": "এই অঞ্চলের সমস্ত রেকর্ড দেখুন"
+    "viewRegionRecords": "এই অঞ্চলের সমস্ত রেকর্ড দেখুন",
+    "heritageNearMe": "আমার কাছাকাছি ঐতিহ্য",
+    "locating": "অবস্থান নির্ণয় করা হচ্ছে...",
+    "youAreHere": "আপনি এখানে আছেন",
+    "nearestHeritageFound": "নিকটতম জীবন্ত ঐতিহ্য",
+    "distanceAway": "{distance} কিমি দূরে",
+    "nearMeActive": "আপনার কাছাকাছি ঐতিহ্য",
+    "clearNearMe": "সমগ্র ভারত দেখুন",
+    "locationDenied": "অবস্থান অ্যাক্সেস অনুপলব্ধ। আপনার রাজ্যের ঐতিহ্য দেখানো হচ্ছে।"
   },
   "untranslatable": {
     "badge": "ভাষাতাত্ত্বিক ও সাংস্কৃতিক ধারণাতত্ত্ব",

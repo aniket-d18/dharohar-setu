@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { getApiUrl } from '@/utils/apiUrl';
 
 export interface UserProfile {
   id: string;
@@ -46,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [hasAdminConfigured, setHasAdminConfigured] = useState<boolean>(false);
   const [adminEmail, setAdminEmail] = useState<string | null>(null);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const apiUrl = getApiUrl();
 
   // Load existing session on initial render
   useEffect(() => {

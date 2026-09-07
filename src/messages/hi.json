@@ -76,7 +76,24 @@
     "filterRegion": "क्षेत्र",
     "showingRecords": "{count} सजीव सांस्कृतिक अभिलेख प्रदर्शित",
     "emptyTitle": "आपकी खोज से मेल खाती कोई परम्परा नहीं मिली",
-    "emptyDesc": "कृपया खोज शब्दों को बदलकर देखें अथवा फ़िल्टर हटाएँ।"
+    "emptyDesc": "कृपया खोज शब्दों को बदलकर देखें अथवा फ़िल्टर हटाएँ।",
+    "allMedia": "सभी माध्यम",
+    "audioRecording": "ऑडियो रिकॉर्डिंग",
+    "videoDemonstration": "वीडियो प्रदर्शन",
+    "imageArtifact": "चित्र / धरोहर",
+    "nativeText": "मूल पाठ",
+    "vitalityStatus": "सजीवता स्थिति",
+    "allUrgencies": "सभी तात्कालिकता स्तर",
+    "critical": "अति संवेदनशील",
+    "endangered": "संकटग्रस्त",
+    "vulnerable": "संवेदनशील",
+    "safe": "सुरक्षित",
+    "sortBy": "क्रमबद्ध करें",
+    "newestFirst": "नवीनतम पहले",
+    "highestUrgency": "उच्चतम तात्कालिकता",
+    "mostVerified": "सर्वाधिक सत्यापित",
+    "filtersApplied": "फ़िल्टर लागू",
+    "resetFilters": "सभी फ़िल्टर हटाएं"
   },
   "atlas": {
     "title": "संवादात्मक सांस्कृतिक एटलस",
@@ -85,7 +102,15 @@
     "dossierSelectPrompt": "प्रलेखित मौखिक अभिलेख, भाषाएँ और संरक्षण संवेदनशीलता देखने के लिए मानचित्र पर किसी राज्य या पिन का चयन करें।",
     "directRecords": "प्रलेखित अभिलेख",
     "vitalityStatus": "जीवन-क्षमता स्थिति",
-    "viewRegionRecords": "इस क्षेत्र के सभी अभिलेख देखें"
+    "viewRegionRecords": "इस क्षेत्र के सभी अभिलेख देखें",
+    "heritageNearMe": "मेरे निकट धरोहर",
+    "locating": "स्थान खोज रहे हैं...",
+    "youAreHere": "आप यहाँ हैं",
+    "nearestHeritageFound": "निकटतम सजीव धरोहर",
+    "distanceAway": "{distance} किमी दूर",
+    "nearMeActive": "आपके निकट धरोहर",
+    "clearNearMe": "सम्पूर्ण भारत देखें",
+    "locationDenied": "स्थान की अनुमति अनुपलब्ध। आपके राज्य की धरोहर दिखाई जा रही है।"
   },
   "untranslatable": {
     "badge": "भाषाई एवं सांस्कृतिक तत्वमीमांसा",
@@ -153,5 +178,29 @@
     "vulnerable": "संवेदनशील",
     "copyright": "© 2026 धरोहर सेतु — स्मार्ट इंडिया हैकाथॉन हेतु निर्मित।",
     "mission": "गरिमा और सत्यापन योग्य प्रामाणिकता के साथ भारतीय सांस्कृतिक स्मृतियों का संरक्षण"
+  },
+  "record": {
+    "backToArchive": "अभिलेखागार में वापस जाएं",
+    "deleteRecord": "अभिलेख हटाएं",
+    "shareMemory": "स्मृति साझा करें",
+    "copied": "कॉपी किया गया",
+    "flagTerm": "शब्द चिह्नित करें",
+    "originRegion": "मूल क्षेत्र",
+    "langDialect": "भाषा / बोली",
+    "associatedCraft": "संबंधित शिल्प",
+    "voiceCustodian": "ध्वनि संरक्षक",
+    "archivedOn": "संग्रहण तिथि",
+    "subjectTags": "विषय टैग",
+    "recordNotFound": "अभिलेख नहीं मिला",
+    "recordNotFoundDesc": "आपके द्वारा अनुरोधित सांस्कृतिक धरोहर स्थानांतरित कर दी गई है या प्रतिबंधित है।",
+    "returnToArchive": "अभिलेखागार में वापस जाएं",
+    "tabTranscription": "प्रतिलेखन एवं अनुवाद",
+    "tabContext": "सांस्कृतिक संदर्भ एवं परंपरा",
+    "tabVerification": "सत्यापन प्रक्रिया",
+    "tabConsent": "सहमति एवं अधिकार",
+    "unspecified": "अनिर्दिष्ट",
+    "anonymousElder": "अनाम वरिष्ठ",
+    "yearsOld": "वर्ष",
+    "speakersRemaining": "मूल भाषी शेष"
   }
 }

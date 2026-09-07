@@ -76,7 +76,24 @@
     "filterRegion": "Region",
     "showingRecords": "Displaying {count} living cultural records",
     "emptyTitle": "No cultural traditions match your search",
-    "emptyDesc": "Try adjusting your search terms or clearing the filters."
+    "emptyDesc": "Try adjusting your search terms or clearing the filters.",
+    "allMedia": "All Media",
+    "audioRecording": "Audio Recording",
+    "videoDemonstration": "Video Demonstration",
+    "imageArtifact": "Image / Artifact",
+    "nativeText": "Native Text",
+    "vitalityStatus": "Vitality Status",
+    "allUrgencies": "All Urgencies",
+    "critical": "Critical",
+    "endangered": "Endangered",
+    "vulnerable": "Vulnerable",
+    "safe": "Safer",
+    "sortBy": "Sort By",
+    "newestFirst": "Newest First",
+    "highestUrgency": "Highest Urgency",
+    "mostVerified": "Most Verified",
+    "filtersApplied": "Filters applied",
+    "resetFilters": "Reset all filters"
   },
   "atlas": {
     "title": "Interactive Cultural Atlas",
@@ -85,7 +102,15 @@
     "dossierSelectPrompt": "Select a state or pin on the map to inspect documented oral records, languages, and preservation vulnerability.",
     "directRecords": "Documented Records",
     "vitalityStatus": "Vitality Status",
-    "viewRegionRecords": "View records from this region"
+    "viewRegionRecords": "View records from this region",
+    "heritageNearMe": "Heritage Near Me",
+    "locating": "Locating position...",
+    "youAreHere": "You Are Here",
+    "nearestHeritageFound": "Nearest Living Heritage",
+    "distanceAway": "{distance} km away",
+    "nearMeActive": "Heritage near you",
+    "clearNearMe": "Show all India",
+    "locationDenied": "Location access unavailable. Showing heritage in your state."
   },
   "untranslatable": {
     "badge": "Linguistic & Cultural Ontologies",
@@ -153,5 +178,29 @@
     "vulnerable": "Vulnerable",
     "copyright": "© 2026 Dharohar Setu — Built for Smart India Hackathon.",
     "mission": "Preserving Indian cultural memory with dignity and verifiable provenance"
+  },
+  "record": {
+    "backToArchive": "Back to archive",
+    "deleteRecord": "Delete record",
+    "shareMemory": "Share memory",
+    "copied": "Copied",
+    "flagTerm": "Flag term",
+    "originRegion": "Origin Region",
+    "langDialect": "Language / Dialect",
+    "associatedCraft": "Associated Craft",
+    "voiceCustodian": "Voice Custodian",
+    "archivedOn": "Archived On",
+    "subjectTags": "Subject Tags",
+    "recordNotFound": "Record not found",
+    "recordNotFoundDesc": "The cultural artifact you requested may have been relocated or is restricted.",
+    "returnToArchive": "Return to archive",
+    "tabTranscription": "Transcripts & Translation",
+    "tabContext": "Cultural Meaning & Lineage",
+    "tabVerification": "Verification Trail",
+    "tabConsent": "Consent & Rights",
+    "unspecified": "Unspecified",
+    "anonymousElder": "Anonymous Elder",
+    "yearsOld": "years old",
+    "speakersRemaining": "native speakers remaining"
   }
 }

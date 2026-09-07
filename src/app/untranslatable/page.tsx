@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 
 import { useTranslations } from '@/context/LanguageContext';
+import { getApiUrl } from '@/utils/apiUrl';
+import { cachedFetch } from '@/utils/apiCache';
 
 interface UntranslatableItem {
   id: string;
@@ -53,37 +55,23 @@ export default function UntranslatableGalleryPage() {
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const apiUrl = getApiUrl();
 
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);
-        // Fetch discovery of the day and full catalog in parallel with no-store
-        const [dayRes, listRes] = await Promise.all([
-          fetch(`${apiUrl}/api/untranslatable/discovery-of-the-day`, { cache: 'no-store' }).catch(() => null),
-          fetch(`${apiUrl}/api/untranslatable`, { cache: 'no-store' }).catch(() => null),
+        // Fetch discovery of the day and full catalog in parallel using cachedFetch
+        const [dayData, listData] = await Promise.all([
+          cachedFetch<UntranslatableItem>(`${apiUrl}/api/untranslatable/discovery-of-the-day`, { ttl: 15 * 60 * 1000 }).catch(() => null),
+          cachedFetch<UntranslatableItem[]>(`${apiUrl}/api/untranslatable`, { ttl: 15 * 60 * 1000 }).catch(() => []),
         ]);
 
-        if (dayRes && dayRes.ok) {
-          const text = await dayRes.text();
-          if (text && text.trim()) {
-            try {
-              const dayData = JSON.parse(text);
-              if (dayData && dayData.id) {
-                setFeatured(dayData);
-              }
-            } catch (parseErr) {
-              console.warn('Failed to parse discovery of the day:', parseErr);
-            }
-          }
+        if (dayData && dayData.id) {
+          setFeatured(dayData);
         }
-
-        if (listRes && listRes.ok) {
-          const listData = await listRes.json();
-          if (Array.isArray(listData)) {
-            setEntries(listData);
-          }
+        if (Array.isArray(listData)) {
+          setEntries(listData);
         }
       } catch (err) {
         console.error('Error fetching untranslatable words:', err);

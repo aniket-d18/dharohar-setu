@@ -1,5 +1,6 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
+import { serverCache } from '../../common/cache.service';
 
 @Injectable()
 export class UntranslatableService {
@@ -9,6 +10,10 @@ export class UntranslatableService {
   ) {}
 
   async getAll(featuredOnly?: boolean, search?: string) {
+    const cacheKey = `untranslatable:all:${featuredOnly}:${search || ''}`;
+    const cached = serverCache.get(cacheKey);
+    if (cached) return cached;
+
     const where: any = {};
     if (featuredOnly) {
       where.isFeatured = true;
@@ -22,7 +27,7 @@ export class UntranslatableService {
       ];
     }
 
-    return this.prisma.untranslatableEntry.findMany({
+    const data = await this.prisma.untranslatableEntry.findMany({
       where,
       orderBy: [{ isFeatured: 'desc' }, { createdAt: 'desc' }],
       include: {
@@ -48,11 +53,18 @@ export class UntranslatableService {
         },
       },
     });
+
+    serverCache.set(cacheKey, data, 15 * 60 * 1000); // 15 mins
+    return data;
   }
 
   async getDiscoveryOfTheDay() {
+    const cacheKey = 'untranslatable:discovery-of-the-day';
+    const cached = serverCache.get(cacheKey);
+    if (cached) return cached;
+
     // Consolidated single query using composite index (isFeatured DESC, createdAt DESC)
-    return this.prisma.untranslatableEntry.findFirst({
+    const data = await this.prisma.untranslatableEntry.findFirst({
       orderBy: [{ isFeatured: 'desc' }, { createdAt: 'desc' }],
       include: {
         record: {
@@ -82,6 +94,9 @@ export class UntranslatableService {
         },
       },
     });
+
+    serverCache.set(cacheKey, data, 15 * 60 * 1000); // 15 mins
+    return data;
   }
 
   async getById(id: string) {

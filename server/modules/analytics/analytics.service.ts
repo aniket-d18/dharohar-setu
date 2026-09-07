@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
+import { serverCache } from '../../common/cache.service';
 
 @Injectable()
 export class AnalyticsService {
@@ -10,6 +11,10 @@ export class AnalyticsService {
 
   // 1. Live Counters for Homepage
   async getLiveCounters() {
+    const cacheKey = 'analytics:live_counters';
+    const cached = serverCache.get(cacheKey);
+    if (cached) return cached;
+
     const [
       totalRecords,
       totalLanguages,
@@ -45,17 +50,24 @@ export class AnalyticsService {
       }),
     ]);
 
-    return {
+    const result = {
       totalRecords,
       totalLanguages,
       verifiedRecords,
       totalContributors,
       regionsCovered: regionsWithRecords.length,
     };
+
+    serverCache.set(cacheKey, result, 30 * 1000); // 30s TTL
+    return result;
   }
 
   // 2. Endangered Heritage Dashboard Analytics
   async getDashboardAnalytics() {
+    const cacheKey = 'analytics:dashboard';
+    const cached = serverCache.get(cacheKey);
+    if (cached) return cached;
+
     const [
       criticalRegions,
       languagesProjection,
@@ -147,7 +159,7 @@ export class AnalyticsService {
       }),
     ]);
 
-    return {
+    const dashboardResult = {
       criticalRegions: criticalRegions.map(r => ({
         id: r.id,
         name: r.name,
@@ -172,5 +184,8 @@ export class AnalyticsService {
         regionCount: v._count.id,
       })),
     };
+
+    serverCache.set(cacheKey, dashboardResult, 60 * 1000); // 60s TTL
+    return dashboardResult;
   }
 }

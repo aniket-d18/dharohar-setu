@@ -152,8 +152,8 @@ export default function Navbar() {
       {/* Main Navigation Row */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         <Link href="/" className="flex items-center space-x-3.5 group shrink-0">
-          <div className="w-10 h-10 rounded-lg bg-[#FFFFFF] border border-[#B8D4CB] flex items-center justify-center text-[#2F6E5D] group-hover:border-[#2F6E5D] transition-colors shadow-none">
-            <Sparkles className="w-5 h-5" />
+          <div className="w-12 h-12 rounded-lg bg-[#FFFFFF] border border-[#B8D4CB] overflow-hidden flex items-center justify-center group-hover:border-[#2F6E5D] transition-colors shadow-sm shrink-0">
+            <img src="/images/logo.png" alt="Dharohar Setu Logo" className="w-full h-full object-cover" />
           </div>
           <div>
             <span className="font-serif text-2xl font-semibold tracking-tight text-[#2A2420] block leading-none">

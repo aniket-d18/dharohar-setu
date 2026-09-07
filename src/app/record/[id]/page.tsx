@@ -7,7 +7,11 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import RecordCard, { RecordCardData } from '@/components/RecordCard';
 import { getCategoryCover } from '@/utils/categoryCovers';
+import { getApiUrl } from '@/utils/apiUrl';
 import { useAuth } from '@/context/AuthContext';
+import { useTranslations, useLanguage } from '@/context/LanguageContext';
+import { cachedFetch } from '@/utils/apiCache';
+import { CATEGORY_I18N } from '@/utils/captureI18n';
 import {
   Play,
   Pause,
@@ -116,6 +120,11 @@ export default function RecordDetailPage() {
   const router = useRouter();
   const recordId = params?.id as string;
 
+  const t = useTranslations('record');
+  const tCommon = useTranslations('common');
+  const { language } = useLanguage();
+  const currentLang = (language === 'mr' || language === 'hi') ? language : 'en';
+
   const [record, setRecord] = useState<RecordDetail | null>(null);
   const [relatedRecords, setRelatedRecords] = useState<RecordCardData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,7 +142,7 @@ export default function RecordDetailPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const apiUrl = getApiUrl();
   const { user } = useAuth();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -173,20 +182,18 @@ export default function RecordDetailPage() {
     async function fetchDetail() {
       try {
         setLoading(true);
-        const res = await fetch(`${apiUrl}/api/records/${recordId}`);
-        if (!res.ok) throw new Error('Record not found');
-        const data = await res.json();
+        const data = await cachedFetch<RecordDetail>(`${apiUrl}/api/records/${recordId}`, { ttl: 60 * 1000 });
+        if (!data) throw new Error('Record not found');
         setRecord(data);
 
         // Fetch related records from same region or language
-        const relUrl = data.languageId
-          ? `${apiUrl}/api/records?languageId=${data.languageId}&limit=4`
-          : `${apiUrl}/api/records?regionId=${data.regionId}&limit=4`;
-        const relRes = await fetch(relUrl);
-        if (relRes.ok) {
-          const relData = await relRes.json();
+        const relUrl = (data as any).languageId
+          ? `${apiUrl}/api/records?languageId=${(data as any).languageId}&limit=4`
+          : `${apiUrl}/api/records?regionId=${(data as any).regionId}&limit=4`;
+        const relData = await cachedFetch<any>(relUrl, { ttl: 60 * 1000 });
+        if (relData && Array.isArray(relData.data)) {
           setRelatedRecords(
-            (relData.data || []).filter((r: RecordCardData) => r.id !== recordId).slice(0, 3)
+            relData.data.filter((r: RecordCardData) => r.id !== recordId).slice(0, 3)
           );
         }
       } catch (err) {
@@ -257,21 +264,21 @@ export default function RecordDetailPage() {
         return (
           <span className="inline-flex items-center px-3 py-1 rounded text-xs font-sans font-medium bg-[#B54A3A]/10 text-[#B54A3A] border border-[#B54A3A]/30">
             <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
-            Expert reviewed
+            {tCommon('expertReviewed')}
           </span>
         );
       case 'STEWARD_ENDORSED':
         return (
           <span className="inline-flex items-center px-3 py-1 rounded text-xs font-sans font-medium bg-[#C97A3D]/10 text-[#C97A3D] border border-[#C97A3D]/30">
             <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-            Steward endorsed
+            {tCommon('stewardEndorsed')}
           </span>
         );
       case 'COMMUNITY_VERIFIED':
         return (
           <span className="inline-flex items-center px-3 py-1 rounded text-xs font-sans font-medium bg-[#2F6E5D]/10 text-[#2F6E5D] border border-[#2F6E5D]/30">
             <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-            Community verified
+            {tCommon('communityVerified')}
           </span>
         );
       case 'UNVERIFIED':
@@ -279,7 +286,7 @@ export default function RecordDetailPage() {
         return (
           <span className="inline-flex items-center px-3 py-1 rounded text-xs font-sans font-medium border border-[#E4DDD0] text-[#2A2420]/70 bg-[#FAF7F1]">
             <Clock className="w-3.5 h-3.5 mr-1.5 text-[#C97A3D]" />
-            Pending review
+            {tCommon('pendingReview')}
           </span>
         );
     }
@@ -304,15 +311,15 @@ export default function RecordDetailPage() {
         <Navbar />
         <div className="flex-1 max-w-2xl mx-auto flex flex-col items-center justify-center p-8 text-center">
           <AlertCircle className="w-12 h-12 text-[#B54A3A] mb-4" />
-          <h1 className="font-serif text-2xl mb-2 text-[#2A2420]">Record not found</h1>
+          <h1 className="font-serif text-2xl mb-2 text-[#2A2420]">{t('recordNotFound')}</h1>
           <p className="text-sm text-[#2A2420]/70 mb-6">
-            The cultural artifact you requested may have been relocated or is restricted.
+            {t('recordNotFoundDesc')}
           </p>
           <Link
             href="/archive"
             className="px-5 py-2.5 rounded bg-[#C97A3D] text-[#FAF7F1] font-medium font-sans hover:bg-[#b56b32] transition-colors shadow-none"
           >
-            Return to archive
+            {t('returnToArchive')}
           </Link>
         </div>
         <Footer />
@@ -333,7 +340,7 @@ export default function RecordDetailPage() {
               className="inline-flex items-center text-xs text-[#2A2420]/70 hover:text-[#C97A3D] transition-colors group font-sans"
             >
               <ArrowLeft className="w-3.5 h-3.5 mr-1.5 group-hover:-translate-x-1 transition-transform" />
-              Back to archive
+              {t('backToArchive')}
             </Link>
             <div className="flex items-center space-x-3">
               {canDelete && (
@@ -344,7 +351,7 @@ export default function RecordDetailPage() {
                   title="Permanently delete record (Admin / Verifier only)"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Delete record</span>
+                  <span className="hidden sm:inline">{t('deleteRecord')}</span>
                 </button>
               )}
               <button
@@ -354,12 +361,12 @@ export default function RecordDetailPage() {
                 {copied ? (
                   <>
                     <Check className="w-3.5 h-3.5 text-[#2F6E5D]" />
-                    <span className="text-[#2F6E5D]">Copied</span>
+                    <span className="text-[#2F6E5D]">{t('copied')}</span>
                   </>
                 ) : (
                   <>
                     <Share2 className="w-3.5 h-3.5 text-[#C97A3D]" />
-                    <span>Share memory</span>
+                    <span>{t('shareMemory')}</span>
                   </>
                 )}
               </button>
@@ -368,7 +375,7 @@ export default function RecordDetailPage() {
                 className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded border border-[#E4DDD0] bg-[#FAF7F1] text-xs font-sans text-[#2A2420]/60 hover:text-[#C97A3D] hover:border-[#C97A3D] hover:bg-[#FFFFFF] transition-colors"
               >
                 <Flag className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Flag term</span>
+                <span className="hidden sm:inline">{t('flagTerm')}</span>
               </button>
             </div>
           </div>
@@ -587,11 +594,12 @@ export default function RecordDetailPage() {
             {/* Verification Status & Category Header */}
             <div className="flex flex-wrap items-center gap-3 mb-4">
               <span className="px-3 py-1 rounded text-xs font-sans font-medium bg-[#2F6E5D] text-[#FAF7F1]">
-                {record.category
-                  .toLowerCase()
-                  .split('_')
-                  .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                  .join(' ')}
+                {CATEGORY_I18N[currentLang]?.[record.category]?.label ||
+                  record.category
+                    .toLowerCase()
+                    .split('_')
+                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                    .join(' ')}
               </span>
               <div>{getVerificationBadge(record.verificationStatus)}</div>
             </div>
@@ -610,9 +618,9 @@ export default function RecordDetailPage() {
                 <div className="flex items-start space-x-3">
                   <MapPin className="w-4 h-4 text-[#C97A3D] mt-0.5 shrink-0" />
                   <div>
-                    <span className="text-[#2A2420]/50 block text-xs">Origin Region</span>
+                    <span className="text-[#2A2420]/50 block text-xs">{t('originRegion')}</span>
                     <span className="text-[#2A2420] font-medium">
-                      {record.region?.name || 'Unspecified'}
+                      {record.region?.name || t('unspecified')}
                       {record.region?.parentRegion?.name
                         ? `, ${record.region.parentRegion.name}`
                         : ''}
@@ -628,7 +636,7 @@ export default function RecordDetailPage() {
                 <div className="flex items-start space-x-3">
                   <BookOpen className="w-4 h-4 text-[#C97A3D] mt-0.5 shrink-0" />
                   <div>
-                    <span className="text-[#2A2420]/50 block text-xs">Language / Dialect</span>
+                    <span className="text-[#2A2420]/50 block text-xs">{t('langDialect')}</span>
                     <span className="text-[#2A2420] font-medium">
                       {record.language?.name || 'Traditional Dialect'}
                     </span>
@@ -639,7 +647,7 @@ export default function RecordDetailPage() {
                     )}
                     {record.language?.estimatedSpeakers && (
                       <p className="text-[11px] text-[#C97A3D]/90">
-                        ~{record.language.estimatedSpeakers.toLocaleString()} native speakers remaining
+                        ~{record.language.estimatedSpeakers.toLocaleString()} {t('speakersRemaining')}
                       </p>
                     )}
                   </div>
@@ -649,7 +657,7 @@ export default function RecordDetailPage() {
                   <div className="flex items-start space-x-3">
                     <Sparkles className="w-4 h-4 text-[#C97A3D] mt-0.5 shrink-0" />
                     <div>
-                      <span className="text-[#2A2420]/50 block text-xs">Associated Craft</span>
+                      <span className="text-[#2A2420]/50 block text-xs">{t('associatedCraft')}</span>
                       <span className="text-[#2A2420] font-medium">{record.craft.name}</span>
                     </div>
                   </div>
@@ -660,15 +668,15 @@ export default function RecordDetailPage() {
                 <div className="flex items-start space-x-3">
                   <User className="w-4 h-4 text-[#C97A3D] mt-0.5 shrink-0" />
                   <div>
-                    <span className="text-[#2A2420]/50 block text-xs">Voice Custodian</span>
+                    <span className="text-[#2A2420]/50 block text-xs">{t('voiceCustodian')}</span>
                     <span className="text-[#2A2420] font-medium">
                       {record.speakerName ? (
                         <span>
                           {record.speakerName}
-                          {record.speakerAge ? ` (${record.speakerAge} years old)` : ''}
+                          {record.speakerAge ? ` (${record.speakerAge} ${t('yearsOld')})` : ''}
                         </span>
                       ) : (
-                        <span className="italic">Anonymous Elder</span>
+                        <span className="italic">{t('anonymousElder')}</span>
                       )}
                     </span>
                   </div>
@@ -677,7 +685,7 @@ export default function RecordDetailPage() {
                 <div className="flex items-start space-x-3">
                   <Calendar className="w-4 h-4 text-[#C97A3D] mt-0.5 shrink-0" />
                   <div>
-                    <span className="text-[#2A2420]/50 block text-xs">Archived On</span>
+                    <span className="text-[#2A2420]/50 block text-xs">{t('archivedOn')}</span>
                     <span className="text-[#2A2420] font-medium">
                       {new Date(record.createdAt).toLocaleDateString('en-US', {
                         year: 'numeric',
@@ -691,15 +699,15 @@ export default function RecordDetailPage() {
                 <div className="flex items-start space-x-3">
                   <Tag className="w-4 h-4 text-[#C97A3D] mt-0.5 shrink-0" />
                   <div>
-                    <span className="text-[#2A2420]/50 block text-xs">Subject Tags</span>
+                    <span className="text-[#2A2420]/50 block text-xs">{t('subjectTags')}</span>
                     <div className="flex flex-wrap gap-1.5 mt-1">
                       {record.tags && record.tags.length > 0 ? (
-                        record.tags.map((t, i) => (
+                        record.tags.map((tagItem, i) => (
                           <span
                             key={i}
                             className="px-2 py-0.5 rounded text-[11px] bg-[#FAF7F1] text-[#2A2420]/75 border border-[#E4DDD0]"
                           >
-                            #{t}
+                            #{tagItem}
                           </span>
                         ))
                       ) : (
@@ -721,7 +729,7 @@ export default function RecordDetailPage() {
                     : 'border-transparent text-[#2A2420]/60 hover:text-[#2A2420]'
                 }`}
               >
-                Transcription & Translation
+                {t('tabTranscription')}
               </button>
               <button
                 onClick={() => setActiveTab('provenance')}
@@ -731,7 +739,7 @@ export default function RecordDetailPage() {
                     : 'border-transparent text-[#2A2420]/60 hover:text-[#2A2420]'
                 }`}
               >
-                Provenance & Audit Trail (
+                {t('tabVerification')} (
                 {(record.verifications?.length || 0) + (record.consentRecord ? 1 : 0)})
               </button>
             </div>

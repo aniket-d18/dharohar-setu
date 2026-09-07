@@ -76,7 +76,24 @@
     "filterRegion": "प्रदेश",
     "showingRecords": "{count} जिवंत सांस्कृतिक नोंदी दाखवत आहे",
     "emptyTitle": "आपल्या शोधाशी जुळणारी कोणतीही परंपरा आढळली नाही",
-    "emptyDesc": "कृपया शोध शब्द बदलून पहा किंवा फिल्टर साफ करा."
+    "emptyDesc": "कृपया शोध शब्द बदलून पहा किंवा फिल्टर साफ करा.",
+    "allMedia": "सर्व माध्यमे",
+    "audioRecording": "ऑडिओ रेकॉर्डिंग",
+    "videoDemonstration": "व्हिडिओ प्रात्यक्षिक",
+    "imageArtifact": "छायाचित्र / वस्तू",
+    "nativeText": "स्थानिक मजकूर",
+    "vitalityStatus": "जिवंतपणाची स्थिती",
+    "allUrgencies": "सर्व निकड स्तर",
+    "critical": "अतिसंवेदनशील",
+    "endangered": "धोक्यात",
+    "vulnerable": "संवेदनशील",
+    "safe": "सुरक्षित",
+    "sortBy": "क्रमवारी लावा",
+    "newestFirst": "नवीनतम आधी",
+    "highestUrgency": "उच्च निकड आधी",
+    "mostVerified": "सर्वाधिक पडताळलेले",
+    "filtersApplied": "फिल्टर लागू केले",
+    "resetFilters": "सर्व फिल्टर काढा"
   },
   "atlas": {
     "title": "परस्परसंवादी सांस्कृतिक नकाशा",
@@ -85,7 +102,15 @@
     "dossierSelectPrompt": "नोंदवलेले मौखिक अभिलेख, भाषा आणि जतन संवेदनशीलता पाहण्यासाठी नकाशावर राज्य किंवा पिन निवडा.",
     "directRecords": "नोंदवलेले अभिलेख",
     "vitalityStatus": "जिवंतपणाची स्थिती",
-    "viewRegionRecords": "या भागातील सर्व नोंदी पहा"
+    "viewRegionRecords": "या भागातील सर्व नोंदी पहा",
+    "heritageNearMe": "माझ्या जवळील वारसा",
+    "locating": "स्थान शोधत आहे...",
+    "youAreHere": "तुम्ही येथे आहात",
+    "nearestHeritageFound": "सर्वात जवळचा जिवंत वारसा",
+    "distanceAway": "{distance} किमी अंतरावर",
+    "nearMeActive": "तुमच्या जवळील वारसा",
+    "clearNearMe": "संपूर्ण भारत दाखवा",
+    "locationDenied": "स्थान परवानगी अनुपलब्ध. आपल्या राज्यातील वारसा दाखवत आहे."
   },
   "untranslatable": {
     "badge": "भाषिक आणि सांस्कृतिक संकल्पना",
@@ -153,5 +178,29 @@
     "vulnerable": "संवेदनशील",
     "copyright": "© 2026 धरोहर सेतू — स्मार्ट इंडिया हॅकाथॉनसाठी निर्मित.",
     "mission": "प्रतिष्ठा आणि पडताळणीयोग्य अस्सलतेसह भारतीय सांस्कृतिक स्मृतींचे जतन"
+  },
+  "record": {
+    "backToArchive": "दस्तऐवजाकडे परत जा",
+    "deleteRecord": "नोंद कायमची हटवा",
+    "shareMemory": "स्मृती शेअर करा",
+    "copied": "कॉपी झाले",
+    "flagTerm": "संज्ञा ध्वजांकित करा",
+    "originRegion": "मूळ प्रदेश",
+    "langDialect": "भाषा / बोली",
+    "associatedCraft": "संबंधित हस्तकला",
+    "voiceCustodian": "आवाज संरक्षक",
+    "archivedOn": "दस्तऐवजीकरण तारीख",
+    "subjectTags": "विषय टॅग्ज",
+    "recordNotFound": "नोंद आढळली नाही",
+    "recordNotFoundDesc": "आपण शोधलेली सांस्कृतिक कलाकृती स्थलांतरित झाली असावी किंवा मर्यादित असावी.",
+    "returnToArchive": "दस्तऐवजाकडे परत जा",
+    "tabTranscription": "लिप्यंतरण आणि भाषांतर",
+    "tabContext": "सांस्कृतिक महत्त्व व संदर्भ",
+    "tabVerification": "पडताळणी प्रक्रिया",
+    "tabConsent": "संमती आणि हक्क",
+    "unspecified": "अनिर्दिष्ट",
+    "anonymousElder": "अनामिक ज्येष्ठ",
+    "yearsOld": "वर्षे वय",
+    "speakersRemaining": "स्थानिक भाषक शिल्लक"
   }
 }

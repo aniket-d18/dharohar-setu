@@ -2,9 +2,11 @@
 
 import { Mic, Video, Image as ImageIcon, FileText, MapPin, Volume2, ShieldCheck, CheckCircle2, Sparkles, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
-import { useTranslations } from '@/context/LanguageContext';
+import { useTranslations, useLanguage } from '@/context/LanguageContext';
 import { useRecordTranslation } from '@/hooks/useRecordTranslation';
 import { getCategoryCover } from '@/utils/categoryCovers';
+import { getApiUrl } from '@/utils/apiUrl';
+import { CATEGORY_I18N } from '@/utils/captureI18n';
 
 export interface RecordCardData {
   id: string;
@@ -56,8 +58,11 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
     tags: record.tags,
   });
 
-  // Format Category name to sentence case
+  // Format Category name to localized title
   const formatCategory = (cat: string) => {
+    const curLang = (language === 'mr' || language === 'hi') ? language : 'en';
+    const catMap = CATEGORY_I18N[curLang] || CATEGORY_I18N.en;
+    if (catMap[cat]?.label) return catMap[cat].label;
     return cat
       .toLowerCase()
       .split('_')
@@ -114,7 +119,7 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
   // Resolve authentic photo: If it's an uploaded image, use the real field photo
   const hasRealImage = record.mediaType === 'IMAGE' && Boolean(record.mediaUrl);
   const photoUrl = hasRealImage
-    ? (record.mediaUrl.startsWith('/uploads/') ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}${record.mediaUrl}` : record.mediaUrl)
+    ? (record.mediaUrl.startsWith('/uploads/') ? `${getApiUrl()}${record.mediaUrl}` : record.mediaUrl)
     : (record.thumbnailUrl && !record.thumbnailUrl.includes('unsplash.com') ? record.thumbnailUrl : null);
 
   return (
