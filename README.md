@@ -139,4 +139,4 @@ npm run dev
 ---
 
 ## 📜 License
-This project is licensed under the MIT License. Developed for SIH 2026.
+This project is licensed under the MIT License.Developed for SIH 2026.
