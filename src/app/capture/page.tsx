@@ -41,6 +41,7 @@ import { getCategoryCover } from '@/utils/categoryCovers';
 import { getApiUrl } from '@/utils/apiUrl';
 import { CAPTURE_I18N, CATEGORY_I18N, SupportedLang } from '@/utils/captureI18n';
 import { cachedFetch } from '@/utils/apiCache';
+import { enqueueSubmission, countQueued, flushQueue } from '@/utils/syncManager';
 
 interface LanguageItem {
   id: string;
@@ -101,7 +102,7 @@ function RegionHierarchySelect({
   };
 
   const { language } = useLanguage();
-  const curLang = (language === 'mr' || language === 'hi') ? language : 'en';
+  const curLang: SupportedLang = (['en', 'hi', 'mr', 'ta', 'bn'].includes(language as SupportedLang)) ? (language as SupportedLang) : 'en';
 
   const query = searchQuery.trim().toLowerCase();
   const filteredStates = INDIA_REGION_HIERARCHY.map((st) => {
@@ -120,12 +121,24 @@ function RegionHierarchySelect({
     return null;
   }).filter((st): st is StaticState => st !== null);
 
-  let selectedLabel = curLang === 'mr' ? 'प्रदेश / जिल्हा निवडा *' : curLang === 'hi' ? 'क्षेत्र / ज़िला चुनें *' : 'Select Region / District *';
+  let selectedLabel =
+    curLang === 'mr' ? 'प्रदेश / जिल्हा निवडा *' :
+    curLang === 'hi' ? 'क्षेत्र / ज़िला चुनें *' :
+    curLang === 'ta' ? 'பகுதி / மாவட்டத்தைத் தேர்ந்தெடுக்கவும் *' :
+    curLang === 'bn' ? 'অঞ্চল / জেলা নির্বাচন করুন *' :
+    'Select Region / District *';
+
   if (selectedState) {
     if (selectedDistrict) {
       selectedLabel = `${selectedDistrict} (${selectedState})`;
     } else {
-      selectedLabel = `${selectedState} (${curLang === 'mr' ? 'संपूर्ण राज्य' : curLang === 'hi' ? 'संपूर्ण राज्य' : 'Entire State'})`;
+      const stateSuffix =
+        curLang === 'mr' ? 'संपूर्ण राज्य' :
+        curLang === 'hi' ? 'संपूर्ण राज्य' :
+        curLang === 'ta' ? 'முழு மாநிலம்' :
+        curLang === 'bn' ? 'সমগ্র রাজ্য' :
+        'Entire State';
+      selectedLabel = `${selectedState} (${stateSuffix})`;
     }
   }
 
@@ -133,10 +146,22 @@ function RegionHierarchySelect({
     <div className="relative font-sans" ref={ref}>
       <div className="flex items-center justify-between mb-1.5">
         <label className="block text-xs text-[#2A2420]/80 font-medium">
-          {label || (curLang === 'mr' ? 'प्रदेश / जिल्हा *' : curLang === 'hi' ? 'क्षेत्र / ज़िला *' : 'Region / District *')}
+          {label || (
+            curLang === 'mr' ? 'प्रदेश / जिल्हा *' :
+            curLang === 'hi' ? 'क्षेत्र / ज़िला *' :
+            curLang === 'ta' ? 'பகுதி / மாவட்டம் *' :
+            curLang === 'bn' ? 'অঞ্চল / জেলা *' :
+            'Region / District *'
+          )}
         </label>
         <span className="text-[11px] text-[#C97A3D]">
-          {sublabel || (curLang === 'mr' ? '३६ राज्ये व केंद्रशासित प्रदेश (संदर्भ)' : curLang === 'hi' ? '३६ राज्य एवं केंद्र शासित प्रदेश (संदर्भ)' : '36 States & Union Territories (Reference)')}
+          {sublabel || (
+            curLang === 'mr' ? '३६ राज्ये व केंद्रशासित प्रदेश (संदर्भ)' :
+            curLang === 'hi' ? '३६ राज्य एवं केंद्र शासित प्रदेश (संदर्भ)' :
+            curLang === 'ta' ? '36 மாநிலங்கள் & ஒன்றியப் பகுதிகள் (குறிப்பு)' :
+            curLang === 'bn' ? '৩৬টি রাজ্য ও কেন্দ্রশাসিত অঞ্চল (রেফারেন্স)' :
+            '36 States & Union Territories (Reference)'
+          )}
         </span>
       </div>
 
@@ -167,7 +192,13 @@ function RegionHierarchySelect({
           <div className="p-2 border-b border-[#E4DDD0] bg-[#FAF7F1]">
             <input
               type="text"
-              placeholder={curLang === 'mr' ? 'भारतीय राज्य किंवा जिल्हा शोधा (उदा. महाराष्ट्र, बुलढाणा, केरळ)...' : curLang === 'hi' ? 'भारतीय राज्य या ज़िला खोजें (उदा. महाराष्ट्र, बुलढाणा, केरल)...' : 'Search Indian state or district (e.g. Maharashtra, Buldhana, Kerala)...'}
+              placeholder={
+                curLang === 'mr' ? 'भारतीय राज्य किंवा जिल्हा शोधा (उदा. महाराष्ट्र, बुलढाणा, केरळ)...' :
+                curLang === 'hi' ? 'भारतीय राज्य या ज़िला खोजें (उदा. महाराष्ट्र, बुलढाणा, केरल)...' :
+                curLang === 'ta' ? 'இந்திய மாநிலம் அல்லது மாவட்டத்தைத் தேடுங்கள் (எ.கா: தமிழ்நாடு, மதுரை)...' :
+                curLang === 'bn' ? 'ভারতীয় রাজ্য বা জেলা অনুসন্ধান করুন (যেমন: পশ্চিমবঙ্গ, বাঁকুড়া)...' :
+                'Search Indian state or district (e.g. Maharashtra, Buldhana, Kerala)...'
+              }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onClick={(e) => e.stopPropagation()}
@@ -179,7 +210,13 @@ function RegionHierarchySelect({
           <div className="overflow-y-auto max-h-60 py-1">
             {filteredStates.length === 0 ? (
               <div className="px-3 py-4 text-center text-xs text-[#2A2420]/50">
-                {curLang === 'mr' ? 'कोणतेही जुळणारे राज्य किंवा जिल्हा आढळला नाही.' : curLang === 'hi' ? 'कोई मेल खाता राज्य या ज़िला नहीं मिला।' : 'No matching state or district found.'}
+                {
+                  curLang === 'mr' ? 'कोणतेही जुळणारे राज्य किंवा जिल्हा आढळला नाही.' :
+                  curLang === 'hi' ? 'कोई मेल खाता राज्य या ज़िला नहीं मिला।' :
+                  curLang === 'ta' ? 'பொருந்தக்கூடிய மாநிலம் அல்லது மாவட்டம் எதுவும் கிடைக்கவில்லை.' :
+                  curLang === 'bn' ? 'কোনো মিল থাকা রাজ্য বা জেলা পাওয়া যায়নি।' :
+                  'No matching state or district found.'
+                }
               </div>
             ) : (
               filteredStates.map((state) => {
@@ -202,7 +239,14 @@ function RegionHierarchySelect({
                       <span className="truncate flex-1 font-serif font-medium">
                         {state.name}{' '}
                         <span className="text-[10px] text-[#2A2420]/50 font-sans">
-                          ({state.districts.length} {curLang === 'mr' ? 'जिल्हे' : curLang === 'hi' ? 'ज़िले' : 'districts'})
+                          ({state.districts.length}{' '}
+                          {
+                            curLang === 'mr' ? 'जिल्हे' :
+                            curLang === 'hi' ? 'ज़िले' :
+                            curLang === 'ta' ? 'மாவட்டங்கள்' :
+                            curLang === 'bn' ? 'জেলা' :
+                            'districts'
+                          })
                         </span>
                       </span>
 
@@ -633,7 +677,7 @@ export default function CaptureWizardPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { language } = useLanguage();
-  const curLang: SupportedLang = (language === 'mr' || language === 'hi') ? language : 'en';
+  const curLang: SupportedLang = (['en', 'hi', 'mr', 'ta', 'bn'].includes(language as SupportedLang)) ? (language as SupportedLang) : 'en';
   const strings = CAPTURE_I18N[curLang] || CAPTURE_I18N.en;
   const catMap = CATEGORY_I18N[curLang] || CATEGORY_I18N.en;
 
@@ -642,6 +686,8 @@ export default function CaptureWizardPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submittedRecordId, setSubmittedRecordId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [queuedCount, setQueuedCount] = useState(0);
+  const [syncing, setSyncing] = useState(false);
 
   // Form Data
   // Step 1: Consent
@@ -704,6 +750,40 @@ export default function CaptureWizardPage() {
         window.removeEventListener('offline', handleOffline);
       };
     }
+  }, []);
+
+  // Register Service Worker for Background Sync
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.warn('[SW] Registration failed:', err);
+      });
+    }
+  }, []);
+
+  // Refresh queued count on mount and after sync events
+  useEffect(() => {
+    countQueued().then(setQueuedCount).catch(() => {});
+    const handleSyncComplete = () => {
+      countQueued().then(setQueuedCount).catch(() => {});
+    };
+    window.addEventListener('dharohar:sync-complete', handleSyncComplete);
+    // Also listen to SW messages asking us to flush
+    const handleSWMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'DHAROHAR_FLUSH_QUEUE') {
+        setSyncing(true);
+        flushQueue()
+          .then(({ synced }) => {
+            if (synced > 0) countQueued().then(setQueuedCount).catch(() => {});
+          })
+          .finally(() => setSyncing(false));
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handleSWMessage);
+    return () => {
+      window.removeEventListener('dharohar:sync-complete', handleSyncComplete);
+      navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
+    };
   }, []);
 
   // Fetch registered database languages for suggestions
@@ -966,6 +1046,15 @@ export default function CaptureWizardPage() {
       isAnonymous,
     };
 
+    // Determine blob to save for offline queuing (if any)
+    const blobForQueue = selectedFile
+      ? selectedFile
+      : recordedAudioBlob
+      ? new File([recordedAudioBlob], `recording-${Date.now()}.webm`, { type: 'audio/webm' })
+      : null;
+    const blobName = selectedFile?.name ?? (recordedAudioBlob ? `recording-${Date.now()}.webm` : null);
+    const blobMime = selectedFile?.type ?? (recordedAudioBlob ? 'audio/webm' : null);
+
     try {
       if (isOnline) {
         const res = await fetch(`${apiUrl}/api/records`, {
@@ -982,16 +1071,44 @@ export default function CaptureWizardPage() {
           throw new Error(errorData.message || 'API submission returned validation error');
         }
       } else {
-        // Offline mode: save in local localStorage sync queue
-        const offlineQueue = JSON.parse(localStorage.getItem('dharohar_sync_queue') || '[]');
-        const offlineId = 'offline-' + Date.now();
-        offlineQueue.push({ id: offlineId, payload, timestamp: new Date().toISOString() });
-        localStorage.setItem('dharohar_sync_queue', JSON.stringify(offlineQueue));
-        setSubmittedRecordId(offlineId);
+        // Offline mode: save to IndexedDB with media blob
+        const queueId = await enqueueSubmission(
+          payload as Record<string, unknown>,
+          blobForQueue,
+          blobName,
+          blobMime,
+          apiUrl
+        );
+        await countQueued().then(setQueuedCount).catch(() => {});
+        setSubmittedRecordId(`offline-${queueId}`);
+        // Request Background Sync if SW supports it
+        if ('serviceWorker' in navigator && 'SyncManager' in window) {
+          const reg = await navigator.serviceWorker.ready;
+          await (reg as any).sync.register('dharohar-sync').catch(() => {});
+        }
       }
     } catch (err: any) {
       console.error('Submission failed:', err);
-      setSubmitError(err.message || 'Submission failed. Please check the fields and try again.');
+      // If online submission failed transiently, enqueue for retry
+      if (isOnline && blobForQueue !== null) {
+        try {
+          await enqueueSubmission(
+            payload as Record<string, unknown>,
+            blobForQueue,
+            blobName,
+            blobMime,
+            apiUrl
+          );
+          await countQueued().then(setQueuedCount).catch(() => {});
+          setSubmitError(
+            'Submission failed but has been saved offline and will retry when your connection improves.'
+          );
+        } catch {
+          setSubmitError(err.message || 'Submission failed. Please check the fields and try again.');
+        }
+      } else {
+        setSubmitError(err.message || 'Submission failed. Please check the fields and try again.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -1023,21 +1140,43 @@ export default function CaptureWizardPage() {
       <main className="flex-1 pb-16">
         {/* Offline Status Top Bar */}
         <div
-          className={`py-2 px-4 text-xs font-sans text-center transition-colors flex items-center justify-center space-x-2 ${
-            isOnline
-              ? 'bg-[#2F6E5D]/10 text-[#2F6E5D] border-b border-[#2F6E5D]/20'
-              : 'bg-[#B54A3A]/10 text-[#B54A3A] border-b border-[#B54A3A]/20'
+          className={`py-2 px-4 text-xs font-sans text-center transition-all duration-300 flex items-center justify-center gap-3 ${
+            !isOnline
+              ? 'bg-[#B54A3A]/10 text-[#B54A3A] border-b border-[#B54A3A]/20'
+              : queuedCount > 0
+              ? 'bg-[#C97A3D]/10 text-[#C97A3D] border-b border-[#C97A3D]/20'
+              : 'bg-[#2F6E5D]/10 text-[#2F6E5D] border-b border-[#2F6E5D]/20'
           }`}
         >
-          {isOnline ? (
+          {!isOnline ? (
             <>
-              <Wifi className="w-3.5 h-3.5" />
-              <span>{strings.onlineStatus}</span>
+              <WifiOff className="w-3.5 h-3.5 shrink-0" />
+              <span>{strings.offlineStatus} — submissions will be saved and synced automatically when you reconnect.</span>
+            </>
+          ) : queuedCount > 0 ? (
+            <>
+              <Clock className="w-3.5 h-3.5 shrink-0 animate-pulse" />
+              <span>
+                <strong>{queuedCount}</strong> offline submission{queuedCount !== 1 ? 's' : ''} pending sync.
+              </span>
+              <button
+                type="button"
+                disabled={syncing}
+                onClick={() => {
+                  setSyncing(true);
+                  flushQueue()
+                    .then(() => countQueued().then(setQueuedCount).catch(() => {}))
+                    .finally(() => setSyncing(false));
+                }}
+                className="px-2 py-0.5 rounded bg-[#C97A3D] text-white text-[10px] font-medium hover:bg-[#B86B30] transition-colors disabled:opacity-50"
+              >
+                {syncing ? 'Syncing…' : 'Sync Now'}
+              </button>
             </>
           ) : (
             <>
-              <WifiOff className="w-3.5 h-3.5" />
-              <span>{strings.offlineStatus}</span>
+              <Wifi className="w-3.5 h-3.5 shrink-0" />
+              <span>{strings.onlineStatus}</span>
             </>
           )}
         </div>

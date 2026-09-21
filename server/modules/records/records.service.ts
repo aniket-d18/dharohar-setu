@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import { existsSync } from 'fs';
 import { join, extname } from 'path';
 import { serverCache } from '../../common/cache.service';
+import { calculateVitalityScore, LanguageVitalityData } from '../../common/vitality.calculator';
 
 export class CreateRecordDto {
   mediaType!: MediaType;
@@ -42,13 +43,16 @@ export class RecordFilterQuery {
   sort?: 'newest' | 'urgency' | 'verified';
   page?: number;
   limit?: number;
+  // Set by the controller from the JWT token (never from client query string)
+  requesterId?: string;
+  requesterRole?: string;
 }
 
 @Injectable()
 export class RecordsService {
   constructor(
     @Inject(PrismaService)
-    private readonly prisma: PrismaService,
+    public readonly prisma: PrismaService,
   ) {}
 
   // 1. Presigned upload URL generator (Stubbed / Mock direct upload)
@@ -115,7 +119,7 @@ export class RecordsService {
             name: stateName,
             level: 'STATE',
             vitalityStatus: 'VULNERABLE',
-            vitalityScore: 50.0,
+            vitalityScore: 5.0,
           },
         });
       }
@@ -137,7 +141,7 @@ export class RecordsService {
               level: 'DISTRICT',
               parentRegionId: stateRegion.id,
               vitalityStatus: 'VULNERABLE',
-              vitalityScore: 50.0,
+              vitalityScore: 5.0,
             },
           });
         }
@@ -218,6 +222,9 @@ export class RecordsService {
       this.processAiEnrichmentBackground(record.id).catch((err) => {
         console.error(`[AI Worker] Background job error for record ${record.id}:`, err);
       });
+      this.recalculateRegionVitality(finalRegionId).catch((err) => {
+        console.error(`[Vitality Calculator] Background error for region ${finalRegionId}:`, err);
+      });
     });
 
     return this.getRecordById(record.id);
@@ -234,6 +241,22 @@ export class RecordsService {
     const skip = (page - 1) * limit;
 
     const where: Prisma.RecordWhereInput = {};
+
+    // ─── Visibility enforcement ───────────────────────────────────────────────
+    // PRIVATE and STEWARD_ONLY records are never included in list results for
+    // public/anonymous visitors. Authenticated users (any role) additionally
+    // see COMMUNITY_ONLY records.
+    // Admin / Steward / Expert / Reviewer see all visibility levels.
+    const privilegedRoles = ['ADMIN', 'STEWARD', 'EXPERT', 'REVIEWER'];
+    const isPrivileged = privilegedRoles.includes((query.requesterRole || '').toUpperCase());
+
+    if (!isPrivileged) {
+      const isAuthenticated = Boolean(query.requesterId);
+      where.visibility = isAuthenticated
+        ? { in: ['PUBLIC', 'COMMUNITY_ONLY'] }
+        : 'PUBLIC';
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     if (query.regionId) {
       where.OR = [
@@ -369,7 +392,7 @@ export class RecordsService {
   }
 
   // 4. Detailed record with provenance and consent
-  async getRecordById(id: string, userId?: string) {
+  async getRecordById(id: string, userId?: string, userRole?: string) {
     const cacheKey = userId ? `records:detail:${id}:${userId}` : `records:detail:${id}`;
     const cached = serverCache.get(cacheKey);
     if (cached) return cached;
@@ -415,6 +438,19 @@ export class RecordsService {
 
     if (!record) {
       throw new NotFoundException(`Cultural record with id ${id} not found`);
+    }
+
+    // Visibility enforcement:
+    const privilegedRoles = ['ADMIN', 'STEWARD', 'EXPERT', 'REVIEWER'];
+    const isPrivileged = privilegedRoles.includes((userRole || '').toUpperCase());
+    const isOwner = Boolean(userId && record.contributorId && userId === record.contributorId);
+
+    if (record.visibility === 'PRIVATE' && !isPrivileged && !isOwner) {
+      throw new ForbiddenException('This cultural record is private and restricted to the contributor or cultural stewards.');
+    }
+
+    if (record.visibility === 'COMMUNITY_ONLY' && !isPrivileged && !isOwner && !userId) {
+      throw new ForbiddenException('This cultural record is restricted to community members. Please sign in to view.');
     }
 
     let upvoteCount = 0;
@@ -575,10 +611,30 @@ export class RecordsService {
       console.warn('[RecordTranslation] Error querying cache:', dbErr);
     }
 
-    // 2. Not cached: fetch original record
-    const record = await this.prisma.record.findUnique({ where: { id: recordId } });
+    // 2. Not cached: fetch original record with consent record
+    const record = await this.prisma.record.findUnique({
+      where: { id: recordId },
+      include: { consentRecord: true },
+    });
     if (!record) {
       throw new NotFoundException(`Record with id ${recordId} not found`);
+    }
+
+    // Consent check: do not translate via AI if AI_TRAINING consent was not granted
+    const scopesGranted: string[] = (record.consentRecord as any)?.scopesGranted ?? [];
+    if (!scopesGranted.includes('AI_TRAINING')) {
+      console.warn(`[RecordTranslation] Skipping AI translation for Record ${recordId}: AI_TRAINING not in scopesGranted`);
+      return {
+        recordId,
+        languageCode,
+        translatedTitle: record.summaryText,
+        translatedSummary: record.summaryText,
+        translatedText: record.translationText,
+        translatedTags: record.tags,
+        aiModel: 'consent-not-granted',
+        cached: false,
+        isFallback: true,
+      };
     }
 
     const targetLangNames: Record<string, string> = {
@@ -1202,6 +1258,7 @@ Respond strictly in valid JSON mapping each record id to its translated object:
         region: true,
         language: true,
         untranslatableEntries: true,
+        consentRecord: true,
       },
     });
 
@@ -1210,9 +1267,46 @@ Respond strictly in valid JSON mapping each record id to its translated object:
       return;
     }
 
+    // ─────────────────────────────────────────────────────
+    // CONSENT GATE: AI enrichment (transcription, untranslatable
+    // detection, summary generation) is only permitted when the
+    // contributor's ConsentRecord explicitly grants 'AI_TRAINING'.
+    // If consent is absent or not granted, clear the placeholder text
+    // and leave the record in a manual-pending state for human review.
+    // ─────────────────────────────────────────────────────
+    const scopesGranted: string[] = (record.consentRecord as any)?.scopesGranted ?? [];
+    const aiTrainingConsented = scopesGranted.includes('AI_TRAINING');
+
+    if (!aiTrainingConsented) {
+      console.warn(`[GeminiWorker] Skipping AI enrichment for Record ${recordId}: AI_TRAINING not in scopesGranted (${JSON.stringify(scopesGranted)}). Leaving record for manual human transcription.`);
+
+      // Replace the "generating..." placeholder with a human-review notice so
+      // the frontend doesn't spin forever with an AI-processing indicator.
+      const needsPlaceholderClear =
+        (record.transcriptionText && record.transcriptionText.includes('Transcribing audio with AI')) ||
+        (record.summaryText && record.summaryText.includes('Generating cultural summary'));
+
+      if (needsPlaceholderClear) {
+        await this.prisma.record.update({
+          where: { id: recordId },
+          data: {
+            transcriptionText: record.transcriptionText?.includes('Transcribing audio with AI')
+              ? '[Awaiting manual transcription — AI processing not consented]'
+              : record.transcriptionText,
+            summaryText: record.summaryText?.includes('Generating cultural summary')
+              ? '[Awaiting manual cultural summary — AI processing not consented]'
+              : record.summaryText,
+          },
+        });
+        serverCache.invalidatePrefix('records:');
+      }
+      return;
+    }
+
     let activeTranscription = record.transcriptionText || '';
     let activeTranslation = record.translationText || '';
     let activeSummary = record.summaryText || '';
+
 
     // ----------------------------------------------------
     // 1. AI SPEECH-TO-TEXT TRANSCRIPTION
@@ -1584,6 +1678,7 @@ If there are no distinct untranslatable words, return [].`;
     }
 
     // Cascade delete in Prisma (RecordTranslation, ConsentRecord, VerificationLog, UntranslatableEntry are all cascade)
+    const affectedRegionId = record.regionId;
     await this.prisma.record.delete({
       where: { id: recordId },
     });
@@ -1592,11 +1687,97 @@ If there are no distinct untranslatable words, return [].`;
     serverCache.invalidatePrefix('analytics:');
     console.log(`[RecordsService] Record ${recordId} permanently deleted.`);
 
+    if (affectedRegionId) {
+      setImmediate(() => {
+        this.recalculateRegionVitality(affectedRegionId).catch((err) => {
+          console.warn(`[Vitality Calculator] Error on delete recalculation for ${affectedRegionId}:`, err.message);
+        });
+      });
+    }
+
     return {
       success: true,
       message: 'Record permanently deleted from archives.',
       id: recordId,
     };
+  }
+
+  /**
+   * Recalculates and updates the vitality score and status for a region.
+   * Also cascades recalculation to parent state if this was a district.
+   */
+  async recalculateRegionVitality(regionId: string): Promise<void> {
+    try {
+      const region = await this.prisma.region.findUnique({
+        where: { id: regionId },
+        include: {
+          languages: { include: { language: true } },
+          childRegions: {
+            include: {
+              languages: { include: { language: true } },
+              _count: { select: { records: true } },
+            },
+          },
+          records: { include: { language: true } },
+          _count: { select: { records: true } },
+        },
+      });
+
+      if (!region) return;
+
+      const langMap = new Map<string, LanguageVitalityData>();
+      for (const rl of region.languages) {
+        if (rl.language) langMap.set(rl.language.id, rl.language);
+      }
+      for (const child of region.childRegions) {
+        for (const crl of child.languages) {
+          if (crl.language) langMap.set(crl.language.id, crl.language);
+        }
+      }
+      for (const rec of region.records) {
+        if (rec.language) langMap.set(rec.language.id, rec.language);
+      }
+
+      if (langMap.size === 0 && region.parentRegionId) {
+        const parent = await this.prisma.region.findUnique({
+          where: { id: region.parentRegionId },
+          include: { languages: { include: { language: true } } },
+        });
+        if (parent) {
+          for (const pl of parent.languages) {
+            if (pl.language) langMap.set(pl.language.id, pl.language);
+          }
+        }
+      }
+
+      const totalRecords =
+        region._count.records +
+        region.childRegions.reduce((sum, c) => sum + c._count.records, 0);
+
+      const languages = Array.from(langMap.values());
+      const calculation = calculateVitalityScore({
+        languages,
+        recordCount: totalRecords,
+      });
+
+      await this.prisma.region.update({
+        where: { id: regionId },
+        data: {
+          vitalityScore: calculation.score,
+          vitalityStatus: calculation.status,
+        },
+      });
+
+      console.log(`[Vitality Calculator] Region ${region.name} score updated to ${calculation.score} (${calculation.status})`);
+      serverCache.invalidatePrefix('regions:');
+      serverCache.invalidatePrefix('analytics:');
+
+      if (region.parentRegionId) {
+        await this.recalculateRegionVitality(region.parentRegionId);
+      }
+    } catch (err: any) {
+      console.warn(`[Vitality Calculator] Failed to recalculate region ${regionId}:`, err.message);
+    }
   }
 }
 

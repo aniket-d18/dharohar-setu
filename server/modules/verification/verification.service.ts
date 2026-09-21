@@ -18,7 +18,7 @@ export class SubmitVerificationDto {
 export class VerificationService {
   constructor(
     @Inject(PrismaService)
-    private readonly prisma: PrismaService,
+    public readonly prisma: PrismaService,
   ) {}
 
   // 1. Get verification queue of unverified or pending records
@@ -161,6 +161,10 @@ export class VerificationService {
         if (dto.submittedTranslation !== undefined && dto.submittedTranslation !== null) {
           updateData.translationText = dto.submittedTranslation.trim();
         }
+      } else if (dto.action === 'DISPUTE') {
+        // Disputed records must go back to UNVERIFIED pipeline for re-review,
+        // with a permanent VerificationLog entry recording the dispute reason.
+        newStatus = 'DISPUTED';
       }
 
       updateData.verificationStatus = newStatus;

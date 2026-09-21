@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import { serverCache } from '../../common/cache.service';
+import { calculateVitalityScore, LanguageVitalityData } from '../../common/vitality.calculator';
+import { VitalityStatus } from '@prisma/client';
 
 const CACHE_TTL_LONG = 30 * 60 * 1000; // 30 minutes
 const CACHE_TTL_MEDIUM = 15 * 60 * 1000; // 15 minutes
@@ -201,5 +203,197 @@ export class RegionsLanguagesService {
     serverCache.set(cacheKey, data, CACHE_TTL_LONG);
     return data;
   }
+
+  // 6. Recalculate vitality score and status for a specific region
+  async recalculateRegionVitality(regionId: string) {
+    const region = await this.prisma.region.findUnique({
+      where: { id: regionId },
+      include: {
+        languages: {
+          include: { language: true },
+        },
+        childRegions: {
+          include: {
+            languages: {
+              include: { language: true },
+            },
+            _count: {
+              select: { records: true },
+            },
+          },
+        },
+        records: {
+          include: { language: true },
+        },
+        _count: {
+          select: { records: true },
+        },
+      },
+    });
+
+    if (!region) return null;
+
+    // Aggregate linked languages across region, child districts, and actual records
+    const langMap = new Map<string, LanguageVitalityData>();
+    for (const rl of region.languages) {
+      if (rl.language) langMap.set(rl.language.id, rl.language);
+    }
+    for (const child of region.childRegions) {
+      for (const crl of child.languages) {
+        if (crl.language) langMap.set(crl.language.id, crl.language);
+      }
+    }
+    for (const rec of region.records) {
+      if (rec.language) langMap.set(rec.language.id, rec.language);
+    }
+
+    // If district has no directly linked languages, check parent state
+    if (langMap.size === 0 && region.parentRegionId) {
+      const parent = await this.prisma.region.findUnique({
+        where: { id: region.parentRegionId },
+        include: {
+          languages: { include: { language: true } },
+        },
+      });
+      if (parent) {
+        for (const pl of parent.languages) {
+          if (pl.language) langMap.set(pl.language.id, pl.language);
+        }
+      }
+    }
+
+    // Total records count: region's records + all child regions' records
+    const totalRecords =
+      region._count.records +
+      region.childRegions.reduce((sum, c) => sum + c._count.records, 0);
+
+    const languages = Array.from(langMap.values());
+    const calculation = calculateVitalityScore({
+      languages,
+      recordCount: totalRecords,
+    });
+
+    const updated = await this.prisma.region.update({
+      where: { id: regionId },
+      data: {
+        vitalityScore: calculation.score,
+        vitalityStatus: calculation.status,
+      },
+    });
+
+    serverCache.invalidatePrefix('regions:');
+    serverCache.invalidatePrefix('analytics:');
+
+    // If this is a district, also cascade recalculation to its parent state
+    if (region.parentRegionId) {
+      const parent = await this.prisma.region.findUnique({
+        where: { id: region.parentRegionId },
+        include: {
+          languages: { include: { language: true } },
+          childRegions: {
+            include: {
+              languages: { include: { language: true } },
+              _count: { select: { records: true } },
+            },
+          },
+          records: { include: { language: true } },
+          _count: { select: { records: true } },
+        },
+      });
+
+      if (parent) {
+        const parentLangMap = new Map<string, LanguageVitalityData>();
+        for (const pl of parent.languages) {
+          if (pl.language) parentLangMap.set(pl.language.id, pl.language);
+        }
+        for (const child of parent.childRegions) {
+          for (const crl of child.languages) {
+            if (crl.language) parentLangMap.set(crl.language.id, crl.language);
+          }
+        }
+        for (const rec of parent.records) {
+          if (rec.language) parentLangMap.set(rec.language.id, rec.language);
+        }
+        const parentRecords =
+          parent._count.records +
+          parent.childRegions.reduce((sum, c) => sum + c._count.records, 0);
+
+        const parentCalc = calculateVitalityScore({
+          languages: Array.from(parentLangMap.values()),
+          recordCount: parentRecords,
+        });
+
+        await this.prisma.region.update({
+          where: { id: parent.id },
+          data: {
+            vitalityScore: parentCalc.score,
+            vitalityStatus: parentCalc.status,
+          },
+        });
+      }
+    }
+
+    return {
+      region: updated,
+      calculation,
+    };
+  }
+
+  // 7. Recalculate vitality scores across all regions in the database
+  async recalculateAllRegions() {
+    // A. Recalculate all districts
+    const districts = await this.prisma.region.findMany({
+      where: { level: 'DISTRICT' },
+      select: { id: true },
+    });
+    for (const d of districts) {
+      await this.recalculateRegionVitality(d.id);
+    }
+
+    // B. Recalculate all states
+    const states = await this.prisma.region.findMany({
+      where: { level: 'STATE' },
+      select: { id: true },
+    });
+    for (const s of states) {
+      await this.recalculateRegionVitality(s.id);
+    }
+
+    serverCache.invalidatePrefix('regions:');
+    serverCache.invalidatePrefix('analytics:');
+    return { updatedDistricts: districts.length, updatedStates: states.length };
+  }
+
+  // 8. Update language details and cascade recalculate all linked regions
+  async updateLanguage(
+    id: string,
+    dto: {
+      estimatedSpeakers?: number;
+      averageSpeakerAge?: number;
+      vitalityStatus?: VitalityStatus;
+      name?: string;
+    },
+  ) {
+    const updated = await this.prisma.language.update({
+      where: { id },
+      data: dto,
+    });
+
+    const linkedRegions = await this.prisma.regionLanguage.findMany({
+      where: { languageId: id },
+      select: { regionId: true },
+    });
+
+    for (const lr of linkedRegions) {
+      await this.recalculateRegionVitality(lr.regionId);
+    }
+
+    serverCache.invalidatePrefix('languages:');
+    serverCache.invalidatePrefix('regions:');
+    serverCache.invalidatePrefix('analytics:');
+
+    return updated;
+  }
 }
+
 

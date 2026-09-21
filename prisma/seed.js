@@ -543,7 +543,105 @@ async function main() {
     });
   }
 
-  console.log('Seeding completed successfully!');
+  console.log('6. Dynamically calculating authentic Vitality Scores for all regions...');
+  function getStatusWeight(status) {
+    switch (status) {
+      case 'CRITICAL': return 9.5;
+      case 'ENDANGERED': return 7.0;
+      case 'VULNERABLE': return 5.0;
+      case 'SAFE': return 2.0;
+      default: return 5.0;
+    }
+  }
+
+  function getSpeakerScarcityScore(speakers) {
+    if (speakers == null) return 5.0;
+    if (speakers <= 100) return 10.0;
+    if (speakers <= 1000) return 8.5;
+    if (speakers <= 10000) return 7.0;
+    if (speakers <= 50000) return 5.0;
+    if (speakers <= 200000) return 3.0;
+    return 1.0;
+  }
+
+  function getSpeakerAgeScore(age) {
+    if (age == null) return 5.0;
+    const score = (age - 20) / 5;
+    return Math.min(10.0, Math.max(1.0, score));
+  }
+
+  function scoreToStatus(score) {
+    if (score >= 7.5) return 'CRITICAL';
+    if (score >= 5.5) return 'ENDANGERED';
+    if (score >= 3.5) return 'VULNERABLE';
+    return 'SAFE';
+  }
+
+  function calculateVitality(languages, recordCount) {
+    if (!languages || languages.length === 0) {
+      const buffer = Math.min(1.0, Math.max(0, recordCount * 0.05));
+      const raw = 5.0 - buffer;
+      const finalScore = Math.round(Math.min(9.9, Math.max(1.0, raw)) * 10) / 10;
+      return { score: finalScore, status: scoreToStatus(finalScore) };
+    }
+    const avgStatus = languages.reduce((acc, l) => acc + getStatusWeight(l.vitalityStatus), 0) / languages.length;
+    const avgSpeakers = languages.reduce((acc, l) => acc + getSpeakerScarcityScore(l.estimatedSpeakers), 0) / languages.length;
+    const avgAge = languages.reduce((acc, l) => acc + getSpeakerAgeScore(l.averageSpeakerAge), 0) / languages.length;
+    const buffer = Math.min(1.0, Math.max(0, recordCount * 0.05));
+    const rawScore = (0.35 * avgStatus) + (0.35 * avgSpeakers) + (0.30 * avgAge) - buffer;
+    const finalScore = Math.round(Math.min(9.9, Math.max(1.0, rawScore)) * 10) / 10;
+    return { score: finalScore, status: scoreToStatus(finalScore) };
+  }
+
+  const allDistricts = await prisma.region.findMany({ where: { level: 'DISTRICT' } });
+  for (const d of allDistricts) {
+    const full = await prisma.region.findUnique({
+      where: { id: d.id },
+      include: {
+        languages: { include: { language: true } },
+        records: { include: { language: true } },
+        _count: { select: { records: true } },
+      },
+    });
+    const lMap = new Map();
+    full.languages.forEach((rl) => rl.language && lMap.set(rl.language.id, rl.language));
+    full.records.forEach((rec) => rec.language && lMap.set(rec.language.id, rec.language));
+    const calc = calculateVitality(Array.from(lMap.values()), full._count.records);
+    await prisma.region.update({
+      where: { id: d.id },
+      data: { vitalityScore: calc.score, vitalityStatus: calc.status },
+    });
+  }
+
+  const allStates = await prisma.region.findMany({ where: { level: 'STATE' } });
+  for (const s of allStates) {
+    const full = await prisma.region.findUnique({
+      where: { id: s.id },
+      include: {
+        languages: { include: { language: true } },
+        childRegions: {
+          include: {
+            languages: { include: { language: true } },
+            _count: { select: { records: true } },
+          },
+        },
+        records: { include: { language: true } },
+        _count: { select: { records: true } },
+      },
+    });
+    const lMap = new Map();
+    full.languages.forEach((rl) => rl.language && lMap.set(rl.language.id, rl.language));
+    full.childRegions.forEach((c) => c.languages.forEach((crl) => crl.language && lMap.set(crl.language.id, crl.language)));
+    full.records.forEach((rec) => rec.language && lMap.set(rec.language.id, rec.language));
+    const totalRecs = full._count.records + full.childRegions.reduce((sum, c) => sum + c._count.records, 0);
+    const calc = calculateVitality(Array.from(lMap.values()), totalRecs);
+    await prisma.region.update({
+      where: { id: s.id },
+      data: { vitalityScore: calc.score, vitalityStatus: calc.status },
+    });
+  }
+
+  console.log('Seeding completed successfully with calculated Vitality Scores!');
 }
 
 main()

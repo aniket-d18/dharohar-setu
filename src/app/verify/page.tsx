@@ -56,7 +56,7 @@ interface QueueItem {
   transcriptionText?: string | null;
   translationText?: string | null;
   summaryText?: string | null;
-  verificationStatus: 'UNVERIFIED' | 'COMMUNITY_SUPPORTED' | 'COMMUNITY_VERIFIED' | 'STEWARD_ENDORSED' | 'EXPERT_REVIEWED';
+  verificationStatus: 'UNVERIFIED' | 'COMMUNITY_SUPPORTED' | 'COMMUNITY_VERIFIED' | 'DISPUTED' | 'STEWARD_ENDORSED' | 'EXPERT_REVIEWED';
   createdAt: string;
   region?: {
     id: string;
@@ -82,7 +82,7 @@ interface QueueItem {
 
 export default function VerificationConsolePage() {
   const router = useRouter();
-  const { user, loading: authLoading, login } = useAuth();
+  const { user, loading: authLoading, login, authFetch } = useAuth();
   const t = useTranslations('verify');
   const tCommon = useTranslations('common');
 
@@ -128,7 +128,7 @@ export default function VerificationConsolePage() {
     async function fetchQueue() {
       try {
         setLoading(true);
-        const res = await fetch(`${apiUrl}/api/verification/queue`);
+        const res = await authFetch(`${apiUrl}/api/verification/queue`);
         if (res.ok) {
           const data: QueueItem[] = await res.json();
           setQueue(data);
@@ -145,8 +145,10 @@ export default function VerificationConsolePage() {
       }
     }
 
-    fetchQueue();
-  }, [apiUrl]);
+    if (user && user.role !== 'CONTRIBUTOR') {
+      fetchQueue();
+    }
+  }, [apiUrl, authFetch, user]);
 
   // Helper to ensure media URL is playable across domains and fallbacks
   const getPlayableMediaUrl = (url?: string | null) => {
@@ -329,14 +331,11 @@ export default function VerificationConsolePage() {
     setActionError(null);
 
     try {
-      const res = await fetch(`${apiUrl}/api/verification/${selectedRecord.id}/submit`, {
+      const res = await authFetch(`${apiUrl}/api/verification/${selectedRecord.id}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action,
-          reviewerId: user.id,
-          reviewerName: user.displayName,
-          reviewerRole: action === 'ENDORSE' ? 'STEWARD' : user.role === 'ADMIN' ? 'ADMIN' : 'REVIEWER',
           submittedTranscription: action === 'EDIT' ? editedTranscription.trim() : undefined,
           submittedTranslation: action === 'EDIT' ? editedTranslation.trim() : undefined,
           notes: reviewerNotes || (action === 'AGREE' ? 'Transcription confirmed by native listener.' : undefined),
@@ -405,8 +404,8 @@ export default function VerificationConsolePage() {
     if (!selectedRecord || !user) return;
     try {
       setIsDeleting(true);
-      const res = await fetch(
-        `${apiUrl}/api/records/${selectedRecord.id}?userId=${encodeURIComponent(user.id)}&role=${encodeURIComponent(user.role)}`,
+      const res = await authFetch(
+        `${apiUrl}/api/records/${selectedRecord.id}`,
         {
           method: 'DELETE',
         }
@@ -1107,6 +1106,17 @@ export default function VerificationConsolePage() {
                   </div>
                 )}
               </div>
+
+              {/* Disputed record notice */}
+              {selectedRecord.verificationStatus === 'DISPUTED' && (
+                <div className="mb-4 px-4 py-3 rounded-lg bg-[#B54A3A]/8 border border-[#B54A3A]/30 flex items-start space-x-2">
+                  <AlertTriangle className="w-4 h-4 text-[#B54A3A] mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-sans font-semibold text-[#B54A3A]">This record has been disputed by a reviewer.</p>
+                    <p className="text-[11px] text-[#2A2420]/70 mt-0.5">A reviewer flagged an error or authenticity concern. Review the existing dispute note below and submit a corrected version or agreement to resolve it.</p>
+                  </div>
+                </div>
+              )}
 
               {/* Action Bar */}
               <div className="pt-6 border-t border-[#E4DDD0] flex flex-wrap items-center justify-between gap-4">

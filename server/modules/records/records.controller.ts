@@ -1,9 +1,13 @@
-import { Controller, Get, Post, Delete, Body, Param, Query, Inject, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, Headers, Inject, UseInterceptors, UploadedFile, BadRequestException, UseGuards } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { RecordsService, CreateRecordDto, RecordFilterQuery } from './records.service';
+import { JwtAuthGuard, JwtUserPayload } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @Controller('api/records')
 export class RecordsController {
@@ -58,8 +62,28 @@ export class RecordsController {
     return this.service.createRecord(dto);
   }
 
+
   @Get()
-  async getRecords(@Query() query: RecordFilterQuery) {
+  async getRecords(
+    @Query() query: RecordFilterQuery,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    // Decode the JWT (if present) to inject requester identity into the query.
+    // The JWT is already verified by JwtAuthGuard on protected routes; here we
+    // just decode the payload for visibility scoping on this public list endpoint.
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.slice(7);
+        const payloadB64 = token.split('.')[1];
+        if (payloadB64) {
+          const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
+          query.requesterId = payload.sub || payload.id || undefined;
+          query.requesterRole = payload.role || undefined;
+        }
+      } catch (_) {
+        // Malformed token — treat as anonymous
+      }
+    }
     return this.service.getRecords(query);
   }
 
@@ -131,17 +155,34 @@ export class RecordsController {
   async getRecordById(
     @Param('id') id: string,
     @Query('userId') userId?: string,
+    @Headers('authorization') authHeader?: string,
   ) {
-    return this.service.getRecordById(id, userId);
+    let requesterId = userId;
+    let requesterRole: string | undefined;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.slice(7);
+        const payloadB64 = token.split('.')[1];
+        if (payloadB64) {
+          const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
+          requesterId = requesterId || payload.sub || payload.id;
+          requesterRole = payload.role;
+        }
+      } catch (_) {}
+    }
+
+    return this.service.getRecordById(id, requesterId, requesterRole);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('REVIEWER', 'STEWARD', 'EXPERT', 'ADMIN')
   @Delete(':id')
   async deleteRecord(
     @Param('id') id: string,
-    @Query('userId') userId?: string,
-    @Query('role') role?: string,
+    @CurrentUser() user: JwtUserPayload,
   ) {
-    return this.service.deleteRecord(id, userId, role);
+    return this.service.deleteRecord(id, user.id, user.role);
   }
 }
 

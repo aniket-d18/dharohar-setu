@@ -87,7 +87,7 @@ interface RecordDetail {
   transcriptionText?: string | null;
   translationText?: string | null;
   summaryText?: string | null;
-  verificationStatus: 'UNVERIFIED' | 'COMMUNITY_SUPPORTED' | 'COMMUNITY_VERIFIED' | 'STEWARD_ENDORSED' | 'EXPERT_REVIEWED';
+  verificationStatus: 'UNVERIFIED' | 'COMMUNITY_SUPPORTED' | 'COMMUNITY_VERIFIED' | 'DISPUTED' | 'STEWARD_ENDORSED' | 'EXPERT_REVIEWED';
   upvoteCount?: number;
   hasUpvoted?: boolean;
   upvoteThreshold?: number;
@@ -156,7 +156,7 @@ export default function RecordDetailPage() {
   const [isMuted, setIsMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const apiUrl = getApiUrl();
-  const { user } = useAuth();
+  const { user, authFetch } = useAuth();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -178,8 +178,8 @@ export default function RecordDetailPage() {
     try {
       setIsDeleting(true);
       setDeleteError(null);
-      const res = await fetch(
-        `${apiUrl}/api/records/${record.id}?userId=${encodeURIComponent(user.id)}&role=${encodeURIComponent(user.role)}`,
+      const res = await authFetch(
+        `${apiUrl}/api/records/${record.id}`,
         { method: 'DELETE' }
       );
       if (!res.ok) {
@@ -450,6 +450,13 @@ export default function RecordDetailPage() {
           <span className="inline-flex items-center px-3 py-1 rounded text-xs font-sans font-medium bg-[#D97706]/10 text-[#D97706] border border-[#D97706]/30">
             <ThumbsUp className="w-3.5 h-3.5 mr-1.5 text-[#D97706]" />
             {tCommon('communitySupported') || 'Community Supported'}
+          </span>
+        );
+      case 'DISPUTED':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded text-xs font-sans font-medium bg-[#B54A3A]/10 text-[#B54A3A] border border-[#B54A3A]/40">
+            <AlertCircle className="w-3.5 h-3.5 mr-1.5" />
+            Disputed — Under Re-Review
           </span>
         );
       case 'UNVERIFIED':

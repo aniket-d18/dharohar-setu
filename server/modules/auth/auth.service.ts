@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException, BadRequestException, Inject } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma.service';
 import * as bcrypt from 'bcryptjs';
-import { randomUUID } from 'crypto';
 
 export class LoginDto {
   email!: string;
@@ -13,6 +13,8 @@ export class AuthService {
   constructor(
     @Inject(PrismaService)
     private readonly prisma: PrismaService,
+    @Inject(JwtService)
+    private readonly jwtService: JwtService,
   ) {}
 
   // 1. Sync Admin account from environment variables if present
@@ -78,6 +80,20 @@ export class AuthService {
         if (!isMatch) {
           throw new UnauthorizedException('Invalid credentials for administrator.');
         }
+
+        const adminToken = this.jwtService.sign(
+          {
+            sub: admin.id,
+            email: admin.email,
+            role: admin.role,
+            displayName: admin.displayName,
+          },
+          {
+            secret: process.env.JWT_SECRET || 'dev-fallback-secret-key-change-in-env-32chars',
+            expiresIn: '24h',
+          },
+        );
+
         return {
           user: {
             id: admin.id,
@@ -87,7 +103,7 @@ export class AuthService {
             points: admin.points,
             badges: admin.badges,
           },
-          token: `dharohar-session-${randomUUID()}`,
+          token: adminToken,
         };
       }
 
@@ -115,6 +131,19 @@ export class AuthService {
         throw new UnauthorizedException('Invalid password entered.');
       }
 
+      const userToken = this.jwtService.sign(
+        {
+          sub: user.id,
+          email: user.email,
+          role: user.role,
+          displayName: user.displayName,
+        },
+        {
+          secret: process.env.JWT_SECRET || 'dev-fallback-secret-key-change-in-env-32chars',
+          expiresIn: '24h',
+        },
+      );
+
       return {
         user: {
           id: user.id,
@@ -124,7 +153,7 @@ export class AuthService {
           points: user.points,
           badges: user.badges,
         },
-        token: `dharohar-session-${randomUUID()}`,
+        token: userToken,
       };
     } catch (err: any) {
       console.error('[AuthService.login Error]:', err);

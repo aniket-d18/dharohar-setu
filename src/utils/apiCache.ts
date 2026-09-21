@@ -15,7 +15,9 @@ export async function cachedFetch<T = any>(
   options?: RequestInit & { maxAgeMs?: number; ttl?: number; fallbackData?: T }
 ): Promise<T> {
   const maxAgeMs = options?.maxAgeMs ?? options?.ttl ?? 10 * 60 * 1000; // 10 minutes default
-  const cacheKey = `dharohar_cache_${url}`;
+  const token = typeof window !== 'undefined' ? localStorage.getItem('dharohar_auth_token') : null;
+  const authScope = token ? `auth_${token.slice(-12)}` : 'anon';
+  const cacheKey = `dharohar_cache_${authScope}_${url}`;
 
   // 1. Try In-Memory cache first (0ms)
   const mem = memoryCache.get(cacheKey);
@@ -49,8 +51,14 @@ export async function cachedFetch<T = any>(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 8000);
 
+    const headers = new Headers(options?.headers || {});
+    if (token && !headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+
     const res = await fetch(url, {
       ...options,
+      headers,
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
@@ -91,7 +99,12 @@ export async function cachedFetch<T = any>(
 
 async function silentRevalidate(url: string, cacheKey: string, options?: RequestInit) {
   try {
-    const res = await fetch(url, options);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('dharohar_auth_token') : null;
+    const headers = new Headers(options?.headers || {});
+    if (token && !headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+    const res = await fetch(url, { ...options, headers });
     if (res.ok) {
       const data = await res.json();
       const entry = { data, timestamp: Date.now() };

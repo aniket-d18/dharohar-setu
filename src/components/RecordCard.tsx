@@ -22,7 +22,7 @@ export interface RecordCardData {
   transcriptionText?: string | null;
   translationText?: string | null;
   summaryText?: string | null;
-  verificationStatus: 'UNVERIFIED' | 'COMMUNITY_SUPPORTED' | 'COMMUNITY_VERIFIED' | 'STEWARD_ENDORSED' | 'EXPERT_REVIEWED';
+  verificationStatus: 'UNVERIFIED' | 'COMMUNITY_SUPPORTED' | 'COMMUNITY_VERIFIED' | 'DISPUTED' | 'STEWARD_ENDORSED' | 'EXPERT_REVIEWED';
   upvoteCount?: number;
   hasUpvoted?: boolean;
   upvoteThreshold?: number;
@@ -171,6 +171,12 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
         return (
           <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-sans font-medium bg-[#D97706]/10 text-[#D97706] border border-[#D97706]/30">
             {t('communitySupported') || 'Community Supported'}
+          </span>
+        );
+      case 'DISPUTED':
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-sans font-medium bg-[#B54A3A]/10 text-[#B54A3A] border border-[#B54A3A]/40">
+            Disputed
           </span>
         );
       case 'UNVERIFIED':

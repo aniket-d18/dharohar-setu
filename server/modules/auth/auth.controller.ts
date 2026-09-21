@@ -1,5 +1,7 @@
-import { Controller, Post, Get, Body, Headers, UnauthorizedException, Inject } from '@nestjs/common';
+import { Controller, Post, Get, Body, Headers, UnauthorizedException, Inject, UseGuards, Req } from '@nestjs/common';
 import { AuthService, LoginDto } from './auth.service';
+import { JwtAuthGuard, JwtUserPayload } from '../../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @Controller('api/auth')
 export class AuthController {
@@ -18,11 +20,9 @@ export class AuthController {
     return this.authService.getDemoUsers();
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('me')
-  async getMe(@Headers('x-user-id') userId: string) {
-    if (!userId) {
-      throw new UnauthorizedException('Missing x-user-id header');
-    }
-    return this.authService.getProfile(userId);
+  async getMe(@CurrentUser() user: JwtUserPayload) {
+    return this.authService.getProfile(user.id);
   }
 }
