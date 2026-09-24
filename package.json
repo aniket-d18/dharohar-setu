@@ -11,7 +11,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "server:dev": "tsx watch --tsconfig tsconfig.server.json server/main.ts",
-    "server:start": "tsx server/main.ts"
+    "server:build": "tsc -p tsconfig.server.json",
+    "server:start": "node dist/main.js"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
