@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: dharohar-backend
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install && npx prisma generate
+    startCommand: npm run server:start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
