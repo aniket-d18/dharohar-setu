@@ -566,10 +566,11 @@ export default function DashboardPage() {
                     : 'border-transparent text-[#2A2420]/60 hover:text-[#2A2420]'
                 }`}
               >
-                <FolderHeart className="w-4 h-4" />
-                <span>My Contributions & Reviewer Feedback</span>
+                <FolderHeart className="w-4 h-4 shrink-0" />
+                <span className="hidden sm:inline">My Contributions &amp; Reviewer Feedback</span>
+                <span className="sm:hidden">My Submissions</span>
                 {myRecords.length > 0 && (
-                  <span className="ml-1.5 px-2 py-0.2 rounded-full text-[11px] bg-[#2F6E5D]/10 text-[#2F6E5D]">
+                  <span className="ml-1.5 px-2 py-0.5 rounded-full text-[11px] bg-[#2F6E5D]/10 text-[#2F6E5D]">
                     {myRecords.length}
                   </span>
                 )}
@@ -668,16 +669,16 @@ export default function DashboardPage() {
                     </span>
                   </div>
 
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs font-sans">
+                  <div className="overflow-x-auto -mx-6 px-6">
+                    <table className="min-w-max w-full text-left text-xs font-sans">
                       <thead>
                         <tr className="border-b border-[#E4DDD0] text-[#2A2420]/60">
-                          <th className="pb-3 font-medium">Language / Dialect</th>
-                          <th className="pb-3 font-medium">Status</th>
-                          <th className="pb-3 font-medium">Est. Speakers</th>
-                          <th className="pb-3 font-medium">Avg Speaker Age</th>
-                          <th className="pb-3 font-medium">Years to Critical</th>
-                          <th className="pb-3 font-medium text-right">Archived Clips</th>
+                          <th className="pb-3 pr-6 font-medium whitespace-nowrap">Language / Dialect</th>
+                          <th className="pb-3 pr-6 font-medium whitespace-nowrap">Status</th>
+                          <th className="pb-3 pr-6 font-medium whitespace-nowrap">Est. Speakers</th>
+                          <th className="pb-3 pr-6 font-medium whitespace-nowrap">Avg Age</th>
+                          <th className="pb-3 pr-6 font-medium whitespace-nowrap">Yrs to Critical</th>
+                          <th className="pb-3 font-medium text-right whitespace-nowrap">Archived Clips</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#E4DDD0]">

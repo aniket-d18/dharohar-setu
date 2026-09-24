@@ -30,6 +30,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/archive?category=OTHER" className="hover:text-[#C97A3D] transition-colors">
+                  Forts & Heritage Sites
+                </Link>
+              </li>
+              <li>
                 <Link href="/archive?category=CRAFT_TECHNIQUE" className="hover:text-[#C97A3D] transition-colors">
                   {t('craftTechniques')}
                 </Link>
@@ -46,13 +51,20 @@ export default function Footer() {
             <h4 className="text-sm font-sans font-medium text-[#2A2420] mb-3">{t('livingHeritage')}</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <span className="text-[#B54A3A]">● {t('critical')}</span> — Great Andamanese, Toda, Toto, Nihali
+                <span className="text-[#B54A3A]">● {t('critical')}</span> —{' '}
+                <Link href="/archive?search=Great%20Andamanese" className="hover:text-[#C97A3D] transition-colors">Great Andamanese</Link>,{' '}
+                <Link href="/archive?search=Toda" className="hover:text-[#C97A3D] transition-colors">Toda</Link>,{' '}
+                <Link href="/archive?search=Toto" className="hover:text-[#C97A3D] transition-colors">Toto</Link>,{' '}
+                <Link href="/archive?search=Nihali" className="hover:text-[#C97A3D] transition-colors">Nihali</Link>
               </li>
               <li>
-                <span className="text-[#C97A3D]">● {t('endangered')}</span> — Spiti Bhoti, Pahari
+                <span className="text-[#C97A3D]">● {t('endangered')}</span> —{' '}
+                <Link href="/archive?search=Spiti%20Bhoti" className="hover:text-[#C97A3D] transition-colors">Spiti Bhoti</Link>,{' '}
+                <Link href="/archive?search=Pahari" className="hover:text-[#C97A3D] transition-colors">Pahari</Link>
               </li>
               <li>
-                <span className="text-[#6B8F5E]">● {t('vulnerable')}</span> — Kachchhi
+                <span className="text-[#6B8F5E]">● {t('vulnerable')}</span> —{' '}
+                <Link href="/archive?search=Kachchhi" className="hover:text-[#C97A3D] transition-colors">Kachchhi</Link>
               </li>
             </ul>
           </div>

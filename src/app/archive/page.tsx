@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import RecordCard, { RecordCardData } from '@/components/RecordCard';
@@ -184,29 +185,53 @@ const RegionSelect = ({ regions, value, onChange }: any) => {
   );
 };
 
-export default function ArchivePage() {
+function ArchiveContent() {
   const t = useTranslations('archive');
   const tCommon = useTranslations('common');
   const { language } = useLanguage();
   const curLang = (language === 'mr' || language === 'hi') ? language : 'en';
   const catMap = CATEGORY_I18N[curLang] || CATEGORY_I18N.en;
+  const searchParams = useSearchParams();
 
   const [records, setRecords] = useState<RecordCardData[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [regions, setRegions] = useState<RegionItem[]>([]);
 
-  // Filter States
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedRegionId, setSelectedRegionId] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedMediaType, setSelectedMediaType] = useState('');
-  const [selectedVitality, setSelectedVitality] = useState('');
+  // Filter States initialized from searchParams
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get('search') || '');
+  const [selectedRegionId, setSelectedRegionId] = useState(searchParams.get('regionId') || '');
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
+  const [selectedMediaType, setSelectedMediaType] = useState(searchParams.get('mediaType') || '');
+  const [selectedVitality, setSelectedVitality] = useState(searchParams.get('vitalityStatus') || '');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedSort, setSelectedSort] = useState<'newest' | 'urgency' | 'verified'>('newest');
 
   const API_URL = getApiUrl();
+
+  // Sync state when URL query params change (e.g. from footer or atlas links)
+  useEffect(() => {
+    const cat = searchParams.get('category');
+    const reg = searchParams.get('regionId');
+    const q = searchParams.get('search');
+    const med = searchParams.get('mediaType');
+    const vit = searchParams.get('vitalityStatus');
+    const del = searchParams.get('deleted');
+
+    if (cat !== null) setSelectedCategory(cat);
+    if (reg !== null) setSelectedRegionId(reg);
+    if (q !== null) {
+      setSearchTerm(q);
+      setDebouncedSearch(q);
+    }
+    if (med !== null) setSelectedMediaType(med);
+    if (vit !== null) setSelectedVitality(vit);
+    if (del === 'true') {
+      setDeletedNotice(true);
+      setTimeout(() => setDeletedNotice(false), 5000);
+    }
+  }, [searchParams]);
 
   // Debounce search input
   useEffect(() => {
@@ -217,13 +242,6 @@ export default function ArchivePage() {
   }, [searchTerm]);
 
   const [deletedNotice, setDeletedNotice] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.search.includes('deleted=true')) {
-      setDeletedNotice(true);
-      setTimeout(() => setDeletedNotice(false), 5000);
-    }
-  }, []);
 
   // Load Regions for the filter dropdown
   useEffect(() => {
@@ -374,14 +392,15 @@ export default function ArchivePage() {
               onChange={setSelectedCategory}
               options={[
                 { value: '', label: tCommon('allCategories') },
-                { value: 'LULLABY', label: catMap.LULLABY?.label || 'Lullaby' },
-                { value: 'PROVERB', label: catMap.PROVERB?.label || 'Proverb' },
+                { value: 'OTHER', label: catMap.OTHER?.label || 'Place / Heritage Site' },
+                { value: 'LULLABY', label: catMap.LULLABY?.label || 'Song / Lullaby' },
                 { value: 'STORY', label: catMap.STORY?.label || 'Story / Folktale' },
-                { value: 'CRAFT_TECHNIQUE', label: catMap.CRAFT_TECHNIQUE?.label || 'Craft Technique' },
-                { value: 'FESTIVAL', label: catMap.FESTIVAL?.label || 'Festival Practice' },
-                { value: 'RECIPE', label: catMap.RECIPE?.label || 'Ancestral Recipe' },
-                { value: 'RITUAL', label: catMap.RITUAL?.label || 'Sacred Ritual' },
-                { value: 'LIFE_SKILL', label: catMap.LIFE_SKILL?.label || 'Life Skill / Indigenous Knowledge' },
+                { value: 'PROVERB', label: catMap.PROVERB?.label || 'Proverb / Saying' },
+                { value: 'RITUAL', label: catMap.RITUAL?.label || 'Ritual / Chant' },
+                { value: 'FESTIVAL', label: catMap.FESTIVAL?.label || 'Festival / Event' },
+                { value: 'RECIPE', label: catMap.RECIPE?.label || 'Culinary Heritage' },
+                { value: 'CRAFT_TECHNIQUE', label: catMap.CRAFT_TECHNIQUE?.label || 'Craft / Skill' },
+                { value: 'LIFE_SKILL', label: catMap.LIFE_SKILL?.label || 'Ecology / Life Skill' },
               ]}
             />
 
@@ -501,5 +520,19 @@ export default function ArchivePage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function ArchivePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#FAF7F1] flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C97A3D]" />
+        </div>
+      }
+    >
+      <ArchiveContent />
+    </Suspense>
   );
 }

@@ -373,148 +373,155 @@ export default function AtlasPage() {
 
       <main className="flex-1 min-h-0 flex flex-col relative overflow-hidden">
         {/* Top Control Strip */}
-        <div className="bg-[#FAF7F1] border-b border-[#E4DDD0] px-4 sm:px-8 py-3 flex-shrink-0 flex flex-wrap items-center justify-between gap-4 z-20">
-          <div className="flex items-center space-x-2">
-            <Compass className="w-5 h-5 text-[#C97A3D]" />
-            <h1 className="font-serif text-lg sm:text-xl font-medium text-[#2A2420]">
-              {t('title')}
-            </h1>
-          </div>
+        <div className="bg-[#FAF7F1] border-b border-[#E4DDD0] px-4 sm:px-8 py-3 flex-shrink-0 z-20">
+          {/* Row 1: Title + Heritage Near Me + Layer Selector */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center space-x-2">
+              <Compass className="w-5 h-5 text-[#C97A3D]" />
+              <h1 className="font-serif text-lg sm:text-xl font-medium text-[#2A2420]">
+                {t('title')}
+              </h1>
+            </div>
 
-          {/* Heritage Near Me Quick-Locate & Layer Selector */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Heritage Near Me Button */}
-            <button
-              id="atlas-heritage-near-me-btn"
-              onClick={handleFindNearMe}
-              disabled={isLocating}
-              className={`px-3 py-1.5 rounded-lg text-xs font-sans font-medium transition-all flex items-center space-x-2 border ${
-                userLocation
-                  ? 'bg-[#00D2FF]/15 text-[#006688] border-[#00D2FF]/50 shadow-[0_0_12px_rgba(0,210,255,0.25)] hover:bg-[#00D2FF]/25'
-                  : 'bg-[#FFFFFF] text-[#2A2420] border-[#E4DDD0] hover:border-[#C97A3D] hover:text-[#C97A3D] shadow-sm'
-              }`}
-              title={userLocation ? t('clearNearMe') : t('heritageNearMe')}
-            >
-              <LocateFixed
-                className={`w-3.5 h-3.5 ${
-                  isLocating
-                    ? 'animate-spin text-[#00D2FF]'
-                    : userLocation
-                    ? 'text-[#00B4D8] animate-pulse'
-                    : 'text-[#C97A3D]'
+            {/* Right side: Heritage Near Me + Layers + View Toggle */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Heritage Near Me Button */}
+              <button
+                id="atlas-heritage-near-me-btn"
+                onClick={handleFindNearMe}
+                disabled={isLocating}
+                className={`px-3 py-1.5 rounded-lg text-xs font-sans font-medium transition-all flex items-center space-x-2 border ${
+                  userLocation
+                    ? 'bg-[#00D2FF]/15 text-[#006688] border-[#00D2FF]/50 shadow-[0_0_12px_rgba(0,210,255,0.25)] hover:bg-[#00D2FF]/25'
+                    : 'bg-[#FFFFFF] text-[#2A2420] border-[#E4DDD0] hover:border-[#C97A3D] hover:text-[#C97A3D] shadow-sm'
                 }`}
-              />
-              <span className="font-medium">
-                {isLocating
-                  ? t('locating')
-                  : userLocation
-                  ? t('nearMeActive')
-                  : t('heritageNearMe')}
-              </span>
-              {userLocation && (
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setUserLocation(null);
-                    setFilterNearMeOnly(false);
-                    setNearestDistanceKm(null);
-                    setLocationNotice(null);
-                  }}
-                  className="ml-1 hover:text-[#B54A3A] p-0.5 rounded cursor-pointer"
-                  title={t('clearNearMe')}
-                >
-                  <X className="w-3 h-3" />
+                title={userLocation ? t('clearNearMe') : t('heritageNearMe')}
+              >
+                <LocateFixed
+                  className={`w-3.5 h-3.5 ${
+                    isLocating
+                      ? 'animate-spin text-[#00D2FF]'
+                      : userLocation
+                      ? 'text-[#00B4D8] animate-pulse'
+                      : 'text-[#C97A3D]'
+                  }`}
+                />
+                <span className="font-medium hidden sm:inline">
+                  {isLocating
+                    ? t('locating')
+                    : userLocation
+                    ? t('nearMeActive')
+                    : t('heritageNearMe')}
                 </span>
-              )}
-            </button>
+                <span className="font-medium sm:hidden">
+                  {isLocating ? '...' : userLocation ? 'Near Me ✓' : 'Near Me'}
+                </span>
+                {userLocation && (
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setUserLocation(null);
+                      setFilterNearMeOnly(false);
+                      setNearestDistanceKm(null);
+                      setLocationNotice(null);
+                    }}
+                    className="ml-1 hover:text-[#B54A3A] p-0.5 rounded cursor-pointer"
+                    title={t('clearNearMe')}
+                  >
+                    <X className="w-3 h-3" />
+                  </span>
+                )}
+              </button>
 
-            {locationNotice && (
-              <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[11px] px-2.5 py-1 rounded-full flex items-center space-x-1.5 animate-fadeIn">
-                <AlertCircle className="w-3 h-3 text-amber-600 flex-shrink-0" />
-                <span>{locationNotice}</span>
+              {locationNotice && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[11px] px-2.5 py-1 rounded-full flex items-center space-x-1.5 animate-fadeIn">
+                  <AlertCircle className="w-3 h-3 text-amber-600 flex-shrink-0" />
+                  <span>{locationNotice}</span>
+                  <button
+                    onClick={() => setLocationNotice(null)}
+                    className="ml-1 text-amber-600 hover:text-amber-900"
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              )}
+
+              {/* Layer Selector */}
+              <div className="flex items-center space-x-1 bg-[#FFFFFF] p-0.5 rounded-lg border border-[#E4DDD0] text-xs font-sans">
+                <span className="text-[#2A2420]/50 px-1.5 hidden sm:inline">Layer:</span>
                 <button
-                  onClick={() => setLocationNotice(null)}
-                  className="ml-1 text-amber-600 hover:text-amber-900"
+                  onClick={() => setActiveLayer('language')}
+                  className={`px-2 sm:px-3 py-1 rounded transition-colors ${
+                    activeLayer === 'language'
+                      ? 'bg-[#2F6E5D] text-[#FAF7F1] font-medium shadow-none'
+                      : 'text-[#2A2420]/70 hover:text-[#2A2420]'
+                  }`}
                 >
-                  <X className="w-2.5 h-2.5" />
+                  <span className="hidden sm:inline">Language Vitality</span>
+                  <span className="sm:hidden">Lang</span>
+                </button>
+                <button
+                  onClick={() => setActiveLayer('craft')}
+                  className={`px-2 sm:px-3 py-1 rounded transition-colors ${
+                    activeLayer === 'craft'
+                      ? 'bg-[#2F6E5D] text-[#FAF7F1] font-medium shadow-none'
+                      : 'text-[#2A2420]/70 hover:text-[#2A2420]'
+                  }`}
+                >
+                  <span className="hidden sm:inline">Craft Vitality</span>
+                  <span className="sm:hidden">Craft</span>
+                </button>
+                <button
+                  onClick={() => setActiveLayer('density')}
+                  className={`px-2 sm:px-3 py-1 rounded transition-colors ${
+                    activeLayer === 'density'
+                      ? 'bg-[#2F6E5D] text-[#FAF7F1] font-medium shadow-none'
+                      : 'text-[#2A2420]/70 hover:text-[#2A2420]'
+                  }`}
+                >
+                  <span className="hidden sm:inline">Contribution Density</span>
+                  <span className="sm:hidden">Density</span>
                 </button>
               </div>
-            )}
 
-            {/* Layer Selector */}
-            <div className="flex items-center space-x-2 bg-[#FFFFFF] p-1 rounded-lg border border-[#E4DDD0] text-xs font-sans">
-              <span className="text-[#2A2420]/50 px-2 hidden sm:inline">Layer:</span>
-              <button
-                onClick={() => setActiveLayer('language')}
-                className={`px-3 py-1 rounded transition-colors ${
-                  activeLayer === 'language'
-                    ? 'bg-[#2F6E5D] text-[#FAF7F1] font-medium shadow-none'
-                    : 'text-[#2A2420]/70 hover:text-[#2A2420]'
-                }`}
-              >
-                Language Vitality
-              </button>
-              <button
-                onClick={() => setActiveLayer('craft')}
-                className={`px-3 py-1 rounded transition-colors ${
-                  activeLayer === 'craft'
-                    ? 'bg-[#2F6E5D] text-[#FAF7F1] font-medium shadow-none'
-                    : 'text-[#2A2420]/70 hover:text-[#2A2420]'
-                }`}
-              >
-                Craft Vitality
-              </button>
-              <button
-                onClick={() => setActiveLayer('density')}
-                className={`px-3 py-1 rounded transition-colors ${
-                  activeLayer === 'density'
-                    ? 'bg-[#2F6E5D] text-[#FAF7F1] font-medium shadow-none'
-                    : 'text-[#2A2420]/70 hover:text-[#2A2420]'
-                }`}
-              >
-                Contribution Density
-              </button>
-            </div>
-          </div>
+              {/* View Toggle & Search */}
+              <div className="relative w-32 sm:w-44">
+                <Search className="w-3.5 h-3.5 text-[#C97A3D] absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder={tCommon('searchPlaceholder')}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded pl-8 pr-3 py-1 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
+                />
+              </div>
 
-          {/* View Toggle & Search */}
-          <div className="flex items-center space-x-3">
-            <div className="relative w-40 sm:w-56">
-              <Search className="w-3.5 h-3.5 text-[#C97A3D] absolute left-2.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder={tCommon('searchPlaceholder')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded pl-8 pr-3 py-1 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
-              />
-            </div>
-
-            <div className="flex items-center bg-[#FFFFFF] border border-[#E4DDD0] rounded p-0.5 text-xs">
-              <button
-                onClick={() => setViewMode('map')}
-                className={`px-2.5 py-1 rounded flex items-center space-x-1 ${
-                  viewMode === 'map'
-                    ? 'bg-[#C97A3D] text-[#FAF7F1] font-medium'
-                    : 'text-[#2A2420]/70 hover:text-[#2A2420]'
-                }`}
-                title="Geospatial Map View"
-              >
-                <Compass className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Map</span>
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`px-2.5 py-1 rounded flex items-center space-x-1 ${
-                  viewMode === 'list'
-                    ? 'bg-[#C97A3D] text-[#FAF7F1] font-medium'
-                    : 'text-[#2A2420]/70 hover:text-[#2A2420]'
-                }`}
-                title="Accessible Directory List"
-              >
-                <List className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Directory</span>
-              </button>
+              <div className="flex items-center bg-[#FFFFFF] border border-[#E4DDD0] rounded p-0.5 text-xs">
+                <button
+                  onClick={() => setViewMode('map')}
+                  className={`px-2.5 py-1 rounded flex items-center space-x-1 ${
+                    viewMode === 'map'
+                      ? 'bg-[#C97A3D] text-[#FAF7F1] font-medium'
+                      : 'text-[#2A2420]/70 hover:text-[#2A2420]'
+                  }`}
+                  title="Geospatial Map View"
+                >
+                  <Compass className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Map</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`px-2.5 py-1 rounded flex items-center space-x-1 ${
+                    viewMode === 'list'
+                      ? 'bg-[#C97A3D] text-[#FAF7F1] font-medium'
+                      : 'text-[#2A2420]/70 hover:text-[#2A2420]'
+                  }`}
+                  title="Accessible Directory List"
+                >
+                  <List className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Directory</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

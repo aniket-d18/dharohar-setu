@@ -533,7 +533,7 @@ export const CATEGORY_I18N: Record<SupportedLang, Record<string, { label: string
     RECIPE: { label: 'Culinary Heritage', desc: 'Ancient recipes and medicinal foraging' },
     RITUAL: { label: 'Sacred Ritual / Chant', desc: 'Dairy shrines, prayers, transitions' },
     LIFE_SKILL: { label: 'Ecology & Life Skill', desc: 'Weather reading, tracking, woodcraft' },
-    OTHER: { label: 'Other / Custom Genre', desc: 'Architecture, martial art, textile, theater, etc.' },
+    OTHER: { label: 'Fort, Monument & Heritage Site', desc: 'Forts, temples, stepwells, monuments, architectural wonders' },
   },
   mr: {
     LULLABY: { label: 'अंगाईगीत / लोकगीत', desc: 'पारंपरिक अंगाईगीते आणि मौखिक लोकधून' },
@@ -544,7 +544,7 @@ export const CATEGORY_I18N: Record<SupportedLang, Record<string, { label: string
     RECIPE: { label: 'पारंपरिक पाककला', desc: 'प्राचीन पाककृती आणि औषधी वनस्पती' },
     RITUAL: { label: 'पवित्र विधी / मंत्र', desc: 'पूजा, धार्मिक विधी आणि प्रार्थना' },
     LIFE_SKILL: { label: 'पर्यावरण व जीवनकौशल्य', desc: 'हवामान वाचन, शोध आणि वनकौशल्य' },
-    OTHER: { label: 'इतर / सानुकूल प्रकार', desc: 'वास्तुकला, युद्धकला, रंगभूमी इत्यादी' },
+    OTHER: { label: 'किल्ला, स्मारक व ऐतिहासिक स्थळ', desc: 'किल्ले, मंदिरे, पायऱ्यांच्या विहिरी (बारव), ऐतिहासिक वास्तू' },
   },
   hi: {
     LULLABY: { label: 'लोरी / लोकगीत', desc: 'पारंपरिक लोरियाँ और मौखिक धुनें' },
@@ -555,7 +555,7 @@ export const CATEGORY_I18N: Record<SupportedLang, Record<string, { label: string
     RECIPE: { label: 'पारंपरिक खानपान', desc: 'प्राचीन व्यंजन और औषधीय ज्ञान' },
     RITUAL: { label: 'पवित्र अनुष्ठान / मंत्र', desc: 'पूजा, धार्मिक अनुष्ठान और मंत्रोच्चार' },
     LIFE_SKILL: { label: 'पर्यावरण एवं जीवन कौशल', desc: 'मौसम का ज्ञान, ट्रैकिंग, वन कौशल' },
-    OTHER: { label: 'अन्य / विशिष्ट विधा', desc: 'स्थापत्य, युद्धकला, रंगमंच इत्यादि' },
+    OTHER: { label: 'किला, स्मारक एवं ऐतिहासिक स्थल', desc: 'किले, प्राचीन मंदिर, बावड़ियां, स्मारक, ऐतिहासिक वास्तुकला' },
   },
   ta: {
     LULLABY: { label: 'தாலாட்டு / நாட்டுப்புறப் பாடல்', desc: 'தூக்கப் பாடல்கள் மற்றும் வாய்மொழி மெட்டுகள்' },
@@ -566,7 +566,7 @@ export const CATEGORY_I18N: Record<SupportedLang, Record<string, { label: string
     RECIPE: { label: 'பாரம்பரிய சமையற்கலை', desc: 'பண்டைய சமையல் குறிப்புகள் மற்றும் மூலிகை அறிவு' },
     RITUAL: { label: 'புனித சடங்கு / மந்திரம்', desc: 'வழிபாட்டுச் சடங்குகள், பிரார்த்தனைகள்' },
     LIFE_SKILL: { label: 'சுற்றுச்சூழல் & வாழ்க்கைத் திறன்', desc: 'வானிலை அறிதல், தடம் அறிதல், வனத் திறன்' },
-    OTHER: { label: 'பிற / தனிப்பயன் வகை', desc: 'கட்டடக்கலை, தற்காப்புக் கலை, அரங்கம் போன்றவை' },
+    OTHER: { label: 'கோட்டை, நினைவுச்சின்னம் & வரலாற்று தளம்', desc: 'கோட்டைகள், கோயில்கள், பண்டைய கட்டடங்கள், வரலாற்று தளங்கள்' },
   },
   bn: {
     LULLABY: { label: 'ঘুমপাড়ানি গান / লোকগান', desc: 'ঘুমপাড়ানি গান এবং সুরময় মৌখিক গান' },
@@ -577,6 +577,6 @@ export const CATEGORY_I18N: Record<SupportedLang, Record<string, { label: string
     RECIPE: { label: 'ঐতিহ্যবাহী রন্ধনপ্রণালী', desc: 'প্রাচীন রেসিপি এবং ওষধি ভেষজ জ্ঞান' },
     RITUAL: { label: 'পবিত্র আচার / স্তোত্র', desc: 'পূজা-অর্চনা, ধর্মীয় আচার ও প্রার্থনা' },
     LIFE_SKILL: { label: 'পরিবেশ ও জীবনদক্ষতা', desc: 'আবহাওয়া পাঠ, ট্র্যাকিং ও বন্য দক্ষতা' },
-    OTHER: { label: 'অন্যান্য / কাস্টম ধারা', desc: 'স্থাপত্য, মার্শাল আর্ট, থিয়েটার ইত্যাদি' },
+    OTHER: { label: 'দুর্গ, স্মৃতিস্তম্ভ ও ঐতিহাসিক স্থান', desc: 'দুর্গ, মন্দির, প্রাচীন স্থাপত্য, ঐতিহাসিক নিদর্শন' },
   },
 };

@@ -522,7 +522,7 @@ export default function RecordDetailPage() {
               <ArrowLeft className="w-3.5 h-3.5 mr-1.5 group-hover:-translate-x-1 transition-transform" />
               {t('backToArchive')}
             </Link>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center flex-wrap gap-2">
               {canDelete && (
                 <button
                   type="button"
@@ -546,7 +546,7 @@ export default function RecordDetailPage() {
                 title={user ? (hasUpvoted ? 'Remove your community upvote' : 'Upvote this record for community verification') : 'Sign in to upvote'}
               >
                 <ThumbsUp className={`w-3.5 h-3.5 ${hasUpvoted ? 'fill-current text-[#FAF7F1]' : 'text-[#C97A3D]'}`} />
-                <span>{hasUpvoted ? 'Upvoted' : 'Upvote'}</span>
+                <span className="hidden sm:inline">{hasUpvoted ? 'Upvoted' : 'Upvote'}</span>
                 <span className="font-mono text-[11px] ml-0.5 px-1 py-0.2 rounded bg-black/5">
                   {upvoteCount}
                 </span>
@@ -558,12 +558,12 @@ export default function RecordDetailPage() {
                 {copied ? (
                   <>
                     <Check className="w-3.5 h-3.5 text-[#2F6E5D]" />
-                    <span className="text-[#2F6E5D]">{t('copied')}</span>
+                    <span className="hidden sm:inline text-[#2F6E5D]">{t('copied')}</span>
                   </>
                 ) : (
                   <>
                     <Share2 className="w-3.5 h-3.5 text-[#C97A3D]" />
-                    <span>{t('shareMemory')}</span>
+                    <span className="hidden sm:inline">{t('shareMemory')}</span>
                   </>
                 )}
               </button>
@@ -1011,13 +1011,21 @@ export default function RecordDetailPage() {
                 <div className="flex items-start space-x-3">
                   <User className="w-4 h-4 text-[#C97A3D] mt-0.5 shrink-0" />
                   <div>
-                    <span className="text-[#2A2420]/50 block text-xs">{t('voiceCustodian')}</span>
+                    <span className="text-[#2A2420]/50 block text-xs">
+                      {record.mediaType === 'IMAGE'
+                        ? 'Field Contributor'
+                        : record.mediaType === 'TEXT'
+                        ? 'Script / Text Custodian'
+                        : t('voiceCustodian')}
+                    </span>
                     <span className="text-[#2A2420] font-medium">
                       {record.speakerName ? (
                         <span>
                           {record.speakerName}
                           {record.speakerAge ? ` (${record.speakerAge} ${t('yearsOld')})` : ''}
                         </span>
+                      ) : record.mediaType === 'IMAGE' ? (
+                        <span>Community Heritage Custodian</span>
                       ) : (
                         <span className="italic">{t('anonymousElder')}</span>
                       )}

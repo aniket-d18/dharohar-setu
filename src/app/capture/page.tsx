@@ -50,15 +50,15 @@ interface LanguageItem {
 }
 
 const CATEGORIES = [
-  { id: 'LULLABY', label: 'Lullaby / Folk Song', desc: 'Bedtime songs and oral melodies' },
-  { id: 'PROVERB', label: 'Proverb / Idiom', desc: 'Ancestral sayings and metaphors' },
-  { id: 'STORY', label: 'Oral Myth / Folktale', desc: 'Creation stories and community legends' },
-  { id: 'FESTIVAL', label: 'Festival / Celebration', desc: 'Seasonal harvests and solstice chants' },
-  { id: 'CRAFT_TECHNIQUE', label: 'Craft Technique', desc: 'Textiles, pottery, metal, carving' },
-  { id: 'RECIPE', label: 'Culinary Heritage', desc: 'Ancient recipes and medicinal foraging' },
-  { id: 'RITUAL', label: 'Sacred Ritual / Chant', desc: 'Dairy shrines, prayers, transitions' },
-  { id: 'LIFE_SKILL', label: 'Ecology & Life Skill', desc: 'Weather reading, tracking, woodcraft' },
-  { id: 'OTHER', label: 'Other / Custom Genre', desc: 'Architecture, martial art, textile, theater, etc.' },
+  { id: 'OTHER',          label: 'Fort, Monument & Heritage Site', desc: 'Forts, temples, stepwells, monuments, architectural wonders', icon: '🏛️' },
+  { id: 'LULLABY',        label: 'Song / Lullaby',        desc: 'Folk songs, lullabies, oral melodies',   icon: '🎵' },
+  { id: 'STORY',          label: 'Story / Folktale',      desc: 'Myths, legends, oral narratives',         icon: '📖' },
+  { id: 'PROVERB',        label: 'Proverb / Saying',      desc: 'Ancestral wisdom, idioms',                icon: '💬' },
+  { id: 'RITUAL',         label: 'Ritual / Chant',        desc: 'Sacred ceremonies, prayers, chants',      icon: '🙏' },
+  { id: 'FESTIVAL',       label: 'Festival / Event',      desc: 'Seasonal events, harvest rituals',        icon: '🎉' },
+  { id: 'RECIPE',         label: 'Culinary Heritage',     desc: 'Traditional recipes, food practices',     icon: '🍲' },
+  { id: 'CRAFT_TECHNIQUE',label: 'Craft / Skill',         desc: 'Weaving, pottery, metalwork, woodcraft',  icon: '🏺' },
+  { id: 'LIFE_SKILL',     label: 'Ecology / Life Skill',  desc: 'Farming, tracking, weather reading',      icon: '🌿' },
 ];
 
 function isKeyboardMash(str: string): boolean {
@@ -1396,6 +1396,38 @@ export default function CaptureWizardPage() {
                   </h2>
 
                   <div className="space-y-4 text-xs font-sans">
+                    {/* Media Type — pick first so the rest of the form adapts */}
+                    <div>
+                      <label className="block text-[#2A2420]/80 font-medium text-sm mb-2">
+                        What are you sharing? <span className="text-[#C97A3D] font-normal text-xs">(choose first)</span>
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {[
+                          { id: 'IMAGE', label: 'Photo / Image', icon: '📸', hint: 'Fort, temple, crafts, food…' },
+                          { id: 'AUDIO', label: 'Audio / Voice', icon: '🎙️', hint: 'Song, story, speech…' },
+                          { id: 'VIDEO', label: 'Video',         icon: '🎥', hint: 'Ritual, demo, performance…' },
+                          { id: 'TEXT',  label: 'Text / Script', icon: '📝', hint: 'Proverb, recipe, manuscript…' },
+                        ].map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => {
+                              setMediaType(m.id as 'AUDIO' | 'VIDEO' | 'IMAGE' | 'TEXT');
+                              removeSelectedFile();
+                            }}
+                            className={`p-3 rounded-lg border text-left transition-all ${
+                              mediaType === m.id
+                                ? 'bg-[#C97A3D] border-[#C97A3D] text-[#FAF7F1]'
+                                : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/75 hover:border-[#C97A3D]/50'
+                            }`}
+                          >
+                            <span className="text-xl block mb-1">{m.icon}</span>
+                            <span className="font-semibold text-xs block">{m.label}</span>
+                            <span className={`text-[10px] block mt-0.5 leading-tight ${mediaType === m.id ? 'text-[#FAF7F1]/75' : 'text-[#2A2420]/50'}`}>{m.hint}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     {/* Reusable Hierarchical Region / District Selector */}
                     <RegionHierarchySelect
                       selectedState={selectedStateName}
@@ -1421,6 +1453,89 @@ export default function CaptureWizardPage() {
                       autoCatalogLabel={strings.langAutoCatalog}
                     />
 
+                    {/* Documentation Format Selector */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-[#2A2420]/80 font-medium text-xs">
+                          Documentation Format *
+                        </label>
+                        <span className="text-[11px] text-[#2A2420]/50">Select media style</span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMediaType('IMAGE');
+                            setSpeakerName('');
+                            setSpeakerAge('');
+                          }}
+                          className={`p-2.5 rounded border text-left transition-all ${
+                            mediaType === 'IMAGE'
+                              ? 'bg-[#2F6E5D] border-[#2F6E5D] text-[#FAF7F1] shadow-sm'
+                              : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/80 hover:border-[#C97A3D]'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-1.5 font-medium text-xs">
+                            <ImageIcon className="w-3.5 h-3.5" />
+                            <span>Photo / Site</span>
+                          </div>
+                          <span className="text-[10px] block opacity-75 mt-0.5">Forts, monuments, crafts</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setMediaType('AUDIO')}
+                          className={`p-2.5 rounded border text-left transition-all ${
+                            mediaType === 'AUDIO'
+                              ? 'bg-[#2F6E5D] border-[#2F6E5D] text-[#FAF7F1] shadow-sm'
+                              : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/80 hover:border-[#C97A3D]'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-1.5 font-medium text-xs">
+                            <Mic className="w-3.5 h-3.5" />
+                            <span>Oral Audio</span>
+                          </div>
+                          <span className="text-[10px] block opacity-75 mt-0.5">Songs, lore, chants</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setMediaType('VIDEO')}
+                          className={`p-2.5 rounded border text-left transition-all ${
+                            mediaType === 'VIDEO'
+                              ? 'bg-[#2F6E5D] border-[#2F6E5D] text-[#FAF7F1] shadow-sm'
+                              : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/80 hover:border-[#C97A3D]'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-1.5 font-medium text-xs">
+                            <Video className="w-3.5 h-3.5" />
+                            <span>Field Video</span>
+                          </div>
+                          <span className="text-[10px] block opacity-75 mt-0.5">Rituals, performances</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMediaType('TEXT');
+                            setSpeakerName('');
+                            setSpeakerAge('');
+                          }}
+                          className={`p-2.5 rounded border text-left transition-all ${
+                            mediaType === 'TEXT'
+                              ? 'bg-[#2F6E5D] border-[#2F6E5D] text-[#FAF7F1] shadow-sm'
+                              : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/80 hover:border-[#C97A3D]'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-1.5 font-medium text-xs">
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>Written Text</span>
+                          </div>
+                          <span className="text-[10px] block opacity-75 mt-0.5">Proverbs, scripts, idioms</span>
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Tradition Genre Grid */}
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
@@ -1431,6 +1546,12 @@ export default function CaptureWizardPage() {
                           {strings.genrePrompt}
                         </span>
                       </div>
+
+                      {/* Helper hint */}
+                      <p className="text-[11px] text-[#2A2420]/55 italic mb-2.5">
+                        📸 Uploading a photo of a fort, temple, or monument? → Choose <strong>Fort, Monument & Heritage Site</strong>
+                      </p>
+
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {CATEGORIES.map((c) => {
                           const localizedCat = catMap[c.id] || c;
@@ -1439,6 +1560,13 @@ export default function CaptureWizardPage() {
                               key={c.id}
                               onClick={() => {
                                 setCategory(c.id);
+                                if (c.id === 'OTHER') {
+                                  setMediaType('IMAGE');
+                                  setSpeakerName('');
+                                  setSpeakerAge('');
+                                } else if (c.id === 'LULLABY' || c.id === 'RITUAL' || c.id === 'STORY') {
+                                  setMediaType('AUDIO');
+                                }
                                 if (step2Errors.customCategory) {
                                   setStep2Errors((prev) => ({ ...prev, customCategory: '' }));
                                 }
@@ -1449,8 +1577,9 @@ export default function CaptureWizardPage() {
                                   : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/75 hover:border-[#C97A3D]/40 hover:text-[#2A2420]'
                               }`}
                             >
+                              <span className="text-base block mb-0.5">{c.icon}</span>
                               <span className="font-medium text-xs block">{localizedCat.label}</span>
-                              <span className="text-[10px] block opacity-70 mt-0.5 truncate">{localizedCat.desc}</span>
+                              <span className="text-[10px] block opacity-70 mt-0.5 leading-tight">{localizedCat.desc}</span>
                             </div>
                           );
                         })}
@@ -1461,11 +1590,11 @@ export default function CaptureWizardPage() {
                         <div className="mt-3 p-3.5 bg-[#FAF7F1] border border-[#C97A3D]/40 rounded-lg shadow-sm">
                           <label className="block text-xs font-semibold text-[#C97A3D] mb-1.5 flex items-center">
                             <Sparkles className="w-3.5 h-3.5 mr-1" />
-                            {strings.customGenreLabel}
+                            Describe the heritage site or custom type (optional)
                           </label>
                           <input
                             type="text"
-                            placeholder={strings.customGenrePlaceholder}
+                            placeholder="e.g. Daulatabad Fort, Shiva Temple, Banyan tree grove, Warli painting site..."
                             value={customCategory}
                             onChange={(e) => {
                               setCustomCategory(e.target.value);
@@ -1481,7 +1610,7 @@ export default function CaptureWizardPage() {
                             <p className="text-[11px] text-[#B54A3A] mt-1">{step2Errors.customCategory}</p>
                           )}
                           <p className="text-[11px] text-[#2A2420]/60 mt-1.5">
-                            This custom genre will be catalogued across the Living Cultural Atlas search and ontology indexing.
+                            This will be catalogued in the Living Cultural Atlas and searchable by name.
                           </p>
                         </div>
                       )}
@@ -1511,46 +1640,54 @@ export default function CaptureWizardPage() {
                       )}
                     </div>
 
-                    {/* Speaker Details (Validated: speaker age 0-120) */}
-                    {!isAnonymous && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[#2A2420]/80 mb-1.5">
-                            {strings.speakerLabel}
-                          </label>
-                          <input
-                            type="text"
-                            placeholder={strings.speakerPlaceholder}
-                            value={speakerName}
-                            onChange={(e) => setSpeakerName(e.target.value)}
-                            className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-3 py-2 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
-                          />
+                    {/* Speaker Details — only relevant for Audio/Video recordings */}
+                    {!isAnonymous && (mediaType === 'AUDIO' || mediaType === 'VIDEO') && category !== 'OTHER' && (
+                      <div>
+                        <div className="flex items-center space-x-2 mb-2 p-2.5 bg-[#FAF7F1] border border-[#E4DDD0] rounded-lg">
+                          <Mic className="w-3.5 h-3.5 text-[#C97A3D] shrink-0" />
+                          <p className="text-[11px] text-[#2A2420]/70">
+                            <strong>Speaker details</strong> — who is the voice in this recording? (optional)
+                          </p>
                         </div>
-                        <div>
-                          <label className="block text-[#2A2420]/80 mb-1.5">
-                            {strings.ageLabel}
-                          </label>
-                          <input
-                            type="number"
-                            min={0}
-                            max={120}
-                            placeholder="e.g. 74"
-                            value={speakerAge}
-                            onChange={(e) => {
-                              setSpeakerAge(e.target.value ? Number(e.target.value) : '');
-                              if (step2Errors.speakerAge) {
-                                setStep2Errors((prev) => ({ ...prev, speakerAge: '' }));
-                              }
-                            }}
-                            className={`w-full bg-[#FFFFFF] border ${
-                              step2Errors.speakerAge ? 'border-[#B54A3A]' : 'border-[#E4DDD0]'
-                            } rounded px-3 py-2 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]`}
-                          />
-                          {step2Errors.speakerAge && (
-                            <p className="text-[11px] text-[#B54A3A] mt-1">
-                              {step2Errors.speakerAge}
-                            </p>
-                          )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[#2A2420]/80 mb-1.5">
+                              {strings.speakerLabel}
+                            </label>
+                            <input
+                              type="text"
+                              placeholder={strings.speakerPlaceholder}
+                              value={speakerName}
+                              onChange={(e) => setSpeakerName(e.target.value)}
+                              className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-3 py-2 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[#2A2420]/80 mb-1.5">
+                              {strings.ageLabel}
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={120}
+                              placeholder="e.g. 74"
+                              value={speakerAge}
+                              onChange={(e) => {
+                                setSpeakerAge(e.target.value ? Number(e.target.value) : '');
+                                if (step2Errors.speakerAge) {
+                                  setStep2Errors((prev) => ({ ...prev, speakerAge: '' }));
+                                }
+                              }}
+                              className={`w-full bg-[#FFFFFF] border ${
+                                step2Errors.speakerAge ? 'border-[#B54A3A]' : 'border-[#E4DDD0]'
+                              } rounded px-3 py-2 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]`}
+                            />
+                            {step2Errors.speakerAge && (
+                              <p className="text-[11px] text-[#B54A3A] mt-1">
+                                {step2Errors.speakerAge}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -2107,13 +2244,21 @@ export default function CaptureWizardPage() {
                     </div>
 
                     <div className="flex justify-between border-b border-[#E4DDD0] pb-2">
-                      <span className="text-[#2A2420]/60">{strings.reviewSpeaker}</span>
+                      <span className="text-[#2A2420]/60">
+                        {mediaType === 'IMAGE'
+                          ? 'Contributor / Photographer:'
+                          : mediaType === 'TEXT'
+                          ? 'Script / Text Contributor:'
+                          : strings.reviewSpeaker}
+                      </span>
                       <span className="text-[#2A2420]">
                         {isAnonymous
-                          ? (strings.anonCustodian.replace(':', '') || 'Anonymous Elder')
-                          : `${speakerName || 'Storyteller'}${
-                              speakerAge !== '' ? ` (${speakerAge} yrs)` : ''
-                            }`}
+                          ? (strings.anonCustodian.replace(':', '') || 'Anonymous Custodian')
+                          : speakerName
+                          ? `${speakerName}${speakerAge !== '' ? ` (${speakerAge} yrs)` : ''}`
+                          : mediaType === 'IMAGE'
+                          ? (user?.displayName || 'Community Heritage Contributor')
+                          : 'Elder Tradition Bearer'}
                       </span>
                     </div>
 

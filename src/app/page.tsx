@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import Navbar from '@/components/Navbar';
@@ -12,6 +12,7 @@ import { cachedFetch } from '@/utils/apiCache';
 import {
   Sparkles,
   ArrowRight,
+  ArrowLeft,
   Compass,
   MapPin,
   Volume2,
@@ -22,6 +23,8 @@ import {
   Layers,
   BookOpen,
   Mic,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface LiveCounters {
@@ -130,6 +133,9 @@ export default function HomePage() {
   ];
 
   const [activeIndex, setActiveIndex] = useState(2);
+  const [isUserInteracting, setIsUserInteracting] = useState(false);
+  const touchStartX = useRef<number>(0);
+  const interactionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const mouseXVal = useMotionValue(0);
   const mouseYVal = useMotionValue(0);
@@ -139,23 +145,55 @@ export default function HomePage() {
   const parallaxX = useTransform(smoothMouseX, [-1, 1], [-15, 15]);
   const parallaxY = useTransform(smoothMouseY, [-1, 1], [-15, 15]);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const index = Math.floor((x / rect.width) * 5);
-    setActiveIndex(Math.min(Math.max(index, 0), 4));
+  // Auto-rotate carousel every 4s when user is not interacting
+  useEffect(() => {
+    if (isUserInteracting) return;
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % CAROUSEL_CARDS.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [isUserInteracting]);
 
-    // Micro parallax for active card
-    const normX = (e.clientX - rect.left - rect.width / 2) / (rect.width / 2);
-    const normY = (e.clientY - rect.top - rect.height / 2) / (rect.height / 2);
+  const pauseAutoRotate = () => {
+    setIsUserInteracting(true);
+    if (interactionTimer.current) clearTimeout(interactionTimer.current);
+    interactionTimer.current = setTimeout(() => setIsUserInteracting(false), 6000);
+  };
+
+  const goNext = () => {
+    pauseAutoRotate();
+    setActiveIndex((prev) => (prev + 1) % CAROUSEL_CARDS.length);
+  };
+
+  const goPrev = () => {
+    pauseAutoRotate();
+    setActiveIndex((prev) => (prev - 1 + CAROUSEL_CARDS.length) % CAROUSEL_CARDS.length);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Only run parallax on non-touch (pointer: fine) devices
+    const normX = (e.clientX - e.currentTarget.getBoundingClientRect().left - e.currentTarget.getBoundingClientRect().width / 2) / (e.currentTarget.getBoundingClientRect().width / 2);
+    const normY = (e.clientY - e.currentTarget.getBoundingClientRect().top - e.currentTarget.getBoundingClientRect().height / 2) / (e.currentTarget.getBoundingClientRect().height / 2);
     mouseXVal.set(normX);
     mouseYVal.set(normY);
   };
 
   const handleMouseLeave = () => {
-    setActiveIndex(2); // return to center on leave
     mouseXVal.set(0);
     mouseYVal.set(0);
+  };
+
+  // Touch swipe support
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(deltaX) > 40) {
+      if (deltaX < 0) goNext();
+      else goPrev();
+    }
   };
 
   useEffect(() => {
@@ -242,11 +280,30 @@ export default function HomePage() {
           </div>
 
           {/* FANNED CARD CAROUSEL */}
-          <div 
+          <div
             className="relative max-w-5xl mx-auto mt-6 px-4 py-8 flex items-center justify-center min-h-[420px] overflow-hidden sm:overflow-visible"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
           >
+            {/* Prev arrow (always visible, tap-friendly) */}
+            <button
+              onClick={goPrev}
+              aria-label="Previous card"
+              className="absolute left-0 sm:left-2 top-1/2 -translate-y-1/2 z-30 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#FFFFFF]/90 border border-[#E4DDD0] shadow-md flex items-center justify-center text-[#2A2420]/70 hover:text-[#C97A3D] hover:border-[#C97A3D] transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {/* Next arrow */}
+            <button
+              onClick={goNext}
+              aria-label="Next card"
+              className="absolute right-0 sm:right-2 top-1/2 -translate-y-1/2 z-30 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#FFFFFF]/90 border border-[#E4DDD0] shadow-md flex items-center justify-center text-[#2A2420]/70 hover:text-[#C97A3D] hover:border-[#C97A3D] transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
             {CAROUSEL_CARDS.map((card, i) => {
               const posIndex = (i - activeIndex + 2 + 5) % 5;
               const pos = POSITIONS[posIndex];
@@ -266,16 +323,20 @@ export default function HomePage() {
                     zIndex: pos.zIndex,
                     filter: isActive ? 'blur(0px)' : 'blur(2px)'
                   }}
-                  transition={{ type: "spring", stiffness: 50, damping: 14 }}
-                  className={`absolute origin-center ${isActive ? 'w-[calc(100%-2rem)] sm:w-full max-w-md' : 'w-64'}`}
+                  transition={{ type: 'spring', stiffness: 50, damping: 14 }}
+                  className={`absolute origin-center ${isActive ? 'w-[calc(100%-5rem)] sm:w-full max-w-md' : 'hidden sm:block w-64'}`}
                   style={{ cursor: isActive ? 'default' : 'pointer' }}
-                  onClick={() => !isActive && setActiveIndex(i)}
+                  onClick={() => {
+                    if (!isActive) {
+                      pauseAutoRotate();
+                      setActiveIndex(i);
+                    }
+                  }}
                 >
-                  <motion.div 
+                  <motion.div
                     style={{ x: isActive ? parallaxX : 0, y: isActive ? parallaxY : 0 }}
-                    className={`transition-colors duration-500 ease-out ${isActive ? 'bg-[#FFFFFF] border-2 border-[#C97A3D] p-6 sm:p-7 shadow-none' : 'bg-[#F5F0E6] border border-[#E4DDD0] p-5 shadow-none'} rounded-xl`}
+                    className={`transition-colors duration-500 ease-out ${isActive ? 'bg-[#FFFFFF] border-2 border-[#C97A3D] p-5 sm:p-7 shadow-none' : 'bg-[#F5F0E6] border border-[#E4DDD0] p-5 shadow-none'} rounded-xl`}
                   >
-                    
                     <div className={`flex items-center ${isActive ? 'justify-between mb-4' : 'mb-2'}`}>
                       <span className={`inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded text-[10px] sm:text-xs font-sans font-medium ${card.badgeColor}`}>
                         {isActive && card.isHero && <Flame className="w-3.5 h-3.5" />}
@@ -289,7 +350,7 @@ export default function HomePage() {
                     </div>
 
                     <div className={isActive ? 'mb-4' : ''}>
-                      <h3 className={`font-serif font-medium text-[#2A2420] ${isActive ? 'text-2xl mb-1' : 'text-sm mb-1'}`}>
+                      <h3 className={`font-serif font-medium text-[#2A2420] ${isActive ? 'text-xl sm:text-2xl mb-1' : 'text-sm mb-1'}`}>
                         {card.title}
                       </h3>
                       <p className={`text-[#C97A3D] flex items-center ${isActive ? 'text-sm space-x-1.5' : 'text-xs'}`}>
@@ -300,14 +361,14 @@ export default function HomePage() {
 
                     <AnimatePresence mode="wait">
                       {isActive && (
-                        <motion.div 
+                        <motion.div
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
-                          transition={{ type: "spring", stiffness: 60, damping: 15 }}
+                          transition={{ type: 'spring', stiffness: 60, damping: 15 }}
                           className="overflow-hidden"
                         >
-                          <div className="bg-[#FAF7F1] p-3.5 rounded-lg border border-[#E4DDD0] mb-5 mt-4">
+                          <div className="bg-[#FAF7F1] p-3.5 rounded-lg border border-[#E4DDD0] mb-4 mt-4">
                             <p className="text-xs text-[#2A2420]/90 italic font-serif leading-relaxed mb-2">
                               {card.quote}
                             </p>
@@ -338,6 +399,22 @@ export default function HomePage() {
                 </motion.div>
               );
             })}
+          </div>
+
+          {/* Dot navigation indicators */}
+          <div className="flex items-center justify-center space-x-2 mt-4">
+            {CAROUSEL_CARDS.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => { pauseAutoRotate(); setActiveIndex(i); }}
+                aria-label={`Go to card ${i + 1}`}
+                className={`rounded-full transition-all duration-300 ${
+                  activeIndex === i
+                    ? 'w-5 h-2 bg-[#C97A3D]'
+                    : 'w-2 h-2 bg-[#C97A3D]/30 hover:bg-[#C97A3D]/60'
+                }`}
+              />
+            ))}
           </div>
         </section>
 

@@ -428,6 +428,8 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
                 {t('by')} {record.speakerName}
                 {record.speakerAge ? ` (${record.speakerAge}y)` : ''}
               </span>
+            ) : record.mediaType === 'IMAGE' ? (
+              <span>Visual Heritage</span>
             ) : (
               <span className="italic">{t('anonymousSpeaker')}</span>
             )}
