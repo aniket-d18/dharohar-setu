@@ -7,9 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
-    "server:dev": "tsx watch --tsconfig tsconfig.server.json server/main.ts"
+    "server:dev": "tsx watch --tsconfig tsconfig.server.json server/main.ts",
+    "server:start": "tsx server/main.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

@@ -9,10 +9,12 @@ const nextConfig: NextConfig = {
   // This allows mobile devices on the same Wi-Fi to access the backend
   // without needing to open port 4000 in the firewall.
   async rewrites() {
+    const rawBackendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000';
+    const backendUrl = rawBackendUrl.replace(/\/+$/, '');
     return [
       {
         source: '/backend/:path*',
-        destination: 'http://127.0.0.1:4000/:path*',
+        destination: `${backendUrl}/:path*`,
       },
     ];
   },
