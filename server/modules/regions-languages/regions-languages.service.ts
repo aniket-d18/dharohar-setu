@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import { serverCache } from '../../common/cache.service';
-import { calculateVitalityScore, LanguageVitalityData } from '../../common/vitality.calculator';
+import { calculateVitalityScore, LanguageVitalityData, scoreToStatus } from '../../common/vitality.calculator';
 import { VitalityStatus } from '@prisma/client';
 
 const CACHE_TTL_LONG = 30 * 60 * 1000; // 30 minutes
@@ -291,43 +291,42 @@ export class RegionsLanguagesService {
         include: {
           languages: { include: { language: true } },
           childRegions: {
-            include: {
-              languages: { include: { language: true } },
-              _count: { select: { records: true } },
+            select: {
+              vitalityScore: true,
+              vitalityStatus: true,
             },
           },
-          records: { include: { language: true } },
           _count: { select: { records: true } },
         },
       });
 
       if (parent) {
-        const parentLangMap = new Map<string, LanguageVitalityData>();
-        for (const pl of parent.languages) {
-          if (pl.language) parentLangMap.set(pl.language.id, pl.language);
-        }
-        for (const child of parent.childRegions) {
-          for (const crl of child.languages) {
-            if (crl.language) parentLangMap.set(crl.language.id, crl.language);
-          }
-        }
-        for (const rec of parent.records) {
-          if (rec.language) parentLangMap.set(rec.language.id, rec.language);
-        }
-        const parentRecords =
-          parent._count.records +
-          parent.childRegions.reduce((sum, c) => sum + c._count.records, 0);
+        // Derive parent state vitality from actual child districts (worst-case urgency)
+        const childScores = parent.childRegions.map((c) => c.vitalityScore);
+        let parentScore: number;
+        let parentStatus: VitalityStatus;
 
-        const parentCalc = calculateVitalityScore({
-          languages: Array.from(parentLangMap.values()),
-          recordCount: parentRecords,
-        });
+        if (childScores.length > 0) {
+          parentScore = Math.round(Math.max(...childScores) * 10) / 10;
+          parentStatus = scoreToStatus(parentScore);
+        } else {
+          const parentLangMap = new Map<string, LanguageVitalityData>();
+          for (const pl of parent.languages) {
+            if (pl.language) parentLangMap.set(pl.language.id, pl.language);
+          }
+          const parentCalc = calculateVitalityScore({
+            languages: Array.from(parentLangMap.values()),
+            recordCount: parent._count.records,
+          });
+          parentScore = parentCalc.score;
+          parentStatus = parentCalc.status;
+        }
 
         await this.prisma.region.update({
           where: { id: parent.id },
           data: {
-            vitalityScore: parentCalc.score,
-            vitalityStatus: parentCalc.status,
+            vitalityScore: parentScore,
+            vitalityStatus: parentStatus,
           },
         });
       }

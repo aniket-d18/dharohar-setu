@@ -32,6 +32,7 @@ import {
   FileAudio,
   Film,
   Link as LinkIcon,
+  Wrench,
 } from 'lucide-react';
 
 import { useAuth } from '@/context/AuthContext';
@@ -61,6 +62,57 @@ const CATEGORIES = [
   { id: 'LIFE_SKILL',     label: 'Ecology / Life Skill',  desc: 'Farming, tracking, weather reading',      icon: '🌿' },
 ];
 
+// Primary State -> Native Language Mapping for Living Cultural Archive
+const REGIONAL_PRIMARY_LANGUAGES: Record<string, string> = {
+  'Maharashtra': 'Marathi',
+  'Tamil Nadu': 'Tamil',
+  'West Bengal': 'Bengali',
+  'Gujarat': 'Gujarati',
+  'Karnataka': 'Kannada',
+  'Kerala': 'Malayalam',
+  'Andhra Pradesh': 'Telugu',
+  'Telangana': 'Telugu',
+  'Punjab': 'Punjabi',
+  'Odisha': 'Odia',
+  'Assam': 'Assamese',
+  'Bihar': 'Maithili',
+  'Uttar Pradesh': 'Hindi',
+  'Madhya Pradesh': 'Hindi',
+  'Rajasthan': 'Hindi',
+  'Haryana': 'Hindi',
+  'Delhi': 'Hindi',
+  'Himachal Pradesh': 'Hindi',
+  'Uttarakhand': 'Hindi',
+  'Chhattisgarh': 'Hindi',
+  'Jharkhand': 'Hindi',
+  'Jammu & Kashmir': 'Kashmiri',
+  'Ladakh': 'Ladakhi',
+  'Goa': 'Konkani',
+  'Manipur': 'Manipuri',
+  'Sikkim': 'Nepali',
+  'Nagaland': 'Nagamese',
+  'Tripura': 'Bengali',
+  'Meghalaya': 'Khasi',
+  'Mizoram': 'Mizo',
+  'Andaman & Nicobar Islands': 'Great Andamanese (Jero)',
+  'Chandigarh': 'Punjabi',
+  'Puducherry': 'Tamil',
+  'Lakshadweep': 'Malayalam',
+};
+
+// District-Specific Endangered Language Overrides (UNESCO Cataloged)
+const DISTRICT_LANGUAGE_OVERRIDES: Record<string, string> = {
+  'Buldhana': 'Nihali',
+  'The Nilgiris': 'Toda',
+  'Alipurduar': 'Toto',
+  'Lahaul & Spiti': 'Spiti Bhoti',
+  'Kutch': 'Kachchhi',
+  'South Andaman': 'Great Andamanese (Jero)',
+  'Changlang': 'Tangsa',
+  'North Sikkim': 'Lepcha (Róng)',
+  'Chandel': 'Tarao',
+};
+
 function isKeyboardMash(str: string): boolean {
   const clean = str.replace(/[^a-zA-Z]/g, '');
   if (clean.length >= 6 && !/[aeiouy]/i.test(clean)) return true;
@@ -75,6 +127,7 @@ function RegionHierarchySelect({
   error,
   label,
   sublabel,
+  suggestedBadge,
 }: {
   selectedState: string;
   selectedDistrict: string;
@@ -82,6 +135,7 @@ function RegionHierarchySelect({
   error?: string;
   label?: string;
   sublabel?: string;
+  suggestedBadge?: React.ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -145,15 +199,18 @@ function RegionHierarchySelect({
   return (
     <div className="relative font-sans" ref={ref}>
       <div className="flex items-center justify-between mb-1.5">
-        <label className="block text-xs text-[#2A2420]/80 font-medium">
-          {label || (
-            curLang === 'mr' ? 'प्रदेश / जिल्हा *' :
-            curLang === 'hi' ? 'क्षेत्र / ज़िला *' :
-            curLang === 'ta' ? 'பகுதி / மாவட்டம் *' :
-            curLang === 'bn' ? 'অঞ্চল / জেলা *' :
-            'Region / District *'
-          )}
-        </label>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <label className="block text-xs text-[#2A2420]/80 font-medium">
+            {label || (
+              curLang === 'mr' ? 'प्रदेश / जिल्हा *' :
+              curLang === 'hi' ? 'क्षेत्र / ज़िला *' :
+              curLang === 'ta' ? 'பகுதி / மாவட்டம் *' :
+              curLang === 'bn' ? 'অঞ্চল / জেলা *' :
+              'Region / District *'
+            )}
+          </label>
+          {suggestedBadge}
+        </div>
         <span className="text-[11px] text-[#C97A3D]">
           {sublabel || (
             curLang === 'mr' ? '३६ राज्ये व केंद्रशासित प्रदेश (संदर्भ)' :
@@ -311,12 +368,14 @@ function LanguageCombobox({
   suggestions,
   label,
   autoCatalogLabel,
+  suggestedBadge,
 }: {
   value: string;
   onChange: (val: string) => void;
   suggestions: LanguageItem[];
   label?: string;
   autoCatalogLabel?: string;
+  suggestedBadge?: React.ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -353,9 +412,12 @@ function LanguageCombobox({
   return (
     <div className="relative font-sans" ref={containerRef}>
       <div className="flex items-center justify-between mb-1.5">
-        <label className="block text-xs text-[#2A2420]/80 font-medium">
-          {label || (curLang === 'mr' ? 'स्थानिक भाषा / बोली' : curLang === 'hi' ? 'स्थानीय भाषा / बोली' : 'Native Language / Dialect')}
-        </label>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <label className="block text-xs text-[#2A2420]/80 font-medium">
+            {label || (curLang === 'mr' ? 'स्थानिक भाषा / बोली' : curLang === 'hi' ? 'स्थानीय भाषा / बोली' : 'Native Language / Dialect')}
+          </label>
+          {suggestedBadge}
+        </div>
         <div className="text-[11px]">
           {matchedLang ? (
             <span className="text-[#2F6E5D] flex items-center space-x-1 font-medium">
@@ -676,7 +738,7 @@ function CustomAudioPlayer({
 export default function CaptureWizardPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { language } = useLanguage();
+  const { language, detectedState } = useLanguage();
   const curLang: SupportedLang = (['en', 'hi', 'mr', 'ta', 'bn'].includes(language as SupportedLang)) ? (language as SupportedLang) : 'en';
   const strings = CAPTURE_I18N[curLang] || CAPTURE_I18N.en;
   const catMap = CATEGORY_I18N[curLang] || CATEGORY_I18N.en;
@@ -697,12 +759,18 @@ export default function CaptureWizardPage() {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [consentConfirmed, setConsentConfirmed] = useState(true);
 
-  // Step 2: Metadata
-  const [selectedStateName, setSelectedStateName] = useState('Maharashtra');
-  const [selectedDistrictName, setSelectedDistrictName] = useState('Buldhana');
+  // Step 2 & 3: Metadata & Media Type
+  const [mediaType, setMediaType] = useState<'AUDIO' | 'VIDEO' | 'IMAGE' | 'TEXT'>('AUDIO');
+  const [selectedStateName, setSelectedStateName] = useState('');
+  const [selectedDistrictName, setSelectedDistrictName] = useState('');
+  const [isRegionAutoSuggested, setIsRegionAutoSuggested] = useState(false);
+
   const [languages, setLanguages] = useState<LanguageItem[]>([]);
-  const [languageName, setLanguageName] = useState('Toda');
+  const [languageName, setLanguageName] = useState('');
+  const [isLanguageAutoSuggested, setIsLanguageAutoSuggested] = useState(false);
+
   const [category, setCategory] = useState('LULLABY');
+  const [isGenreAutoSuggested, setIsGenreAutoSuggested] = useState(true);
   const [customCategory, setCustomCategory] = useState('');
   const [speakerName, setSpeakerName] = useState('');
   const [speakerAge, setSpeakerAge] = useState<number | ''>('');
@@ -710,8 +778,73 @@ export default function CaptureWizardPage() {
   const [descriptionText, setDescriptionText] = useState('');
   const [tagsInput, setTagsInput] = useState('');
 
+  // Auto-suggestion: pre-select Region & Language based on detected location
+  useEffect(() => {
+    if (!selectedStateName) {
+      const targetState = detectedState || 'Maharashtra';
+      const matchedState =
+        INDIA_REGION_HIERARCHY.find(
+          (s) => s.name.toLowerCase() === targetState.toLowerCase()
+        ) || INDIA_REGION_HIERARCHY.find((s) => s.name === 'Maharashtra') || INDIA_REGION_HIERARCHY[0];
+
+      if (matchedState) {
+        setSelectedStateName(matchedState.name);
+        const defaultDistrict = matchedState.districts[0]?.name || '';
+        setSelectedDistrictName(defaultDistrict);
+        setIsRegionAutoSuggested(true);
+
+        const suggestedLang =
+          (defaultDistrict && DISTRICT_LANGUAGE_OVERRIDES[defaultDistrict]) ||
+          REGIONAL_PRIMARY_LANGUAGES[matchedState.name] ||
+          'Marathi';
+        setLanguageName(suggestedLang);
+        setIsLanguageAutoSuggested(true);
+      }
+    }
+  }, [detectedState, selectedStateName]);
+
+  // Region selection handler with cascading language auto-suggestion
+  const handleRegionChange = (st: string, dist?: string) => {
+    setSelectedStateName(st);
+    setSelectedDistrictName(dist || '');
+    setIsRegionAutoSuggested(false); // User actively chose/confirmed
+
+    if (step2Errors.region) {
+      setStep2Errors((prev) => ({ ...prev, region: '' }));
+    }
+
+    // Update language suggestion if language was auto-suggested or empty
+    if (isLanguageAutoSuggested || !languageName.trim()) {
+      const suggestedLang =
+        (dist && DISTRICT_LANGUAGE_OVERRIDES[dist]) ||
+        REGIONAL_PRIMARY_LANGUAGES[st] ||
+        'Hindi';
+      setLanguageName(suggestedLang);
+      setIsLanguageAutoSuggested(true);
+    }
+  };
+
+  // Language input change handler
+  const handleLanguageChange = (newLang: string) => {
+    setLanguageName(newLang);
+    setIsLanguageAutoSuggested(false); // User made manual choice
+  };
+
+  // Tradition genre selection handler
+  const handleGenreSelect = (catId: string) => {
+    setCategory(catId);
+    setIsGenreAutoSuggested(false); // User made manual choice
+
+    if (catId === 'OTHER') {
+      setSpeakerName('');
+      setSpeakerAge('');
+    }
+    if (step2Errors.customCategory) {
+      setStep2Errors((prev) => ({ ...prev, customCategory: '' }));
+    }
+  };
+
   // Step 3: Media
-  const [mediaType, setMediaType] = useState<'AUDIO' | 'VIDEO' | 'IMAGE' | 'TEXT'>('AUDIO');
   const [audioMode, setAudioMode] = useState<'MIC' | 'FILE'>('MIC');
   const [transcriptionDraft, setTranscriptionDraft] = useState('');
   const [translationDraft, setTranslationDraft] = useState('');
@@ -830,6 +963,26 @@ export default function CaptureWizardPage() {
     }
   };
 
+  // Format selection handler with matching tradition genre auto-suggestion
+  const handleFormatSelect = (fmt: 'AUDIO' | 'VIDEO' | 'IMAGE' | 'TEXT') => {
+    setMediaType(fmt);
+    removeSelectedFile();
+
+    // Auto-suggest matching tradition genre
+    if (fmt === 'AUDIO') {
+      setCategory('LULLABY');
+    } else if (fmt === 'IMAGE') {
+      setCategory('OTHER');
+      setSpeakerName('');
+      setSpeakerAge('');
+    } else if (fmt === 'VIDEO') {
+      setCategory('RITUAL');
+    } else if (fmt === 'TEXT') {
+      setCategory('PROVERB');
+    }
+    setIsGenreAutoSuggested(true);
+  };
+
   // Audio Recording handlers
   const startRecording = async () => {
     try {
@@ -923,8 +1076,8 @@ export default function CaptureWizardPage() {
       }
     }
 
-    if (category === 'OTHER' && !customCategory.trim()) {
-      errs.customCategory = 'Please specify your custom category or tradition genre.';
+    if (category === 'OTHER' && customCategory.trim() && customCategory.trim().length < 2) {
+      errs.customCategory = 'Please specify at least 2 characters for the heritage site name.';
     }
 
     setStep2Errors(errs);
@@ -1185,28 +1338,50 @@ export default function CaptureWizardPage() {
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
           {/* Step Indicator */}
           {!submittedRecordId && (
-            <div className="mb-10">
-              <div className="flex items-center justify-between relative">
-                <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-[#E4DDD0] z-0" />
+            <div className="mb-10 max-w-xl mx-auto">
+              <div className="relative flex items-start justify-between">
+                {/* Connecting Line — anchored precisely at the 18px vertical center of the w-9 (36px) circles on both desktop & mobile */}
+                <div className="absolute left-10 right-10 sm:left-14 sm:right-14 top-[18px] -translate-y-1/2 h-0.5 bg-[#E4DDD0] z-0">
+                  {/* Active progress track */}
+                  <div
+                    className="h-full bg-[#2F6E5D] transition-all duration-300"
+                    style={{
+                      width: `${((currentStep - 1) / 3) * 100}%`,
+                    }}
+                  />
+                </div>
                 {[
                   { step: 1, label: strings.step1Label },
                   { step: 2, label: strings.step2Label },
                   { step: 3, label: strings.step3Label },
                   { step: 4, label: strings.step4Label },
                 ].map((s) => (
-                  <div key={s.step} className="relative z-10 flex flex-col items-center">
-                    <div
+                  <div key={s.step} className="relative z-10 flex flex-col items-center w-20 sm:w-28 text-center">
+                    <button
+                      type="button"
+                      disabled={s.step > currentStep}
+                      onClick={() => {
+                        if (s.step < currentStep) setCurrentStep(s.step as any);
+                      }}
                       className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-medium font-mono transition-all ${
                         currentStep === s.step
-                          ? 'bg-[#C97A3D] text-[#FAF7F1] ring-4 ring-[#C97A3D]/20'
+                          ? 'bg-[#C97A3D] text-[#FAF7F1] ring-4 ring-[#C97A3D]/20 shadow-sm'
                           : currentStep > s.step
-                          ? 'bg-[#2F6E5D] text-[#FAF7F1]'
+                          ? 'bg-[#2F6E5D] text-[#FAF7F1] cursor-pointer'
                           : 'bg-[#FFFFFF] text-[#2A2420]/40 border border-[#E4DDD0]'
                       }`}
                     >
-                      {currentStep > s.step ? <Check className="w-4 h-4" /> : s.step}
-                    </div>
-                    <span className="text-[11px] font-sans text-[#2A2420]/70 mt-1.5 hidden sm:block">
+                      {currentStep > s.step ? <Check className="w-4 h-4 stroke-[2.5]" /> : s.step}
+                    </button>
+                    <span
+                      className={`text-[11px] font-sans mt-2 text-center max-w-[100px] leading-tight hidden sm:block transition-colors ${
+                        currentStep === s.step
+                          ? 'text-[#C97A3D] font-semibold'
+                          : currentStep > s.step
+                          ? 'text-[#2F6E5D] font-medium'
+                          : 'text-[#2A2420]/50'
+                      }`}
+                    >
                       {s.label}
                     </span>
                   </div>
@@ -1396,63 +1571,6 @@ export default function CaptureWizardPage() {
                   </h2>
 
                   <div className="space-y-4 text-xs font-sans">
-                    {/* Media Type — pick first so the rest of the form adapts */}
-                    <div>
-                      <label className="block text-[#2A2420]/80 font-medium text-sm mb-2">
-                        What are you sharing? <span className="text-[#C97A3D] font-normal text-xs">(choose first)</span>
-                      </label>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        {[
-                          { id: 'IMAGE', label: 'Photo / Image', icon: '📸', hint: 'Fort, temple, crafts, food…' },
-                          { id: 'AUDIO', label: 'Audio / Voice', icon: '🎙️', hint: 'Song, story, speech…' },
-                          { id: 'VIDEO', label: 'Video',         icon: '🎥', hint: 'Ritual, demo, performance…' },
-                          { id: 'TEXT',  label: 'Text / Script', icon: '📝', hint: 'Proverb, recipe, manuscript…' },
-                        ].map((m) => (
-                          <button
-                            key={m.id}
-                            type="button"
-                            onClick={() => {
-                              setMediaType(m.id as 'AUDIO' | 'VIDEO' | 'IMAGE' | 'TEXT');
-                              removeSelectedFile();
-                            }}
-                            className={`p-3 rounded-lg border text-left transition-all ${
-                              mediaType === m.id
-                                ? 'bg-[#C97A3D] border-[#C97A3D] text-[#FAF7F1]'
-                                : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/75 hover:border-[#C97A3D]/50'
-                            }`}
-                          >
-                            <span className="text-xl block mb-1">{m.icon}</span>
-                            <span className="font-semibold text-xs block">{m.label}</span>
-                            <span className={`text-[10px] block mt-0.5 leading-tight ${mediaType === m.id ? 'text-[#FAF7F1]/75' : 'text-[#2A2420]/50'}`}>{m.hint}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    {/* Reusable Hierarchical Region / District Selector */}
-                    <RegionHierarchySelect
-                      selectedState={selectedStateName}
-                      selectedDistrict={selectedDistrictName}
-                      label={strings.regionLabel}
-                      sublabel={strings.regionRef}
-                      onChange={(st, dist) => {
-                        setSelectedStateName(st);
-                        setSelectedDistrictName(dist || '');
-                        if (step2Errors.region) {
-                          setStep2Errors((prev) => ({ ...prev, region: '' }));
-                        }
-                      }}
-                      error={step2Errors.region}
-                    />
-
-                    {/* Native Language / Dialect: Direct typing of any rare dialect + suggestions */}
-                    <LanguageCombobox
-                      value={languageName}
-                      onChange={setLanguageName}
-                      suggestions={languages}
-                      label={strings.langLabel}
-                      autoCatalogLabel={strings.langAutoCatalog}
-                    />
-
                     {/* Documentation Format Selector */}
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
@@ -1461,123 +1579,85 @@ export default function CaptureWizardPage() {
                         </label>
                         <span className="text-[11px] text-[#2A2420]/50">Select media style</span>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMediaType('IMAGE');
-                            setSpeakerName('');
-                            setSpeakerAge('');
-                          }}
-                          className={`p-2.5 rounded border text-left transition-all ${
-                            mediaType === 'IMAGE'
-                              ? 'bg-[#2F6E5D] border-[#2F6E5D] text-[#FAF7F1] shadow-sm'
-                              : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/80 hover:border-[#C97A3D]'
-                          }`}
-                        >
-                          <div className="flex items-center space-x-1.5 font-medium text-xs">
-                            <ImageIcon className="w-3.5 h-3.5" />
-                            <span>Photo / Site</span>
-                          </div>
-                          <span className="text-[10px] block opacity-75 mt-0.5">Forts, monuments, crafts</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setMediaType('AUDIO')}
-                          className={`p-2.5 rounded border text-left transition-all ${
-                            mediaType === 'AUDIO'
-                              ? 'bg-[#2F6E5D] border-[#2F6E5D] text-[#FAF7F1] shadow-sm'
-                              : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/80 hover:border-[#C97A3D]'
-                          }`}
-                        >
-                          <div className="flex items-center space-x-1.5 font-medium text-xs">
-                            <Mic className="w-3.5 h-3.5" />
-                            <span>Oral Audio</span>
-                          </div>
-                          <span className="text-[10px] block opacity-75 mt-0.5">Songs, lore, chants</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setMediaType('VIDEO')}
-                          className={`p-2.5 rounded border text-left transition-all ${
-                            mediaType === 'VIDEO'
-                              ? 'bg-[#2F6E5D] border-[#2F6E5D] text-[#FAF7F1] shadow-sm'
-                              : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/80 hover:border-[#C97A3D]'
-                          }`}
-                        >
-                          <div className="flex items-center space-x-1.5 font-medium text-xs">
-                            <Video className="w-3.5 h-3.5" />
-                            <span>Field Video</span>
-                          </div>
-                          <span className="text-[10px] block opacity-75 mt-0.5">Rituals, performances</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMediaType('TEXT');
-                            setSpeakerName('');
-                            setSpeakerAge('');
-                          }}
-                          className={`p-2.5 rounded border text-left transition-all ${
-                            mediaType === 'TEXT'
-                              ? 'bg-[#2F6E5D] border-[#2F6E5D] text-[#FAF7F1] shadow-sm'
-                              : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/80 hover:border-[#C97A3D]'
-                          }`}
-                        >
-                          <div className="flex items-center space-x-1.5 font-medium text-xs">
-                            <FileText className="w-3.5 h-3.5" />
-                            <span>Written Text</span>
-                          </div>
-                          <span className="text-[10px] block opacity-75 mt-0.5">Proverbs, scripts, idioms</span>
-                        </button>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {[
+                          { id: 'AUDIO', label: 'Oral Audio', icon: <Mic className="w-4 h-4" />, hint: 'Songs, folktales, chants' },
+                          { id: 'IMAGE', label: 'Photo / Site', icon: <ImageIcon className="w-4 h-4" />, hint: 'Forts, temples, crafts' },
+                          { id: 'VIDEO', label: 'Field Video', icon: <Video className="w-4 h-4" />, hint: 'Rituals, dances, performances' },
+                          { id: 'TEXT', label: 'Written Text', icon: <FileText className="w-4 h-4" />, hint: 'Proverbs, idioms, scripts' },
+                        ].map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => handleFormatSelect(m.id as any)}
+                            className={`p-3 rounded-lg border text-left transition-all ${
+                              mediaType === m.id
+                                ? 'bg-[#2F6E5D] border-[#2F6E5D] text-[#FAF7F1] shadow-sm'
+                                : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/80 hover:border-[#C97A3D]'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-1.5 font-medium text-xs mb-0.5">
+                              {m.icon}
+                              <span>{m.label}</span>
+                            </div>
+                            <span
+                              className={`text-[10px] block leading-tight ${
+                                mediaType === m.id ? 'text-[#FAF7F1]/80' : 'text-[#2A2420]/50'
+                              }`}
+                            >
+                              {m.hint}
+                            </span>
+                          </button>
+                        ))}
                       </div>
                     </div>
 
                     {/* Tradition Genre Grid */}
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-[#2A2420]/80 font-medium text-sm">
-                          {strings.genreLabel}
-                        </label>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <label className="block text-[#2A2420]/80 font-medium text-xs">
+                            {strings.genreLabel} *
+                          </label>
+                          {isGenreAutoSuggested && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-sans font-medium px-2 py-0.5 rounded-full bg-[#2F6E5D]/10 text-[#2F6E5D] border border-[#2F6E5D]/20">
+                              <Sparkles className="w-2.5 h-2.5" /> Suggested for format
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[11px] text-[#2A2420]/50">
                           {strings.genrePrompt}
                         </span>
                       </div>
 
-                      {/* Helper hint */}
-                      <p className="text-[11px] text-[#2A2420]/55 italic mb-2.5">
-                        📸 Uploading a photo of a fort, temple, or monument? → Choose <strong>Fort, Monument & Heritage Site</strong>
+                      <p className="text-[11px] text-[#2A2420]/55 italic mb-2">
+                        {isGenreAutoSuggested
+                          ? 'Auto-suggested based on format above. Click any genre to change.'
+                          : 'Select the traditional genre that best classifies this cultural record.'}
                       </p>
 
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {CATEGORIES.map((c) => {
                           const localizedCat = catMap[c.id] || c;
+                          const isSelected = category === c.id;
                           return (
                             <div
                               key={c.id}
-                              onClick={() => {
-                                setCategory(c.id);
-                                if (c.id === 'OTHER') {
-                                  setMediaType('IMAGE');
-                                  setSpeakerName('');
-                                  setSpeakerAge('');
-                                } else if (c.id === 'LULLABY' || c.id === 'RITUAL' || c.id === 'STORY') {
-                                  setMediaType('AUDIO');
-                                }
-                                if (step2Errors.customCategory) {
-                                  setStep2Errors((prev) => ({ ...prev, customCategory: '' }));
-                                }
-                              }}
+                              onClick={() => handleGenreSelect(c.id)}
                               className={`p-2.5 rounded border cursor-pointer transition-all ${
-                                category === c.id
+                                isSelected
                                   ? 'bg-[#2F6E5D] border-[#2F6E5D] text-[#FAF7F1] shadow-sm'
                                   : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/75 hover:border-[#C97A3D]/40 hover:text-[#2A2420]'
                               }`}
                             >
-                              <span className="text-base block mb-0.5">{c.icon}</span>
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className="text-base">{c.icon}</span>
+                                {isSelected && isGenreAutoSuggested && (
+                                  <span className="inline-flex items-center gap-0.5 text-[9px] font-sans font-medium px-1.5 py-0.5 rounded bg-white/20 text-[#FAF7F1]">
+                                    <Sparkles className="w-2.5 h-2.5" /> Suggested
+                                  </span>
+                                )}
+                              </div>
                               <span className="font-medium text-xs block">{localizedCat.label}</span>
                               <span className="text-[10px] block opacity-70 mt-0.5 leading-tight">{localizedCat.desc}</span>
                             </div>
@@ -1590,11 +1670,11 @@ export default function CaptureWizardPage() {
                         <div className="mt-3 p-3.5 bg-[#FAF7F1] border border-[#C97A3D]/40 rounded-lg shadow-sm">
                           <label className="block text-xs font-semibold text-[#C97A3D] mb-1.5 flex items-center">
                             <Sparkles className="w-3.5 h-3.5 mr-1" />
-                            Describe the heritage site or custom type (optional)
+                            Describe the heritage site or monument name (optional)
                           </label>
                           <input
                             type="text"
-                            placeholder="e.g. Daulatabad Fort, Shiva Temple, Banyan tree grove, Warli painting site..."
+                            placeholder="e.g. Daulatabad Fort, Chand Baori, Ellora Caves, Warli sacred grove..."
                             value={customCategory}
                             onChange={(e) => {
                               setCustomCategory(e.target.value);
@@ -1604,17 +1684,47 @@ export default function CaptureWizardPage() {
                             }}
                             className={`w-full bg-[#FFFFFF] border ${
                               step2Errors.customCategory ? 'border-[#B54A3A]' : 'border-[#E4DDD0]'
-                            } rounded px-3 py-2 text-sm text-[#2A2420] focus:outline-none focus:border-[#C97A3D]`}
+                            } rounded px-3 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]`}
                           />
-                          {step2Errors.customCategory && (
-                            <p className="text-[11px] text-[#B54A3A] mt-1">{step2Errors.customCategory}</p>
-                          )}
                           <p className="text-[11px] text-[#2A2420]/60 mt-1.5">
                             This will be catalogued in the Living Cultural Atlas and searchable by name.
                           </p>
                         </div>
                       )}
                     </div>
+
+                    {/* Reusable Hierarchical Region / District Selector */}
+                    <RegionHierarchySelect
+                      selectedState={selectedStateName}
+                      selectedDistrict={selectedDistrictName}
+                      label={strings.regionLabel}
+                      sublabel={strings.regionRef}
+                      suggestedBadge={
+                        isRegionAutoSuggested ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-sans font-medium px-2 py-0.5 rounded-full bg-[#2F6E5D]/10 text-[#2F6E5D] border border-[#2F6E5D]/20">
+                            <Sparkles className="w-2.5 h-2.5" /> Suggested from location
+                          </span>
+                        ) : undefined
+                      }
+                      onChange={handleRegionChange}
+                      error={step2Errors.region}
+                    />
+
+                    {/* Native Language / Dialect: Direct typing of any rare dialect + suggestions */}
+                    <LanguageCombobox
+                      value={languageName}
+                      onChange={handleLanguageChange}
+                      suggestions={languages}
+                      label={strings.langLabel}
+                      autoCatalogLabel={strings.langAutoCatalog}
+                      suggestedBadge={
+                        isLanguageAutoSuggested ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-sans font-medium px-2 py-0.5 rounded-full bg-[#2F6E5D]/10 text-[#2F6E5D] border border-[#2F6E5D]/20">
+                            <Sparkles className="w-2.5 h-2.5" /> Suggested for region
+                          </span>
+                        ) : undefined
+                      }
+                    />
 
                     {/* Cultural Title (Validated: min length 5, no keyboard mash) */}
                     <div>
@@ -1640,55 +1750,110 @@ export default function CaptureWizardPage() {
                       )}
                     </div>
 
-                    {/* Speaker Details — only relevant for Audio/Video recordings */}
-                    {!isAnonymous && (mediaType === 'AUDIO' || mediaType === 'VIDEO') && category !== 'OTHER' && (
+                    {/* Speaker / Practitioner Details — conditional based on Tradition Genre */}
+                    {!isAnonymous && category !== 'OTHER' && (
                       <div>
-                        <div className="flex items-center space-x-2 mb-2 p-2.5 bg-[#FAF7F1] border border-[#E4DDD0] rounded-lg">
-                          <Mic className="w-3.5 h-3.5 text-[#C97A3D] shrink-0" />
-                          <p className="text-[11px] text-[#2A2420]/70">
-                            <strong>Speaker details</strong> — who is the voice in this recording? (optional)
-                          </p>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {category === 'CRAFT_TECHNIQUE' || category === 'LIFE_SKILL' || category === 'RECIPE' ? (
+                          // Craft / Ecology / Skill / Recipe Practitioner
                           <div>
-                            <label className="block text-[#2A2420]/80 mb-1.5">
-                              {strings.speakerLabel}
-                            </label>
-                            <input
-                              type="text"
-                              placeholder={strings.speakerPlaceholder}
-                              value={speakerName}
-                              onChange={(e) => setSpeakerName(e.target.value)}
-                              className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-3 py-2 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[#2A2420]/80 mb-1.5">
-                              {strings.ageLabel}
-                            </label>
-                            <input
-                              type="number"
-                              min={0}
-                              max={120}
-                              placeholder="e.g. 74"
-                              value={speakerAge}
-                              onChange={(e) => {
-                                setSpeakerAge(e.target.value ? Number(e.target.value) : '');
-                                if (step2Errors.speakerAge) {
-                                  setStep2Errors((prev) => ({ ...prev, speakerAge: '' }));
-                                }
-                              }}
-                              className={`w-full bg-[#FFFFFF] border ${
-                                step2Errors.speakerAge ? 'border-[#B54A3A]' : 'border-[#E4DDD0]'
-                              } rounded px-3 py-2 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]`}
-                            />
-                            {step2Errors.speakerAge && (
-                              <p className="text-[11px] text-[#B54A3A] mt-1">
-                                {step2Errors.speakerAge}
+                            <div className="flex items-center space-x-2 mb-2 p-2.5 bg-[#FAF7F1] border border-[#E4DDD0] rounded-lg">
+                              <Wrench className="w-3.5 h-3.5 text-[#C97A3D] shrink-0" />
+                              <p className="text-[11px] text-[#2A2420]/70">
+                                <strong>Practitioner / Artisan details</strong> — who crafted or demonstrated this technique? (optional)
                               </p>
-                            )}
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-[#2A2420]/80 mb-1.5 font-medium text-xs">
+                                  Practitioner / Artisan Name <span className="text-[#2A2420]/40 font-normal">(optional)</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. Ramdev Suthar, Devaki Amma"
+                                  value={speakerName}
+                                  onChange={(e) => setSpeakerName(e.target.value)}
+                                  className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-3 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[#2A2420]/80 mb-1.5 font-medium text-xs">
+                                  Practitioner Age <span className="text-[#2A2420]/40 font-normal">(optional)</span>
+                                </label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={120}
+                                  placeholder="e.g. 58"
+                                  value={speakerAge}
+                                  onChange={(e) => {
+                                    setSpeakerAge(e.target.value ? Number(e.target.value) : '');
+                                    if (step2Errors.speakerAge) {
+                                      setStep2Errors((prev) => ({ ...prev, speakerAge: '' }));
+                                    }
+                                  }}
+                                  className={`w-full bg-[#FFFFFF] border ${
+                                    step2Errors.speakerAge ? 'border-[#B54A3A]' : 'border-[#E4DDD0]'
+                                  } rounded px-3 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]`}
+                                />
+                                {step2Errors.speakerAge && (
+                                  <p className="text-[11px] text-[#B54A3A] mt-1">
+                                    {step2Errors.speakerAge}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          // Spoken / Oral Tradition Storyteller
+                          <div>
+                            <div className="flex items-center space-x-2 mb-2 p-2.5 bg-[#FAF7F1] border border-[#E4DDD0] rounded-lg">
+                              <Mic className="w-3.5 h-3.5 text-[#C97A3D] shrink-0" />
+                              <p className="text-[11px] text-[#2A2420]/70">
+                                <strong>Speaker / Storyteller details</strong> — who is sharing this oral recording or lore? (optional)
+                              </p>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-[#2A2420]/80 mb-1.5 font-medium text-xs">
+                                  Speaker / Storyteller Name <span className="text-[#2A2420]/40 font-normal">(optional)</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. Gangubai Thakar, Elder Toda singer"
+                                  value={speakerName}
+                                  onChange={(e) => setSpeakerName(e.target.value)}
+                                  className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-3 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[#2A2420]/80 mb-1.5 font-medium text-xs">
+                                  Speaker Age <span className="text-[#2A2420]/40 font-normal">(optional)</span>
+                                </label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={120}
+                                  placeholder="e.g. 74"
+                                  value={speakerAge}
+                                  onChange={(e) => {
+                                    setSpeakerAge(e.target.value ? Number(e.target.value) : '');
+                                    if (step2Errors.speakerAge) {
+                                      setStep2Errors((prev) => ({ ...prev, speakerAge: '' }));
+                                    }
+                                  }}
+                                  className={`w-full bg-[#FFFFFF] border ${
+                                    step2Errors.speakerAge ? 'border-[#B54A3A]' : 'border-[#E4DDD0]'
+                                  } rounded px-3 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]`}
+                                />
+                                {step2Errors.speakerAge && (
+                                  <p className="text-[11px] text-[#B54A3A] mt-1">
+                                    {step2Errors.speakerAge}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 

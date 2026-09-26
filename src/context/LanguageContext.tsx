@@ -77,19 +77,21 @@ function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): 
   return R * c;
 }
 
-function detectStateLanguage(lat: number, lng: number): SupportedLanguage {
+function detectStateAndLanguage(lat: number, lng: number): { lang: SupportedLanguage; state: string } {
   let closestLang: SupportedLanguage = 'en';
-  let minDistance = 750; // max radius threshold in km
+  let closestState = 'Maharashtra';
+  let minDistance = 2500; // max radius threshold in km
 
   for (const item of INDIAN_STATE_CENTROIDS) {
     const dist = getDistanceKm(lat, lng, item.lat, item.lng);
     if (dist < minDistance) {
       minDistance = dist;
       closestLang = item.lang;
+      closestState = item.state;
     }
   }
 
-  return closestLang;
+  return { lang: closestLang, state: closestState };
 }
 
 interface LanguageContextType {
@@ -109,34 +111,43 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [detectedState, setDetectedState] = useState<string | null>(null);
 
   useEffect(() => {
-    // 1. Check if user already manually selected a language
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('dharohar_ui_lang') as SupportedLanguage;
       if (stored && MESSAGES_MAP[stored]) {
         setLanguageState(stored);
-        return;
       }
 
-      // 2. Geolocation auto-detection on first visit
-      const prompted = sessionStorage.getItem('dharohar_geo_attempted');
-      if (!prompted && 'geolocation' in navigator) {
-        sessionStorage.setItem('dharohar_geo_attempted', 'true');
+      const cachedState = sessionStorage.getItem('dharohar_detected_state');
+      if (cachedState) {
+        setDetectedState(cachedState);
+      }
+
+      // Geolocation auto-detection
+      if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
             const { latitude, longitude } = position.coords;
-            const detected = detectStateLanguage(latitude, longitude);
-            if (detected && detected !== 'en') {
-              setLanguageState(detected);
-              localStorage.setItem('dharohar_ui_lang', detected);
-              console.log(`[Dharohar Setu i18n] Geolocation mapped coords (${latitude.toFixed(2)}, ${longitude.toFixed(2)}) -> ${detected}`);
+            const { lang, state } = detectStateAndLanguage(latitude, longitude);
+            setDetectedState(state);
+            sessionStorage.setItem('dharohar_detected_state', state);
+            if (!stored && lang && lang !== 'en') {
+              setLanguageState(lang);
+              localStorage.setItem('dharohar_ui_lang', lang);
+              console.log(`[Dharohar Setu i18n] Geolocation mapped coords (${latitude.toFixed(2)}, ${longitude.toFixed(2)}) -> ${state} (${lang})`);
             }
           },
           (error) => {
-            // Permission denied or timeout -> default quietly to English
-            console.log('[Dharohar Setu i18n] Geolocation default fallback to English.');
+            console.log('[Dharohar Setu i18n] Geolocation default fallback to Maharashtra.');
+            if (!cachedState) {
+              setDetectedState('Maharashtra');
+              sessionStorage.setItem('dharohar_detected_state', 'Maharashtra');
+            }
           },
           { timeout: 8000, maximumAge: 3600000 }
         );
+      } else if (!cachedState) {
+        setDetectedState('Maharashtra');
+        sessionStorage.setItem('dharohar_detected_state', 'Maharashtra');
       }
     }
   }, []);

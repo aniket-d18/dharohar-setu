@@ -78,11 +78,11 @@ const ALL_INDIA_STATES_VITALITY: Record<string, StateVitalityData> = {
   'Mizoram': { status: 'CRITICAL', score: 8.6, highlight: 'Mara, Lai oral traditions' },
   'Ladakh': { status: 'CRITICAL', score: 8.5, highlight: 'Balti, Brokskat, Zanskari' },
 
-  'Tamil Nadu': { status: 'CRITICAL', score: 8.9, highlight: 'Toda in Nilgiris, Kota, Pukhoor embroidery', hasCraft: true },
-  'West Bengal': { status: 'CRITICAL', score: 9.1, highlight: 'Toto script & language, Lepcha', hasCraft: false },
-  'Maharashtra': { status: 'CRITICAL', score: 9.4, highlight: 'Nihali language isolate, Buldhana', hasCraft: false },
-  'Himachal Pradesh': { status: 'ENDANGERED', score: 7.3, highlight: 'Spiti Bhoti, Kinnauri, Buddhist murals', hasCraft: true },
-  'Gujarat': { status: 'VULNERABLE', score: 5.8, highlight: 'Kachchhi, Rogan castor oil painting', hasCraft: true },
+  'Tamil Nadu': { status: 'CRITICAL', score: 8.6, highlight: 'The Nilgiris (Toda: 8.6 • Critical), Kota, Pukhoor embroidery', hasCraft: true },
+  'West Bengal': { status: 'ENDANGERED', score: 7.2, highlight: 'Alipurduar (Toto: 7.2 • Endangered) / Bengali mainland (Safe)', hasCraft: false },
+  'Maharashtra': { status: 'ENDANGERED', score: 5.9, highlight: 'Buldhana (Nihali: 5.9 • Endangered) / Marathi mainland (Safe)', hasCraft: false },
+  'Himachal Pradesh': { status: 'ENDANGERED', score: 6.1, highlight: 'Lahaul & Spiti (Spiti Bhoti: 6.1 • Endangered), Kinnauri', hasCraft: true },
+  'Gujarat': { status: 'VULNERABLE', score: 3.7, highlight: 'Kutch (Kachchhi: 3.7 • Vulnerable), Rogan art', hasCraft: true },
 
   'Jammu & Kashmir': { status: 'ENDANGERED', score: 7.8, highlight: 'Shina, Burushaski, Gojri' },
   'Uttarakhand': { status: 'ENDANGERED', score: 7.5, highlight: 'Jaunsari, Rung, Tolchha' },
@@ -239,10 +239,44 @@ export default function AtlasMap({
         dbState._count.records +
         dbState.childRegions.reduce((acc, c) => acc + c._count.records, 0);
       const hasCrafts = dbState.childRegions.some((c) => c.crafts && c.crafts.length > 0);
+
+      // If state has child districts, derive state score & status directly from real district data
+      if (dbState.childRegions && dbState.childRegions.length > 0) {
+        const childDistricts = dbState.childRegions;
+        const childScores = childDistricts.map((c) => c.vitalityScore);
+        const maxScore = Math.max(...childScores);
+        const avgScore = childScores.reduce((sum, s) => sum + s, 0) / childDistricts.length;
+        const worstDistrict = [...childDistricts].sort((a, b) => b.vitalityScore - a.vitalityScore)[0];
+
+        // Derived score: worst-case district score (representing highest regional preservation urgency)
+        const derivedScore = Math.round(maxScore * 10) / 10;
+        const derivedStatus: 'CRITICAL' | 'ENDANGERED' | 'VULNERABLE' | 'SAFE' =
+          derivedScore >= 7.5 ? 'CRITICAL' :
+          derivedScore >= 5.5 ? 'ENDANGERED' :
+          derivedScore >= 3.5 ? 'VULNERABLE' : 'SAFE';
+
+        const highlightText = childDistricts.length === 1
+          ? `${worstDistrict.name}: ${worstDistrict.vitalityScore.toFixed(1)} (${worstDistrict.vitalityStatus})`
+          : `Worst-case: ${worstDistrict.name} (${worstDistrict.vitalityScore.toFixed(1)} • ${worstDistrict.vitalityStatus}) | ${childDistricts.length} monitored districts (Avg: ${avgScore.toFixed(1)})`;
+
+        return {
+          status: derivedStatus,
+          score: derivedScore,
+          avgScore: Math.round(avgScore * 10) / 10,
+          worstDistrict,
+          districtsCount: childDistricts.length,
+          highlight: highlightText,
+          hasCraft: hasCrafts,
+          recordsCount,
+          dbState,
+        };
+      }
+
+      // States with no district children evaluate from their database record
       return {
         status: dbState.vitalityStatus as 'CRITICAL' | 'ENDANGERED' | 'VULNERABLE' | 'SAFE',
         score: dbState.vitalityScore,
-        highlight: dbState.childRegions.map((c) => c.name).join(', ') || 'Cultural documentation active',
+        highlight: matrixData?.highlight || 'Cultural documentation active',
         hasCraft: hasCrafts,
         recordsCount,
         dbState,
@@ -333,6 +367,8 @@ export default function AtlasMap({
             ? '#E57A6C'
             : info.status === 'ENDANGERED'
             ? '#E8A33D'
+            : info.status === 'VULNERABLE'
+            ? '#D4882E'
             : '#68BAA4';
 
         // Rich Tooltip with Vitality Score & Heritage Highlight
@@ -382,8 +418,8 @@ export default function AtlasMap({
                 id: info.dbState.id,
                 name: info.dbState.name,
                 level: info.dbState.level,
-                vitalityStatus: info.dbState.vitalityStatus,
-                vitalityScore: info.dbState.vitalityScore,
+                vitalityStatus: info.status,
+                vitalityScore: info.score,
                 languages: info.dbState.languages || [],
                 crafts: [],
                 _count: { records: info.recordsCount },
