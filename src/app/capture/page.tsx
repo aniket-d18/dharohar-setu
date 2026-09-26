@@ -33,6 +33,7 @@ import {
   Film,
   Link as LinkIcon,
   Wrench,
+  UserCheck,
 } from 'lucide-react';
 
 import { useAuth } from '@/context/AuthContext';
@@ -772,6 +773,7 @@ export default function CaptureWizardPage() {
   const [category, setCategory] = useState('LULLABY');
   const [isGenreAutoSuggested, setIsGenreAutoSuggested] = useState(true);
   const [customCategory, setCustomCategory] = useState('');
+  const [speakerRole, setSpeakerRole] = useState('');
   const [speakerName, setSpeakerName] = useState('');
   const [speakerAge, setSpeakerAge] = useState<number | ''>('');
   const [titleText, setTitleText] = useState('');
@@ -835,10 +837,6 @@ export default function CaptureWizardPage() {
     setCategory(catId);
     setIsGenreAutoSuggested(false); // User made manual choice
 
-    if (catId === 'OTHER') {
-      setSpeakerName('');
-      setSpeakerAge('');
-    }
     if (step2Errors.customCategory) {
       setStep2Errors((prev) => ({ ...prev, customCategory: '' }));
     }
@@ -973,8 +971,6 @@ export default function CaptureWizardPage() {
       setCategory('LULLABY');
     } else if (fmt === 'IMAGE') {
       setCategory('OTHER');
-      setSpeakerName('');
-      setSpeakerAge('');
     } else if (fmt === 'VIDEO') {
       setCategory('RITUAL');
     } else if (fmt === 'TEXT') {
@@ -1163,6 +1159,10 @@ export default function CaptureWizardPage() {
     if (category === 'OTHER' && customCategory.trim()) {
       tags.push(`genre:${customCategory.trim().toLowerCase()}`);
       tags.push(customCategory.trim().toLowerCase());
+    }
+
+    if (speakerRole && speakerRole !== 'Not applicable/Other') {
+      tags.push(`role:${speakerRole.toLowerCase().replace(/[^a-z0-9]/g, '')}`);
     }
 
     const scopesGranted: string[] = [];
@@ -1425,6 +1425,9 @@ export default function CaptureWizardPage() {
                     setRecordedAudioUrl(null);
                     setSelectedFile(null);
                     setFilePreviewUrl(null);
+                    setSpeakerRole('');
+                    setSpeakerName('');
+                    setSpeakerAge('');
                     setConsentConfirmed(false);
                   }}
                   className="w-full sm:w-auto px-6 py-3 rounded-lg border border-[#E4DDD0] text-[#2A2420] font-sans text-sm hover:bg-[#FAF7F1] transition-colors"
@@ -1750,110 +1753,102 @@ export default function CaptureWizardPage() {
                       )}
                     </div>
 
-                    {/* Speaker / Practitioner Details — conditional based on Tradition Genre */}
-                    {!isAnonymous && category !== 'OTHER' && (
-                      <div>
-                        {category === 'CRAFT_TECHNIQUE' || category === 'LIFE_SKILL' || category === 'RECIPE' ? (
-                          // Craft / Ecology / Skill / Recipe Practitioner
-                          <div>
-                            <div className="flex items-center space-x-2 mb-2 p-2.5 bg-[#FAF7F1] border border-[#E4DDD0] rounded-lg">
-                              <Wrench className="w-3.5 h-3.5 text-[#C97A3D] shrink-0" />
-                              <p className="text-[11px] text-[#2A2420]/70">
-                                <strong>Practitioner / Artisan details</strong> — who crafted or demonstrated this technique? (optional)
-                              </p>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              <div>
-                                <label className="block text-[#2A2420]/80 mb-1.5 font-medium text-xs">
-                                  Practitioner / Artisan Name <span className="text-[#2A2420]/40 font-normal">(optional)</span>
-                                </label>
-                                <input
-                                  type="text"
-                                  placeholder="e.g. Ramdev Suthar, Devaki Amma"
-                                  value={speakerName}
-                                  onChange={(e) => setSpeakerName(e.target.value)}
-                                  className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-3 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-[#2A2420]/80 mb-1.5 font-medium text-xs">
-                                  Practitioner Age <span className="text-[#2A2420]/40 font-normal">(optional)</span>
-                                </label>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  max={120}
-                                  placeholder="e.g. 58"
-                                  value={speakerAge}
-                                  onChange={(e) => {
-                                    setSpeakerAge(e.target.value ? Number(e.target.value) : '');
-                                    if (step2Errors.speakerAge) {
-                                      setStep2Errors((prev) => ({ ...prev, speakerAge: '' }));
-                                    }
-                                  }}
-                                  className={`w-full bg-[#FFFFFF] border ${
-                                    step2Errors.speakerAge ? 'border-[#B54A3A]' : 'border-[#E4DDD0]'
-                                  } rounded px-3 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]`}
-                                />
-                                {step2Errors.speakerAge && (
-                                  <p className="text-[11px] text-[#B54A3A] mt-1">
-                                    {step2Errors.speakerAge}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
+                    {/* Contributor Attribution: "Who shared this with you?" — flexible for all formats & genres */}
+                    {!isAnonymous && (
+                      <div className="p-4 bg-[#FAF7F1] border border-[#E4DDD0] rounded-xl space-y-3 shadow-none">
+                        <div>
+                          <div className="flex items-center space-x-2 mb-1">
+                            <UserCheck className="w-4 h-4 text-[#C97A3D]" />
+                            <h3 className="font-sans font-medium text-xs text-[#2A2420]">
+                              Who shared this with you? <span className="text-[#2A2420]/50 font-normal">(optional)</span>
+                            </h3>
                           </div>
-                        ) : (
-                          // Spoken / Oral Tradition Storyteller
+                          <p className="text-[11px] text-[#2A2420]/65 leading-tight">
+                            Attribute this tradition or knowledge to the community member, elder, singer, or artisan who shared it.
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                          {/* Role Selector */}
                           <div>
-                            <div className="flex items-center space-x-2 mb-2 p-2.5 bg-[#FAF7F1] border border-[#E4DDD0] rounded-lg">
-                              <Mic className="w-3.5 h-3.5 text-[#C97A3D] shrink-0" />
-                              <p className="text-[11px] text-[#2A2420]/70">
-                                <strong>Speaker / Storyteller details</strong> — who is sharing this oral recording or lore? (optional)
-                              </p>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              <div>
-                                <label className="block text-[#2A2420]/80 mb-1.5 font-medium text-xs">
-                                  Speaker / Storyteller Name <span className="text-[#2A2420]/40 font-normal">(optional)</span>
-                                </label>
-                                <input
-                                  type="text"
-                                  placeholder="e.g. Gangubai Thakar, Elder Toda singer"
-                                  value={speakerName}
-                                  onChange={(e) => setSpeakerName(e.target.value)}
-                                  className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-3 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-[#2A2420]/80 mb-1.5 font-medium text-xs">
-                                  Speaker Age <span className="text-[#2A2420]/40 font-normal">(optional)</span>
-                                </label>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  max={120}
-                                  placeholder="e.g. 74"
-                                  value={speakerAge}
-                                  onChange={(e) => {
-                                    setSpeakerAge(e.target.value ? Number(e.target.value) : '');
-                                    if (step2Errors.speakerAge) {
-                                      setStep2Errors((prev) => ({ ...prev, speakerAge: '' }));
-                                    }
-                                  }}
-                                  className={`w-full bg-[#FFFFFF] border ${
-                                    step2Errors.speakerAge ? 'border-[#B54A3A]' : 'border-[#E4DDD0]'
-                                  } rounded px-3 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]`}
-                                />
-                                {step2Errors.speakerAge && (
-                                  <p className="text-[11px] text-[#B54A3A] mt-1">
-                                    {step2Errors.speakerAge}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
+                            <label className="block text-[11px] font-medium text-[#2A2420]/80 mb-1">
+                              Role <span className="text-[#2A2420]/40 font-normal">(optional)</span>
+                            </label>
+                            <select
+                              value={speakerRole}
+                              onChange={(e) => setSpeakerRole(e.target.value)}
+                              className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-2.5 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D] transition-colors"
+                            >
+                              <option value="">Select role (optional)...</option>
+                              <option value="Speaker">Speaker</option>
+                              <option value="Storyteller">Storyteller</option>
+                              <option value="Practitioner/Artisan">Practitioner / Artisan</option>
+                              <option value="Singer">Singer</option>
+                              <option value="Elder">Elder</option>
+                              <option value="Not applicable/Other">Not applicable / Other</option>
+                            </select>
                           </div>
-                        )}
+
+                          {/* Name Input */}
+                          <div>
+                            <label className="block text-[11px] font-medium text-[#2A2420]/80 mb-1">
+                              {speakerRole && speakerRole !== 'Not applicable/Other'
+                                ? `${speakerRole} Name`
+                                : 'Name'}{' '}
+                              <span className="text-[#2A2420]/40 font-normal">(optional)</span>
+                            </label>
+                            <input
+                              type="text"
+                              placeholder={
+                                speakerRole === 'Singer'
+                                  ? 'e.g. Sinamma Toda, Gangubai'
+                                  : speakerRole === 'Practitioner/Artisan'
+                                  ? 'e.g. Ramdev Suthar, Khatri ji'
+                                  : speakerRole === 'Elder'
+                                  ? 'e.g. Licho Elder, Shantabai'
+                                  : speakerRole === 'Storyteller'
+                                  ? 'e.g. Dhaniram Toto'
+                                  : speakerRole === 'Speaker'
+                                  ? 'e.g. Gangubai Thakar'
+                                  : 'e.g. Community member or artisan'
+                              }
+                              value={speakerName}
+                              onChange={(e) => setSpeakerName(e.target.value)}
+                              className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-2.5 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
+                            />
+                          </div>
+
+                          {/* Age Input */}
+                          <div>
+                            <label className="block text-[11px] font-medium text-[#2A2420]/80 mb-1">
+                              {speakerRole && speakerRole !== 'Not applicable/Other'
+                                ? `${speakerRole} Age`
+                                : 'Age'}{' '}
+                              <span className="text-[#2A2420]/40 font-normal">(optional)</span>
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={120}
+                              placeholder="e.g. 74"
+                              value={speakerAge}
+                              onChange={(e) => {
+                                setSpeakerAge(e.target.value ? Number(e.target.value) : '');
+                                if (step2Errors.speakerAge) {
+                                  setStep2Errors((prev) => ({ ...prev, speakerAge: '' }));
+                                }
+                              }}
+                              className={`w-full bg-[#FFFFFF] border ${
+                                step2Errors.speakerAge ? 'border-[#B54A3A]' : 'border-[#E4DDD0]'
+                              } rounded px-2.5 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]`}
+                            />
+                            {step2Errors.speakerAge && (
+                              <p className="text-[11px] text-[#B54A3A] mt-1">
+                                {step2Errors.speakerAge}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     )}
 
@@ -2410,20 +2405,16 @@ export default function CaptureWizardPage() {
 
                     <div className="flex justify-between border-b border-[#E4DDD0] pb-2">
                       <span className="text-[#2A2420]/60">
-                        {mediaType === 'IMAGE'
-                          ? 'Contributor / Photographer:'
-                          : mediaType === 'TEXT'
-                          ? 'Script / Text Contributor:'
-                          : strings.reviewSpeaker}
+                        {speakerRole && speakerRole !== 'Not applicable/Other'
+                          ? `${speakerRole}:`
+                          : 'Attributed to / Shared by:'}
                       </span>
                       <span className="text-[#2A2420]">
                         {isAnonymous
                           ? (strings.anonCustodian.replace(':', '') || 'Anonymous Custodian')
                           : speakerName
                           ? `${speakerName}${speakerAge !== '' ? ` (${speakerAge} yrs)` : ''}`
-                          : mediaType === 'IMAGE'
-                          ? (user?.displayName || 'Community Heritage Contributor')
-                          : 'Elder Tradition Bearer'}
+                          : 'Not specified'}
                       </span>
                     </div>
 
