@@ -81,11 +81,18 @@ export class VerificationService {
         },
         verifications: {
           include: {
-            reviewer: true,
+            reviewer: {
+              select: {
+                id: true,
+                displayName: true,
+                role: true,
+              },
+            },
           },
           orderBy: { createdAt: 'desc' },
         },
       },
+      take: 100,
     });
   }
 

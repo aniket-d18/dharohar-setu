@@ -331,7 +331,7 @@ function ArchiveContent() {
     <div className="min-h-screen bg-[#FAF7F1] text-[#2A2420] flex flex-col selection:bg-[#C97A3D]/20">
       <Navbar />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 pb-24 md:pb-10">
         {/* Page Header */}
         <div className="mb-8">
           <div className="inline-flex items-center space-x-2 text-xs font-sans text-[#C97A3D] mb-2">

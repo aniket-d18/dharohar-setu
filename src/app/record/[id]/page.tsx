@@ -511,7 +511,7 @@ export default function RecordDetailPage() {
     <div className="min-h-screen bg-[#FAF7F1] text-[#2A2420] flex flex-col justify-between selection:bg-[#C97A3D]/20">
       <Navbar />
 
-      <main className="flex-1">
+      <main className="flex-1 pb-24 md:pb-0">
         {/* Breadcrumb Top Bar */}
         <div className="border-b border-[#E4DDD0] bg-[#FFFFFF] py-3 px-4 sm:px-8">
           <div className="max-w-6xl mx-auto flex items-center justify-between">

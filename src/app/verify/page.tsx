@@ -125,29 +125,60 @@ export default function VerificationConsolePage() {
   }, [authLoading, user, router]);
 
   useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
     async function fetchQueue() {
       try {
         setLoading(true);
-        const res = await authFetch(`${apiUrl}/api/verification/queue`);
+        setActionError(null);
+        const res = await authFetch(`${apiUrl}/api/verification/queue`, {
+          signal: controller.signal,
+        });
         if (res.ok) {
           const data: QueueItem[] = await res.json();
-          setQueue(data);
-          if (data.length > 0) {
-            setSelectedRecord(data[0]);
-            setEditedTranscription(data[0].transcriptionText || '');
-            setEditedTranslation(data[0].translationText || '');
+          if (isMounted) {
+            setQueue(data);
+            if (data.length > 0) {
+              setSelectedRecord(data[0]);
+              setEditedTranscription(data[0].transcriptionText || '');
+              setEditedTranslation(data[0].translationText || '');
+            }
+          }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          if (isMounted) {
+            setActionError(errData.message || `Server returned status ${res.status}`);
           }
         }
-      } catch (err) {
-        console.error('Error fetching verification queue:', err);
+      } catch (err: any) {
+        if (isMounted) {
+          if (err.name === 'AbortError') {
+            setActionError('Request timed out. Please retry or verify server is reachable.');
+          } else {
+            console.error('Error fetching verification queue:', err);
+            setActionError('Failed to load queue. Please check network connection.');
+          }
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
 
     if (user && user.role !== 'CONTRIBUTOR') {
       fetchQueue();
+    } else {
+      setLoading(false);
     }
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [apiUrl, authFetch, user]);
 
   // Helper to ensure media URL is playable across domains and fallbacks
@@ -441,7 +472,7 @@ export default function VerificationConsolePage() {
     return (
       <div className="min-h-screen bg-[#FAF7F1] text-[#2A2420] flex flex-col justify-between selection:bg-[#C97A3D]/20">
         <Navbar />
-        <main className="flex-1 flex items-center justify-center p-6">
+        <main className="flex-1 flex items-center justify-center p-6 pb-24 md:pb-6">
           <div className="max-w-md w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl p-8 text-center shadow-none">
             <Lock className="w-12 h-12 text-[#C97A3D] mx-auto mb-4 animate-pulse" />
             <h2 className="font-serif text-xl text-[#2A2420] font-medium mb-2">
@@ -469,7 +500,7 @@ export default function VerificationConsolePage() {
     <div className="min-h-screen bg-[#FAF7F1] text-[#2A2420] flex flex-col justify-between selection:bg-[#C97A3D]/20">
       <Navbar />
 
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col pb-24 md:pb-0">
         {/* Verification Subheader Bar */}
         <div className="bg-[#FAF7F1] border-b border-[#E4DDD0] px-6 py-4">
           <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
@@ -573,8 +604,8 @@ export default function VerificationConsolePage() {
                   Loading verification queue...
                 </div>
               ) : filteredQueue.length === 0 ? (
-                <div className="p-8 text-center text-xs text-[#2A2420]/50 font-sans">
-                  No records waiting in this queue slice.
+                <div className="p-8 text-center text-xs text-[#2A2420]/50 font-sans space-y-2">
+                  <p>{actionError || 'No records waiting in this queue slice.'}</p>
                 </div>
               ) : (
                 filteredQueue.map((item) => {

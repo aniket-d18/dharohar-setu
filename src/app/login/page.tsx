@@ -78,7 +78,7 @@ function LoginFormContent() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pb-24 md:pb-12">
       {/* Top Banner if redirected from a role-gated page */}
       {errorParam === 'reviewers_only' && (
         <div className="mb-8 p-4 rounded-lg bg-[#C97A3D]/10 border border-[#C97A3D]/30 text-[#2A2420] flex items-start space-x-3">

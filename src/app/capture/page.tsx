@@ -1137,7 +1137,7 @@ export default function CaptureWizardPage() {
     <div className="min-h-screen bg-[#FAF7F1] text-[#2A2420] flex flex-col justify-between selection:bg-[#C97A3D]/20">
       <Navbar />
 
-      <main className="flex-1 pb-16">
+      <main className="flex-1 pb-24 md:pb-16">
         {/* Offline Status Top Bar */}
         <div
           className={`py-2 px-4 text-xs font-sans text-center transition-all duration-300 flex items-center justify-center gap-3 ${

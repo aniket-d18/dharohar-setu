@@ -110,7 +110,7 @@ export default function UntranslatableGalleryPage() {
     <div className="min-h-screen bg-[#FAF7F1] text-[#2A2420] flex flex-col justify-between selection:bg-[#C97A3D]/20">
       <Navbar />
 
-      <main className="flex-1 pb-16">
+      <main className="flex-1 pb-24 md:pb-16">
         {/* Header Hero Section */}
         <section className="bg-[#FAF7F1] py-14 px-4 sm:px-8 border-b border-[#E4DDD0]">
           <div className="max-w-5xl mx-auto text-center">

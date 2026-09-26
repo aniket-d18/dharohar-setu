@@ -544,7 +544,7 @@ export default function AtlasPage() {
             </div>
           ) : (
             /* Accessible Directory List View */
-            <div className="flex-1 p-6 sm:p-10 overflow-y-auto max-w-4xl mx-auto w-full">
+            <div className="flex-1 p-6 pb-20 sm:p-10 overflow-y-auto max-w-4xl mx-auto w-full">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="font-serif text-2xl text-[#2A2420]">
