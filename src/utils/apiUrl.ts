@@ -11,10 +11,10 @@ export function getApiUrl(): string {
     return `${window.location.origin}/backend`;
   }
   // Server-side: talk directly to the backend
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  return process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 }
 
 export const API_BASE_URL = typeof window !== 'undefined'
   ? '' // Will be set at runtime via getApiUrl()
-  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000');
+  : (process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000');
 
