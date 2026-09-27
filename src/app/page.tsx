@@ -62,7 +62,6 @@ export default function HomePage() {
   const [fadingLanguages, setFadingLanguages] = useState<FadingLanguage[]>([]);
   const [featuredRecords, setFeaturedRecords] = useState<RecordCardData[]>([]);
   const [activeTickerIndex, setActiveTickerIndex] = useState(0);
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -250,8 +249,154 @@ export default function HomePage() {
 
       <main className="flex-1 pb-20 md:pb-0">
         {/* ========================================================= */}
-        {/* 1. HERO SECTION WITH MOBILE-FIRST CAROUSEL                */}
+        {/* MOBILE CONSUMER EXPERIENCE (Strictly block md:hidden)     */}
+        {/* Simple like a real consumer application                   */}
         {/* ========================================================= */}
+        <div className="block md:hidden px-4 pt-4 pb-8 space-y-5">
+          {/* 1. Header & Mission Statement */}
+          <div className="text-center pt-2">
+            <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#2F6E5D]/10 border border-[#2F6E5D]/20 text-[11px] font-sans font-medium text-[#2F6E5D] mb-3">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Living Heritage Repository</span>
+            </div>
+            <h1 className="font-serif text-2xl font-medium text-[#2A2420] tracking-tight leading-snug mb-2">
+              Dharohar Setu
+            </h1>
+            <p className="text-xs text-[#2A2420]/75 font-sans leading-relaxed max-w-xs mx-auto">
+              Preserving India's endangered oral traditions, folk songs, ceremonies, and ancient craftsmanship before they vanish.
+            </p>
+          </div>
+
+          {/* 2. Primary & Secondary Action CTAs (Large Touch Targets) */}
+          <div className="flex flex-col gap-2.5">
+            <Link
+              href="/capture"
+              className="w-full min-h-[50px] inline-flex items-center justify-center space-x-2 px-5 py-3.5 rounded-xl bg-[#C97A3D] text-[#FAF7F1] font-sans font-semibold text-sm hover:bg-[#B86B30] active:scale-[0.98] transition-all shadow-sm"
+            >
+              <Mic className="w-4 h-4" />
+              <span>Capture a Memory</span>
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </Link>
+
+            <Link
+              href="/archive"
+              className="w-full min-h-[46px] inline-flex items-center justify-center space-x-2 px-5 py-3 rounded-xl border border-[#E4DDD0] bg-[#FFFFFF] text-[#2A2420] font-sans font-medium text-sm hover:bg-[#FAF7F1] active:scale-[0.98] transition-all shadow-xs"
+            >
+              <Compass className="w-4 h-4 text-[#C97A3D]" />
+              <span>Explore Heritage</span>
+            </Link>
+          </div>
+
+          {/* 3. Compact Impact Summary (3 Key Metrics in 1 Row) */}
+          <div className="bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl p-3 shadow-none">
+            <div className="grid grid-cols-3 divide-x divide-[#E4DDD0] text-center">
+              <div className="px-2">
+                <p className="font-serif text-xl font-bold text-[#2A2420]">
+                  {counters.totalRecords || 49}+
+                </p>
+                <p className="text-[10px] font-sans text-[#2A2420]/60 uppercase tracking-tight mt-0.5">
+                  Records
+                </p>
+              </div>
+              <div className="px-2">
+                <p className="font-serif text-xl font-bold text-[#C97A3D]">
+                  {counters.totalLanguages || 32}
+                </p>
+                <p className="text-[10px] font-sans text-[#2A2420]/60 uppercase tracking-tight mt-0.5">
+                  Languages
+                </p>
+              </div>
+              <div className="px-2">
+                <p className="font-serif text-xl font-bold text-[#2F6E5D]">
+                  {counters.regionsCovered || 18}
+                </p>
+                <p className="text-[10px] font-sans text-[#2A2420]/60 uppercase tracking-tight mt-0.5">
+                  Regions
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. One Featured Heritage Record */}
+          <div>
+            <div className="flex items-center justify-between mb-2 px-0.5">
+              <span className="text-[11px] font-sans font-semibold uppercase tracking-wider text-[#2A2420]/60">
+                Featured Heritage Record
+              </span>
+              <span className="inline-flex items-center space-x-1 text-[10px] font-sans font-medium text-[#B54A3A] bg-[#B54A3A]/10 px-2 py-0.5 rounded border border-[#B54A3A]/25">
+                <Flame className="w-3 h-3" />
+                <span>Critically Endangered</span>
+              </span>
+            </div>
+
+            <div className="bg-[#FFFFFF] border-2 border-[#C97A3D]/40 rounded-xl p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div>
+                  <h3 className="font-serif text-base font-medium text-[#2A2420] leading-snug">
+                    {CAROUSEL_CARDS[0].title}
+                  </h3>
+                  <p className="text-[#C97A3D] text-xs flex items-center space-x-1 mt-0.5">
+                    <MapPin className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{CAROUSEL_CARDS[0].subtitle}</span>
+                  </p>
+                </div>
+                <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-[#FAF7F1] border border-[#E4DDD0] text-[#2A2420]/70 shrink-0">
+                  Audio
+                </span>
+              </div>
+
+              <div className="bg-[#FAF7F1] p-3 rounded-lg border border-[#E4DDD0] mb-3">
+                <p className="text-xs text-[#2A2420] italic font-serif leading-relaxed mb-1">
+                  "{CAROUSEL_CARDS[0].quote}"
+                </p>
+                <p className="text-[11px] text-[#2A2420]/65 leading-relaxed">
+                  {CAROUSEL_CARDS[0].translation}
+                </p>
+              </div>
+
+              <Link
+                href="/archive"
+                className="w-full inline-flex items-center justify-center space-x-1.5 px-3 py-2.5 rounded-lg bg-[#C97A3D] text-[#FAF7F1] text-xs font-sans font-semibold hover:bg-[#B86B30] active:scale-95 transition-all shadow-none"
+              >
+                <Compass className="w-3.5 h-3.5" />
+                <span>Explore this Record & Archive →</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* 5. Recent Records (Stream of 3 items) */}
+          <div>
+            <div className="flex items-center justify-between mb-3 px-0.5">
+              <span className="text-[11px] font-sans font-semibold uppercase tracking-wider text-[#2A2420]/60">
+                Recent Living Records
+              </span>
+              <Link
+                href="/archive"
+                className="text-xs font-sans text-[#C97A3D] font-medium hover:underline inline-flex items-center space-x-0.5"
+              >
+                <span>View all</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+
+            <div className="space-y-3">
+              {featuredRecords.length > 0 ? (
+                featuredRecords.slice(0, 3).map((record) => (
+                  <RecordCard key={record.id} record={record} />
+                ))
+              ) : (
+                <div className="p-4 text-center bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl text-xs text-[#2A2420]/60">
+                  Loading living records...
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================= */}
+        {/* DESKTOP EXPERIENCE (Strictly hidden md:block)             */}
+        {/* ========================================================= */}
+        <div className="hidden md:block">
         <section className="relative pt-6 pb-10 sm:pt-16 sm:pb-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
           <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-16">
             <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#C97A3D]/10 border border-[#C97A3D]/30 text-xs font-sans text-[#C97A3D] mb-4 sm:mb-6 shadow-xs">
@@ -342,13 +487,13 @@ export default function HomePage() {
                         <span className="truncate text-[11px]">{CAROUSEL_CARDS[activeIndex].media}</span>
                       </div>
 
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setIsPlayingAudio(!isPlayingAudio); }}
+                      <Link
+                        href="/archive"
                         className="inline-flex items-center justify-center space-x-1.5 px-3 py-2 rounded-lg bg-[#C97A3D] text-[#FAF7F1] text-xs font-sans font-semibold hover:bg-[#B86B30] active:scale-95 transition-all shrink-0 min-h-[44px] shadow-sm"
                       >
-                        <Volume2 className="w-3.5 h-3.5" />
-                        <span>{isPlayingAudio ? tCommon('listening') : tCommon('listenNow')}</span>
-                      </button>
+                        <Compass className="w-3.5 h-3.5" />
+                        <span>{tCommon('exploreArchive')}</span>
+                      </Link>
                     </div>
                   </motion.div>
                 </AnimatePresence>
@@ -418,6 +563,7 @@ export default function HomePage() {
                   const posIndex = (i - activeIndex + 2 + 5) % 5;
                   const pos = POSITIONS[posIndex];
                   const isActive = posIndex === 2;
+                  const isFarEdge = posIndex === 0 || posIndex === 4;
 
                   return (
                     <motion.div
@@ -435,9 +581,9 @@ export default function HomePage() {
                       }}
                       transition={{ type: 'spring', stiffness: 50, damping: 14 }}
                       className={`absolute origin-center ${isActive ? 'w-full max-w-md' : 'w-64'}`}
-                      style={{ cursor: isActive ? 'default' : 'pointer' }}
+                      style={{ cursor: isActive || isFarEdge ? 'default' : 'pointer' }}
                       onClick={() => {
-                        if (!isActive) {
+                        if (!isActive && !isFarEdge) {
                           pauseAutoRotate();
                           setActiveIndex(i);
                         }
@@ -493,13 +639,14 @@ export default function HomePage() {
                                   <span>{card.media}</span>
                                 </div>
 
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setIsPlayingAudio(!isPlayingAudio); }}
+                                <Link
+                                  href="/archive"
+                                  onClick={(e) => e.stopPropagation()}
                                   className="inline-flex items-center justify-center space-x-2 px-4 py-2 rounded-md bg-[#C97A3D] text-[#FAF7F1] text-xs font-sans font-semibold hover:bg-[#B86B30] transition-colors shrink-0 shadow-none"
                                 >
-                                  <Volume2 className="w-3.5 h-3.5" />
-                                  <span>{isPlayingAudio ? tCommon('listening') : tCommon('listenNow')}</span>
-                                </button>
+                                  <Compass className="w-3.5 h-3.5" />
+                                  <span>{tCommon('exploreArchive')}</span>
+                                </Link>
                               </div>
                             </motion.div>
                           )}
@@ -703,6 +850,7 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+        </div>
       </main>
 
       <Footer />

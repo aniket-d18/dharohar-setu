@@ -680,10 +680,10 @@ Respond strictly in JSON format with these exact keys:
 }`;
 
       const candidateModels = [
-        'gemini-flash-latest',
-        'gemini-2.5-flash-lite',
         'gemini-3.5-flash',
         'gemini-3.6-flash',
+        'gemini-3.5-flash-lite',
+        'gemini-flash-latest',
       ];
 
       let geminiRes: any = null;
@@ -1140,8 +1140,9 @@ Respond strictly in valid JSON mapping each record id to its translated object:
     }
 
     const candidateModels = [
-      'gemini-3-flash-preview',
+      'gemini-3.5-flash',
       'gemini-3.6-flash',
+      'gemini-3.5-flash-lite',
       'gemini-flash-latest',
     ];
 

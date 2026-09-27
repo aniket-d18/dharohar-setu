@@ -669,8 +669,8 @@ export default function AtlasMap({
         </button>
       </div>
 
-      {/* Map Legend (Bottom-Left) — positioned above mobile bottom tab bar on narrow screens */}
-      <div className="absolute bottom-20 md:bottom-6 left-4 sm:left-6 z-[400] bg-[#1E2340]/95 backdrop-blur-md border border-[#E8A33D]/35 rounded-lg p-3 text-xs shadow-2xl pointer-events-auto">
+      {/* Map Legend (Bottom-Left) — positioned inside map canvas */}
+      <div className="absolute bottom-4 sm:bottom-6 left-3 sm:left-6 z-20 bg-[#1E2340]/95 backdrop-blur-md border border-[#E8A33D]/35 rounded-lg p-2.5 sm:p-3 text-xs shadow-2xl pointer-events-auto max-w-[220px] sm:max-w-none">
         <span className="block font-serif text-xs font-semibold text-[#F3ECDD] mb-2">
           {activeLayer === 'craft'
             ? 'Craft Vitality Matrix'

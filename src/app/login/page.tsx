@@ -35,6 +35,8 @@ function LoginFormContent() {
   const [errorMessage, setErrorMessage] = useState<string | null>(
     errorParam === 'reviewers_only'
       ? 'Access restricted: The Verification Console is reserved for Reviewers, Stewards, and Administrators. Please sign in with an authorized role account.'
+      : errorParam === 'login_to_upvote'
+      ? 'Sign in to upvote and endorse cultural heritage records from the community archive.'
       : null
   );
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -396,7 +398,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#FAF7F1] text-[#2A2420] flex flex-col selection:bg-[#C97A3D]/20">
       <Navbar />
-      <main className="flex-1">
+      <main className="flex-1 pb-20 md:pb-0">
         <Suspense
           fallback={
             <div className="flex items-center justify-center min-h-[50vh] text-[#C97A3D]">

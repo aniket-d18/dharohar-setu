@@ -367,11 +367,11 @@ export default function AtlasPage() {
 
   return (
     <div className="h-screen flex flex-col bg-[#FAF7F1] text-[#2A2420] overflow-hidden">
-      <div className="flex-shrink-0 z-40">
+      <div className="flex-shrink-0">
         <Navbar />
       </div>
 
-      <main className="flex-1 min-h-0 flex flex-col relative overflow-hidden">
+      <main className="flex-1 min-h-0 flex flex-col relative overflow-hidden pb-16 md:pb-0">
         {/* Top Control Strip */}
         <div className="bg-[#FAF7F1] border-b border-[#E4DDD0] px-4 sm:px-8 py-3 flex-shrink-0 z-20">
           {/* Row 1: Title + Heritage Near Me + Layer Selector */}
@@ -530,7 +530,7 @@ export default function AtlasPage() {
         <div className="flex-1 min-h-0 relative flex overflow-hidden">
           {viewMode === 'map' ? (
             /* Interactive Geospatial Leaflet Map Canvas */
-            <div className="flex-1 relative bg-[#FAF7F1] flex flex-col overflow-hidden">
+            <div className="flex-1 relative isolate z-0 bg-[#FAF7F1] flex flex-col overflow-hidden">
               <AtlasMap
                 states={states}
                 districts={displayDistricts}

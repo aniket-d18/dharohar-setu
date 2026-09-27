@@ -4,16 +4,16 @@
     "home": "Home",
     "atlas": "Cultural Atlas",
     "archive": "Archive",
-    "untranslatable": "Ontologies",
-    "dashboard": "Dashboard",
-    "verify": "Verify",
+    "untranslatable": "Living Concepts",
+    "dashboard": "Observatory",
+    "verify": "Review Desk",
     "signIn": "Sign In",
     "signOut": "Sign Out",
     "capture": "Capture a memory",
     "utilityTagline": "National Digital Repository of Living Heritage",
     "records": "Records",
     "languages": "Languages",
-    "archiveDirectory": "Archive Directory",
+    "archiveDirectory": "Heritage Archive",
     "contactCurators": "Contact Curators"
   },
   "common": {
@@ -116,8 +116,8 @@
     "locationDenied": "Location access unavailable. Showing heritage in your state."
   },
   "untranslatable": {
-    "badge": "Linguistic & Cultural Ontologies",
-    "title": "Untranslatable Words & Micro-Traditions",
+    "badge": "Living Cultural Concepts",
+    "title": "Untranslatable Words & Living Concepts",
     "subtitle": "When an indigenous language recedes, entire ways of perceiving ecology, emotion, and ritual disappear. These terms have no single-word equivalent in English or Hindi.",
     "discoveryOfTheDay": "Discovery of the day",
     "spokenIn": "Spoken in {language}",
@@ -135,7 +135,7 @@
   "dashboard": {
     "title": "National Preservation Observatory",
     "subtitle": "Real-time telemetry on language vulnerability, verified records, regional preservation gaps, and community contributions across India.",
-    "downloadReport": "Export Report (PDF)",
+    "downloadReport": "Print / Save PDF",
     "languagesAtRisk": "Languages at Risk & Attrition Projection",
     "preservationGaps": "Preservation Gaps",
     "preservationGapsDesc": "Critical regions with 0 documented records",
@@ -171,7 +171,7 @@
   },
   "footer": {
     "about": "A community-driven, offline-first platform documenting and verifying India’s vulnerable oral traditions, dialects, folk songs, and ancient artisanal knowledge before they vanish.",
-    "exploreArchive": "Explore Archive",
+    "exploreArchive": "Heritage Archive",
     "oralTraditions": "Oral traditions & stories",
     "craftTechniques": "Ancient craft techniques",
     "ancestralLullabies": "Ancestral lullabies",
@@ -183,7 +183,7 @@
     "mission": "Preserving Indian cultural memory with dignity and verifiable provenance"
   },
   "record": {
-    "backToArchive": "Back to archive",
+    "backToArchive": "Back to Archive",
     "deleteRecord": "Delete record",
     "shareMemory": "Share memory",
     "copied": "Copied",
@@ -196,7 +196,7 @@
     "subjectTags": "Subject Tags",
     "recordNotFound": "Record not found",
     "recordNotFoundDesc": "The cultural artifact you requested may have been relocated or is restricted.",
-    "returnToArchive": "Return to archive",
+    "returnToArchive": "Return to Archive",
     "tabTranscription": "Transcripts & Translation",
     "tabContext": "Cultural Meaning & Lineage",
     "tabVerification": "Verification Trail",

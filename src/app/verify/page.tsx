@@ -116,13 +116,8 @@ export default function VerificationConsolePage() {
   const apiUrl = getApiUrl();
 
   // Role-Gating: Only REVIEWER, STEWARD, EXPERT, or ADMIN can access /verify
-  useEffect(() => {
-    if (!authLoading) {
-      if (!user || user.role === 'CONTRIBUTOR') {
-        router.push('/login?redirect=/verify&error=reviewers_only');
-      }
-    }
-  }, [authLoading, user, router]);
+  // No redirect — the inline "Access Restricted" card (below) handles unauthorized users
+  // cleanly without a loading flash or race condition.
 
   useEffect(() => {
     let isMounted = true;

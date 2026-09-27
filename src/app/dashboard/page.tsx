@@ -42,6 +42,8 @@ import {
   Film,
   Image as ImageIcon,
   Volume2,
+  ChevronRight,
+  ChevronDown,
 } from 'lucide-react';
 
 import { useTranslations } from '@/context/LanguageContext';
@@ -121,6 +123,10 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [exported, setExported] = useState(false);
+
+  // Mobile Observatory drill-down & view all state
+  const [selectedMobileLang, setSelectedMobileLang] = useState<LanguageProjection | null>(null);
+  const [showAllMobileLangs, setShowAllMobileLangs] = useState(false);
 
   // Contributor Records & Re-edit State
   const [myRecords, setMyRecords] = useState<ContributorRecord[]>([]);
@@ -577,6 +583,25 @@ export default function DashboardPage() {
               </button>
             )}
           </div>
+
+          {/* Guest Contributor Banner (Fix F-20) */}
+          {!user && (
+            <div className="max-w-6xl mx-auto mt-4 px-4 py-3 rounded-xl bg-[#2F6E5D]/5 border border-[#2F6E5D]/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-sans">
+              <div className="flex items-center space-x-2 text-[#2A2420]">
+                <FolderHeart className="w-4 h-4 text-[#2F6E5D] shrink-0" />
+                <span>
+                  <strong>Contributor Desk:</strong> Sign in to view your personal submissions, reviewer notes, and verification badges.
+                </span>
+              </div>
+              <Link
+                href="/login?redirect=/dashboard"
+                className="inline-flex items-center justify-center space-x-1 px-3 py-1.5 rounded-lg bg-[#2F6E5D] text-white font-medium hover:bg-[#235346] transition-colors shrink-0 text-xs shadow-sm self-start sm:self-auto"
+              >
+                <span>Sign In to Access</span>
+                <span aria-hidden="true">&rarr;</span>
+              </Link>
+            </div>
+          )}
         </section>
 
         {/* Tab 1: Analytics Observatory */}
@@ -591,69 +616,144 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="max-w-6xl mx-auto px-4 sm:px-8 mt-8 space-y-10">
-                {/* 4 Metric Urgency Tiles */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-[#FFFFFF] border border-[#B54A3A]/30 rounded-xl p-5 shadow-none">
-                    <div className="flex items-center justify-between text-xs text-[#2A2420]/60 mb-2">
-                      <span>Critically Endangered</span>
-                      <Flame className="w-4 h-4 text-[#B54A3A]" />
+                {/* 4 Metric Urgency Tiles (Compact 2x2 grid on mobile, 4-column on desktop) */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  <div className="bg-[#FFFFFF] border border-[#B54A3A]/30 rounded-xl p-4 sm:p-5 shadow-none">
+                    <div className="flex items-center justify-between text-[11px] sm:text-xs text-[#2A2420]/60 mb-1.5 sm:mb-2">
+                      <span className="truncate">Critically Endangered</span>
+                      <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#B54A3A] shrink-0" />
                     </div>
-                    <div className="font-serif text-3xl font-bold text-[#B54A3A]">
+                    <div className="font-serif text-2xl sm:text-3xl font-bold text-[#B54A3A]">
                       {data.languagesProjection.filter((l) => l.vitalityStatus === 'CRITICAL').length}
                     </div>
-                    <p className="text-[11px] text-[#2A2420]/60 mt-1 font-sans">
-                      Under 1,000 active fluent speakers remaining
+                    <p className="text-[10px] sm:text-[11px] text-[#2A2420]/60 mt-1 font-sans line-clamp-1">
+                      Under 1,000 fluent speakers
                     </p>
                   </div>
 
-                  <div className="bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl p-5 shadow-none">
-                    <div className="flex items-center justify-between text-xs text-[#2A2420]/60 mb-2">
-                      <span>Average Speaker Age</span>
-                      <Users className="w-4 h-4 text-[#C97A3D]" />
+                  <div className="bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl p-4 sm:p-5 shadow-none">
+                    <div className="flex items-center justify-between text-[11px] sm:text-xs text-[#2A2420]/60 mb-1.5 sm:mb-2">
+                      <span className="truncate">Average Speaker Age</span>
+                      <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#C97A3D] shrink-0" />
                     </div>
-                    <div className="font-serif text-3xl font-bold text-[#C97A3D]">
+                    <div className="font-serif text-2xl sm:text-3xl font-bold text-[#C97A3D]">
                       {Math.round(
                         data.languagesProjection.reduce(
                           (acc, cur) => acc + (cur.averageSpeakerAge || 60),
                           0
                         ) / (data.languagesProjection.length || 1)
                       )}
-                      <span className="text-lg font-normal text-[#2A2420]/60 ml-1">years</span>
+                      <span className="text-sm sm:text-lg font-normal text-[#2A2420]/60 ml-1">yrs</span>
                     </div>
-                    <p className="text-[11px] text-[#2A2420]/60 mt-1 font-sans">
-                      Intergenerational transmission largely discontinued
+                    <p className="text-[10px] sm:text-[11px] text-[#2A2420]/60 mt-1 font-sans line-clamp-1">
+                      Transmission discontinued
                     </p>
                   </div>
 
-                  <div className="bg-[#FFFFFF] border border-[#2F6E5D]/30 rounded-xl p-5 shadow-none">
-                    <div className="flex items-center justify-between text-xs text-[#2A2420]/60 mb-2">
-                      <span>{t('preservationGaps')}</span>
-                      <ShieldAlert className="w-4 h-4 text-[#2F6E5D]" />
+                  <div className="bg-[#FFFFFF] border border-[#2F6E5D]/30 rounded-xl p-4 sm:p-5 shadow-none">
+                    <div className="flex items-center justify-between text-[11px] sm:text-xs text-[#2A2420]/60 mb-1.5 sm:mb-2">
+                      <span className="truncate">{t('preservationGaps')}</span>
+                      <ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#2F6E5D] shrink-0" />
                     </div>
-                    <div className="font-serif text-3xl font-bold text-[#2F6E5D]">
+                    <div className="font-serif text-2xl sm:text-3xl font-bold text-[#2F6E5D]">
                       {data.criticalRegions.filter((r) => r.isPreservationGap).length}
                     </div>
-                    <p className="text-[11px] text-[#2A2420]/60 mt-1 font-sans">
-                      Critical districts with zero digitized records
+                    <p className="text-[10px] sm:text-[11px] text-[#2A2420]/60 mt-1 font-sans line-clamp-1">
+                      Districts with 0 records
                     </p>
                   </div>
 
-                  <div className="bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl p-5 shadow-none">
-                    <div className="flex items-center justify-between text-xs text-[#2A2420]/60 mb-2">
-                      <span>Preserved Traditions</span>
-                      <Layers className="w-4 h-4 text-[#C97A3D]" />
+                  <div className="bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl p-4 sm:p-5 shadow-none">
+                    <div className="flex items-center justify-between text-[11px] sm:text-xs text-[#2A2420]/60 mb-1.5 sm:mb-2">
+                      <span className="truncate">Preserved Traditions</span>
+                      <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#C97A3D] shrink-0" />
                     </div>
-                    <div className="font-serif text-3xl font-bold text-[#2A2420]">
+                    <div className="font-serif text-2xl sm:text-3xl font-bold text-[#2A2420]">
                       {data.categoryDistribution.reduce((a, b) => a + b.count, 0)}
                     </div>
-                    <p className="text-[11px] text-[#2A2420]/60 mt-1 font-sans">
-                      Across {data.categoryDistribution.length} cultural domains
+                    <p className="text-[10px] sm:text-[11px] text-[#2A2420]/60 mt-1 font-sans line-clamp-1">
+                      Across {data.categoryDistribution.length} domains
                     </p>
                   </div>
                 </div>
 
-                {/* "Years-to-Critical" Projection Table */}
-                <div className="bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl p-6 shadow-none">
+                {/* Mobile View: Prioritized Summary Cards + Drill-down (No dense horizontal table) */}
+                <div className="block md:hidden bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl p-4 shadow-none">
+                  <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#E4DDD0]">
+                    <div>
+                      <h2 className="font-serif text-base text-[#2A2420] font-medium flex items-center">
+                        <Clock className="w-4 h-4 text-[#C97A3D] mr-1.5" />
+                        Highest-Priority Traditions
+                      </h2>
+                      <p className="text-[11px] text-[#2A2420]/60 mt-0.5">
+                        Sorted by extinction urgency • Tap for analytics
+                      </p>
+                    </div>
+                    <span className="text-[10px] text-[#C97A3D] font-mono px-2 py-0.5 rounded bg-[#C97A3D]/10">
+                      UNESCO
+                    </span>
+                  </div>
+
+                  {/* Prioritized Items Stream */}
+                  <div className="space-y-2.5">
+                    {(showAllMobileLangs
+                      ? data.languagesProjection
+                      : data.languagesProjection.slice(0, 4)
+                    ).map((lang) => (
+                      <button
+                        key={lang.id}
+                        type="button"
+                        onClick={() => setSelectedMobileLang(lang)}
+                        className="w-full text-left p-3.5 rounded-xl border border-[#E4DDD0] bg-[#FAF7F1]/50 hover:bg-[#FAF7F1] hover:border-[#C97A3D] transition-all flex items-center justify-between group active:scale-[0.99]"
+                      >
+                        <div className="min-w-0 flex-1 pr-2">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="font-serif font-medium text-sm text-[#2A2420] truncate">
+                              {lang.name}
+                            </span>
+                            {getVitalityBadge(lang.vitalityStatus)}
+                          </div>
+                          <div className="flex items-center space-x-3 text-[11px] text-[#2A2420]/65">
+                            <span className="inline-flex items-center text-[#B54A3A] font-medium">
+                              <TrendingDown className="w-3 h-3 mr-0.5" />
+                              {lang.yearsToCritical ? `~${lang.yearsToCritical} yrs left` : 'Immediate risk'}
+                            </span>
+                            <span>•</span>
+                            <span>{lang.estimatedSpeakers ? `${lang.estimatedSpeakers.toLocaleString()} spkrs` : 'Speakers unknown'}</span>
+                            <span>•</span>
+                            <span className="text-[#C97A3D] font-mono font-medium">{lang._count.records} clips</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-[#2A2420]/40 group-hover:text-[#C97A3D] group-hover:translate-x-0.5 transition-all shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* View All Toggle */}
+                  {data.languagesProjection.length > 4 && (
+                    <div className="mt-4 pt-3 border-t border-[#E4DDD0] text-center">
+                      <button
+                        type="button"
+                        onClick={() => setShowAllMobileLangs(!showAllMobileLangs)}
+                        className="text-xs font-sans font-medium text-[#C97A3D] hover:underline inline-flex items-center space-x-1"
+                      >
+                        <span>
+                          {showAllMobileLangs
+                            ? 'Show highest-priority only'
+                            : `View all ${data.languagesProjection.length} endangered languages`}
+                        </span>
+                        <ChevronDown
+                          className={`w-3.5 h-3.5 transition-transform ${
+                            showAllMobileLangs ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Desktop View: Full "Years-to-Critical" Projection Table */}
+                <div className="hidden md:block bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl p-6 shadow-none">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 pb-4 border-b border-[#E4DDD0] gap-2">
                     <div>
                       <h2 className="font-serif text-xl text-[#2A2420] font-medium flex items-center">
@@ -1397,6 +1497,88 @@ export default function DashboardPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Observatory Drill-down Analytics Modal */}
+        {selectedMobileLang && (
+          <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
+            <div className="bg-[#FFFFFF] w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-6 shadow-2xl border border-[#E4DDD0] animate-in slide-in-from-bottom duration-200">
+              <div className="flex items-center justify-between pb-3 border-b border-[#E4DDD0] mb-4">
+                <div className="flex items-center space-x-2">
+                  <h3 className="font-serif text-xl font-medium text-[#2A2420]">
+                    {selectedMobileLang.name}
+                  </h3>
+                  {getVitalityBadge(selectedMobileLang.vitalityStatus)}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedMobileLang(null)}
+                  className="p-1 rounded-full text-[#2A2420]/60 hover:text-[#2A2420] hover:bg-[#FAF7F1]"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3.5 text-xs font-sans mb-6">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="bg-[#FAF7F1] p-3 rounded-xl border border-[#E4DDD0]">
+                    <span className="text-[10px] text-[#2A2420]/60 block mb-0.5">Est. Speakers</span>
+                    <span className="font-serif text-base font-bold text-[#2A2420]">
+                      {selectedMobileLang.estimatedSpeakers
+                        ? selectedMobileLang.estimatedSpeakers.toLocaleString()
+                        : 'Unknown'}
+                    </span>
+                  </div>
+
+                  <div className="bg-[#FAF7F1] p-3 rounded-xl border border-[#E4DDD0]">
+                    <span className="text-[10px] text-[#2A2420]/60 block mb-0.5">Avg Speaker Age</span>
+                    <span className="font-serif text-base font-bold text-[#C97A3D]">
+                      {selectedMobileLang.averageSpeakerAge
+                        ? `${selectedMobileLang.averageSpeakerAge} yrs`
+                        : 'Elderly only'}
+                    </span>
+                  </div>
+
+                  <div className="bg-[#FAF7F1] p-3 rounded-xl border border-[#E4DDD0]">
+                    <span className="text-[10px] text-[#2A2420]/60 block mb-0.5">Time to Critical</span>
+                    <span className="font-serif text-base font-bold text-[#B54A3A]">
+                      {selectedMobileLang.yearsToCritical
+                        ? `~${selectedMobileLang.yearsToCritical} yrs`
+                        : 'Immediate'}
+                    </span>
+                  </div>
+
+                  <div className="bg-[#FAF7F1] p-3 rounded-xl border border-[#E4DDD0]">
+                    <span className="text-[10px] text-[#2A2420]/60 block mb-0.5">Archived Clips</span>
+                    <span className="font-serif text-base font-bold text-[#2F6E5D]">
+                      {selectedMobileLang._count.records} records
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-[#FAF7F1] rounded-xl border border-[#E4DDD0] text-[11px] text-[#2A2420]/80 leading-relaxed">
+                  <strong>Urgency Diagnosis:</strong> Intergenerational transmission is vulnerable. Audio and video preservation of elders speaking {selectedMobileLang.name} is classified as high national priority.
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Link
+                  href={`/archive?search=${encodeURIComponent(selectedMobileLang.name)}`}
+                  onClick={() => setSelectedMobileLang(null)}
+                  className="w-full py-3 rounded-xl bg-[#2F6E5D] text-white font-medium text-xs text-center hover:bg-[#24584a] transition-colors"
+                >
+                  Explore Archived Clips in {selectedMobileLang.name}
+                </Link>
+                <Link
+                  href="/capture"
+                  onClick={() => setSelectedMobileLang(null)}
+                  className="w-full py-3 rounded-xl border border-[#C97A3D] text-[#C97A3D] font-medium text-xs text-center hover:bg-[#C97A3D]/10 transition-colors"
+                >
+                  Record Memory in this Dialect
+                </Link>
+              </div>
             </div>
           </div>
         )}

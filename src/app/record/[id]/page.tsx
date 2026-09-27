@@ -515,13 +515,20 @@ export default function RecordDetailPage() {
         {/* Breadcrumb Top Bar */}
         <div className="border-b border-[#E4DDD0] bg-[#FFFFFF] py-3 px-4 sm:px-8">
           <div className="max-w-6xl mx-auto flex items-center justify-between">
-            <Link
-              href="/archive"
-              className="inline-flex items-center text-xs text-[#2A2420]/70 hover:text-[#C97A3D] transition-colors group font-sans"
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.history.length > 1) {
+                  router.back();
+                } else {
+                  router.push('/archive');
+                }
+              }}
+              className="inline-flex items-center text-xs text-[#2A2420]/70 hover:text-[#C97A3D] transition-colors group font-sans cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5 mr-1.5 group-hover:-translate-x-1 transition-transform" />
-              {t('backToArchive')}
-            </Link>
+              <span>{t('backToArchive')}</span>
+            </button>
             <div className="flex items-center flex-wrap gap-2">
               {canDelete && (
                 <button

@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -19,12 +21,28 @@ import {
   ChevronDown,
   ChevronRight,
   Check,
+  Map,
+  List,
 } from 'lucide-react';
 
 import { useTranslations, useLanguage } from '@/context/LanguageContext';
 import { getApiUrl } from '@/utils/apiUrl';
 import { cachedFetch } from '@/utils/apiCache';
 import { CATEGORY_I18N } from '@/utils/captureI18n';
+
+const AtlasMap = dynamic(() => import('@/components/AtlasMap'), { ssr: false });
+
+const CHIP_CATEGORIES = [
+  { id: '', label: 'All', icon: '✦' },
+  { id: 'LULLABY', label: 'Songs', icon: '🎵' },
+  { id: 'STORY', label: 'Stories', icon: '📖' },
+  { id: 'PROVERB', label: 'Proverbs', icon: '💬' },
+  { id: 'CRAFT_TECHNIQUE', label: 'Crafts', icon: '🏺' },
+  { id: 'RITUAL', label: 'Rituals', icon: '🙏' },
+  { id: 'RECIPE', label: 'Recipes', icon: '🍲' },
+  { id: 'OTHER', label: 'Sites', icon: '🏛️' },
+  { id: 'LIFE_SKILL', label: 'Skills', icon: '🌿' },
+];
 
 interface RegionItem {
   id: string;
@@ -242,6 +260,16 @@ function ArchiveContent() {
   }, [searchTerm]);
 
   const [deletedNotice, setDeletedNotice] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [selectedMapDistrict, setSelectedMapDistrict] = useState<any>(null);
+
+  const activeSecondaryFiltersCount =
+    (selectedRegionId ? 1 : 0) +
+    (selectedMediaType ? 1 : 0) +
+    (selectedVitality ? 1 : 0) +
+    (selectedStatus ? 1 : 0) +
+    (selectedSort !== 'newest' ? 1 : 0);
 
   // Load Regions for the filter dropdown
   useEffect(() => {
@@ -355,53 +383,101 @@ function ArchiveContent() {
         )}
 
         {/* Search & Filter Controls Bar */}
-        <div className="bg-[#FFFFFF] border border-[#E4DDD0] rounded-lg p-4 sm:p-5 mb-8 shadow-none">
-          {/* Search Input */}
-          <div className="relative mb-4">
-            <Search className="w-4 h-4 text-[#2A2420]/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              placeholder={t('searchPlaceholder')}
-              className="w-full pl-10 pr-4 py-2.5 rounded-md bg-[#FAF7F1] border border-[#E4DDD0] text-sm text-[#2A2420] placeholder-[#2A2420]/40 focus:outline-none focus:border-[#C97A3D] transition-colors"
-            />
-            {searchTerm && (
+        <div className="bg-[#FFFFFF] border border-[#E4DDD0] rounded-2xl p-4 sm:p-5 mb-6 shadow-none">
+          {/* Top Row: Search Input + Mobile Filter Button + View Mode Toggle */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-3">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-[#2A2420]/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                placeholder={t('searchPlaceholder')}
+                className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-[#FAF7F1] border border-[#E4DDD0] text-sm text-[#2A2420] placeholder-[#2A2420]/40 focus:outline-none focus:border-[#C97A3D] transition-colors"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#2A2420]/40 hover:text-[#2A2420]"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between sm:justify-end gap-2">
+              {/* Mobile Filter Button (opens bottom sheet) */}
               <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#2A2420]/40 hover:text-[#2A2420]"
+                type="button"
+                onClick={() => setIsFilterSheetOpen(true)}
+                className="inline-flex sm:hidden items-center space-x-1.5 px-3 py-2 rounded-xl border border-[#E4DDD0] bg-[#FAF7F1] text-xs font-sans font-medium text-[#2A2420] active:bg-[#E4DDD0] transition-colors min-h-[40px]"
               >
-                <X className="w-4 h-4" />
+                <SlidersHorizontal className="w-3.5 h-3.5 text-[#C97A3D]" />
+                <span>Filters</span>
+                {activeSecondaryFiltersCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-[#C97A3D] text-white text-[10px] flex items-center justify-center font-bold">
+                    {activeSecondaryFiltersCount}
+                  </span>
+                )}
               </button>
-            )}
+
+              {/* View Mode Toggle (List vs Map) */}
+              <div className="flex items-center rounded-xl bg-[#FAF7F1] p-1 border border-[#E4DDD0] text-xs font-sans">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
+                    viewMode === 'list'
+                      ? 'bg-[#FFFFFF] text-[#2F6E5D] shadow-xs'
+                      : 'text-[#2A2420]/60 hover:text-[#2A2420]'
+                  }`}
+                >
+                  <List className="w-3.5 h-3.5" />
+                  <span>List</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('map')}
+                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
+                    viewMode === 'map'
+                      ? 'bg-[#FFFFFF] text-[#C97A3D] shadow-xs'
+                      : 'text-[#2A2420]/60 hover:text-[#2A2420]'
+                  }`}
+                >
+                  <Map className="w-3.5 h-3.5" />
+                  <span>Map</span>
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Filter Dropdowns Row */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {/* Simple Category Chips (Horizontal Scroll on Mobile & Desktop) */}
+          <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar py-1">
+            {CHIP_CATEGORIES.map(chip => (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={() => setSelectedCategory(selectedCategory === chip.id ? '' : chip.id)}
+                className={`px-3 py-1.5 rounded-full text-xs font-sans whitespace-nowrap transition-all flex items-center space-x-1 ${
+                  (chip.id === '' && !selectedCategory) || selectedCategory === chip.id
+                    ? 'bg-[#2F6E5D] text-[#FAF7F1] font-medium shadow-xs'
+                    : 'bg-[#FAF7F1] border border-[#E4DDD0] text-[#2A2420]/80 hover:border-[#C97A3D]'
+                }`}
+              >
+                <span>{chip.icon}</span>
+                <span>{chip.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Desktop Filter Dropdowns (hidden on mobile, visible on desktop) */}
+          <div className="hidden md:grid md:grid-cols-5 gap-3 mt-4 pt-4 border-t border-[#E4DDD0]">
             {/* Region Filter */}
             <RegionSelect 
               regions={regions} 
               value={selectedRegionId} 
               onChange={setSelectedRegionId} 
-            />
-
-            {/* Category Filter */}
-            <CustomSelect
-              label={t('filterCategory')}
-              value={selectedCategory}
-              onChange={setSelectedCategory}
-              options={[
-                { value: '', label: tCommon('allCategories') },
-                { value: 'OTHER', label: catMap.OTHER?.label || 'Place / Heritage Site' },
-                { value: 'LULLABY', label: catMap.LULLABY?.label || 'Song / Lullaby' },
-                { value: 'STORY', label: catMap.STORY?.label || 'Story / Folktale' },
-                { value: 'PROVERB', label: catMap.PROVERB?.label || 'Proverb / Saying' },
-                { value: 'RITUAL', label: catMap.RITUAL?.label || 'Ritual / Chant' },
-                { value: 'FESTIVAL', label: catMap.FESTIVAL?.label || 'Festival / Event' },
-                { value: 'RECIPE', label: catMap.RECIPE?.label || 'Culinary Heritage' },
-                { value: 'CRAFT_TECHNIQUE', label: catMap.CRAFT_TECHNIQUE?.label || 'Craft / Skill' },
-                { value: 'LIFE_SKILL', label: catMap.LIFE_SKILL?.label || 'Ecology / Life Skill' },
-              ]}
             />
 
             {/* Media Type Filter */}
@@ -462,15 +538,15 @@ function ArchiveContent() {
 
           {/* Active Filter Chips & Reset */}
           {hasActiveFilters && (
-            <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#E4DDD0]">
-              <span className="text-xs text-[#C97A3D] flex items-center space-x-1">
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#E4DDD0] text-xs">
+              <span className="text-[#C97A3D] flex items-center space-x-1 font-sans font-medium">
                 <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span>{t('filtersApplied')}</span>
+                <span>Filters Active</span>
               </span>
 
               <button
                 onClick={clearFilters}
-                className="text-xs text-[#2A2420]/60 hover:text-[#2A2420] underline"
+                className="text-[#2A2420]/60 hover:text-[#2A2420] underline font-sans"
               >
                 {t('resetFilters')}
               </button>
@@ -478,44 +554,187 @@ function ArchiveContent() {
           )}
         </div>
 
-        {/* Results Counter */}
-        <div className="flex items-center justify-between mb-6 text-sm text-[#2A2420]/60">
-          <span>
-            {t('showingRecords', { count: records.length })} ({totalCount} total)
-          </span>
-
-          {isLoading && (
-            <span className="flex items-center space-x-1.5 text-xs text-[#C97A3D]">
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-              <span>{tCommon('loading')}</span>
-            </span>
-          )}
-        </div>
-
-        {/* Record Cards Grid */}
-        {records.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {records.map(record => (
-              <RecordCard key={record.id} record={record} />
-            ))}
+        {/* View Content: Map View vs List View */}
+        {viewMode === 'map' ? (
+          <div className="h-[65vh] sm:h-[75vh] w-full rounded-2xl overflow-hidden border border-[#E4DDD0] relative isolate z-0 bg-[#FAF7F1] mb-8 shadow-xs">
+            <AtlasMap
+              states={regions.filter((r: any) => r.level === 'STATE') as any}
+              districts={regions.filter((r: any) => r.level === 'DISTRICT') as any}
+              selectedRegion={selectedMapDistrict}
+              onSelectRegion={(d: any) => {
+                setSelectedMapDistrict(d);
+                setSelectedRegionId(d.id);
+              }}
+              activeLayer="language"
+            />
+            {selectedMapDistrict && (
+              <div className="absolute bottom-4 left-4 right-4 z-20 bg-[#FFFFFF]/95 backdrop-blur-md border border-[#E4DDD0] rounded-xl p-3.5 sm:p-4 shadow-lg flex items-center justify-between gap-3">
+                <div>
+                  <h4 className="font-serif text-sm font-medium text-[#2A2420]">
+                    {selectedMapDistrict.name}
+                  </h4>
+                  <p className="text-xs text-[#2A2420]/60">
+                    Filter set to this district
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className="px-3 py-1.5 rounded-lg bg-[#2F6E5D] text-white text-xs font-sans font-medium hover:bg-[#235346] transition-colors"
+                >
+                  View in List &rarr;
+                </button>
+              </div>
+            )}
           </div>
-        ) : !isLoading ? (
-          <div className="bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl p-12 text-center max-w-lg mx-auto shadow-none">
-            <Compass className="w-12 h-12 text-[#C97A3D]/40 mx-auto mb-3" />
-            <h3 className="font-serif text-lg font-medium text-[#2A2420] mb-1">
-              {t('emptyTitle')}
-            </h3>
-            <p className="text-xs text-[#2A2420]/60 mb-6">
-              {t('emptyDesc')}
-            </p>
-            <button
-              onClick={clearFilters}
-              className="px-4 py-2 rounded-md bg-[#C97A3D] text-[#FAF7F1] text-xs font-sans font-medium hover:bg-[#B86B30] transition-colors"
-            >
-              Reset filters
-            </button>
+        ) : (
+          <>
+            {/* Results Counter */}
+            <div className="flex items-center justify-between mb-5 text-sm text-[#2A2420]/60 font-sans">
+              <span>
+                {t('showingRecords', { count: records.length })} ({totalCount} total)
+              </span>
+
+              {isLoading && (
+                <span className="flex items-center space-x-1.5 text-xs text-[#C97A3D]">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>{tCommon('loading')}</span>
+                </span>
+              )}
+            </div>
+
+            {/* Record Cards Grid */}
+            {records.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {records.map(record => (
+                  <RecordCard key={record.id} record={record} />
+                ))}
+              </div>
+            ) : !isLoading ? (
+              <div className="bg-[#FFFFFF] border border-[#E4DDD0] rounded-2xl p-8 sm:p-12 text-center max-w-lg mx-auto shadow-none">
+                <Compass className="w-12 h-12 text-[#C97A3D]/40 mx-auto mb-3" />
+                <h3 className="font-serif text-lg font-medium text-[#2A2420] mb-1">
+                  {searchTerm ? `No recordings found for "${searchTerm}"` : t('emptyTitle')}
+                </h3>
+                <p className="text-xs text-[#2A2420]/60 mb-6 leading-relaxed">
+                  {searchTerm
+                    ? `Be the first to preserve an oral tradition or living concept for this community.`
+                    : t('emptyDesc')}
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <Link
+                    href={searchTerm ? `/capture?language=${encodeURIComponent(searchTerm)}` : '/capture'}
+                    className="inline-flex items-center px-4 py-2.5 rounded-xl bg-[#2F6E5D] text-[#FAF7F1] text-xs font-sans font-medium hover:bg-[#235346] transition-colors"
+                  >
+                    Capture a Memory &rarr;
+                  </Link>
+                  <button
+                    onClick={clearFilters}
+                    className="px-4 py-2.5 rounded-xl bg-[#FAF7F1] border border-[#E4DDD0] text-[#2A2420] text-xs font-sans font-medium hover:bg-[#E4DDD0]/50 transition-colors"
+                  >
+                    Reset filters
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </>
+        )}
+
+        {/* Mobile Filter Bottom Sheet Modal */}
+        {isFilterSheetOpen && (
+          <div className="fixed inset-0 z-[1200] flex items-end justify-center bg-black/40 backdrop-blur-xs animate-in fade-in">
+            <div className="w-full max-w-lg bg-[#FAF7F1] rounded-t-2xl border-t border-[#E4DDD0] p-5 shadow-2xl max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom">
+              <div className="flex items-center justify-between pb-3 border-b border-[#E4DDD0] mb-4">
+                <div className="flex items-center space-x-2">
+                  <SlidersHorizontal className="w-4 h-4 text-[#C97A3D]" />
+                  <h3 className="font-serif text-lg font-medium text-[#2A2420]">Filter Archive</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsFilterSheetOpen(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-[#2A2420]/60 hover:text-[#2A2420] hover:bg-black/5"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                <RegionSelect
+                  regions={regions}
+                  value={selectedRegionId}
+                  onChange={setSelectedRegionId}
+                />
+                <CustomSelect
+                  label={t('filterMediaType')}
+                  value={selectedMediaType}
+                  onChange={setSelectedMediaType}
+                  options={[
+                    { value: '', label: t('allMedia') },
+                    { value: 'AUDIO', label: t('audioRecording') },
+                    { value: 'VIDEO', label: t('videoDemonstration') },
+                    { value: 'IMAGE', label: t('imageArtifact') },
+                    { value: 'TEXT', label: t('nativeText') },
+                  ]}
+                />
+                <CustomSelect
+                  label={t('vitalityStatus')}
+                  value={selectedVitality}
+                  onChange={setSelectedVitality}
+                  options={[
+                    { value: '', label: t('allUrgencies') },
+                    { value: 'CRITICAL', label: t('critical') },
+                    { value: 'ENDANGERED', label: t('endangered') },
+                    { value: 'VULNERABLE', label: t('vulnerable') },
+                    { value: 'SAFE', label: t('safe') },
+                  ]}
+                />
+                <CustomSelect
+                  label={t('filterStatus')}
+                  value={selectedStatus}
+                  onChange={setSelectedStatus}
+                  options={[
+                    { value: '', label: tCommon('allStatuses') },
+                    { value: 'UNVERIFIED', label: tCommon('pendingReview') },
+                    { value: 'COMMUNITY_SUPPORTED', label: tCommon('communitySupported') || 'Community Supported' },
+                    { value: 'COMMUNITY_VERIFIED', label: tCommon('communityVerified') },
+                    { value: 'STEWARD_ENDORSED', label: tCommon('stewardEndorsed') },
+                    { value: 'EXPERT_REVIEWED', label: tCommon('expertReviewed') },
+                  ]}
+                />
+                <CustomSelect
+                  label={t('sortBy')}
+                  value={selectedSort}
+                  onChange={setSelectedSort}
+                  options={[
+                    { value: 'newest', label: t('newestFirst') },
+                    { value: 'urgency', label: t('highestUrgency') },
+                    { value: 'verified', label: t('mostVerified') },
+                  ]}
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearFilters();
+                    setIsFilterSheetOpen(false);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl border border-[#E4DDD0] bg-white text-xs font-sans font-medium text-[#2A2420] hover:bg-black/5 transition-colors"
+                >
+                  Reset All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsFilterSheetOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-[#2F6E5D] text-white text-xs font-sans font-medium hover:bg-[#235346] transition-colors shadow-sm"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
           </div>
-        ) : null}
+        )}
       </main>
 
       <Footer />

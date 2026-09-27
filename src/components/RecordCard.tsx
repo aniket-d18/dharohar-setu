@@ -59,7 +59,7 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
     e.stopPropagation();
 
     if (!user) {
-      window.location.href = `/login?redirect=/archive&message=login_to_upvote`;
+      window.location.href = `/login?redirect=/archive&error=login_to_upvote`;
       return;
     }
 
@@ -237,7 +237,7 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
 
               <div className="flex items-center justify-between text-[10px] text-[#FAF7F1]/40 z-10 pt-1 border-t border-white/5">
                 <span>Living Memory</span>
-                <span className="font-mono text-[#C97A3D]/90 font-medium">Listen Audio →</span>
+                <span className="font-mono text-[#C97A3D]/90 font-medium">View Record →</span>
               </div>
             </div>
           )}

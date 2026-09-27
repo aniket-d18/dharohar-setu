@@ -744,7 +744,9 @@ export default function CaptureWizardPage() {
   const strings = CAPTURE_I18N[curLang] || CAPTURE_I18N.en;
   const catMap = CATEGORY_I18N[curLang] || CATEGORY_I18N.en;
 
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [showAdvancedPrivacy, setShowAdvancedPrivacy] = useState(false);
+  const [showTranscriptionNotes, setShowTranscriptionNotes] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submittedRecordId, setSubmittedRecordId] = useState<string | null>(null);
@@ -753,7 +755,7 @@ export default function CaptureWizardPage() {
   const [syncing, setSyncing] = useState(false);
 
   // Form Data
-  // Step 1: Consent
+  // Step 5: Consent & Permissions
   const [visibility, setVisibility] = useState<'PUBLIC' | 'COMMUNITY_ONLY' | 'PRIVATE'>('PUBLIC');
   const [allowAiTraining, setAllowAiTraining] = useState(true);
   const [allowPublicArchive, setAllowPublicArchive] = useState(true);
@@ -1043,8 +1045,8 @@ export default function CaptureWizardPage() {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // Step 2 Validation: Title, Description, Speaker Age, Region
-  const validateStep2 = (): boolean => {
+  // Step 4 Validation: Title, Description, Speaker Age, Region
+  const validateStep4 = (): boolean => {
     const errs: Record<string, string> = {};
 
     if (!selectedStateName) {
@@ -1079,6 +1081,7 @@ export default function CaptureWizardPage() {
     setStep2Errors(errs);
     return Object.keys(errs).length === 0;
   };
+  const validateStep2 = validateStep4;
 
   // Step 3 Validation: Media or Transcription non-empty
   const validateStep3 = (): boolean => {
@@ -1338,54 +1341,80 @@ export default function CaptureWizardPage() {
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
           {/* Step Indicator */}
           {!submittedRecordId && (
-            <div className="mb-10 max-w-xl mx-auto">
-              <div className="relative flex items-start justify-between">
-                {/* Connecting Line — anchored precisely at the 18px vertical center of the w-9 (36px) circles on both desktop & mobile */}
-                <div className="absolute left-10 right-10 sm:left-14 sm:right-14 top-[18px] -translate-y-1/2 h-0.5 bg-[#E4DDD0] z-0">
-                  {/* Active progress track */}
+            <div className="mb-8 max-w-xl mx-auto">
+              {/* Mobile Consumer Step Progress */}
+              <div className="block sm:hidden mb-2">
+                <div className="flex items-center justify-between text-xs font-medium text-[#2A2420]/80 mb-1.5">
+                  <span className="font-semibold text-[#C97A3D]">Step {currentStep} of 5</span>
+                  <span className="text-[#2F6E5D] font-medium">
+                    {currentStep === 1
+                      ? 'Format'
+                      : currentStep === 2
+                      ? 'Category'
+                      : currentStep === 3
+                      ? 'Record / Media'
+                      : currentStep === 4
+                      ? 'Context & People'
+                      : 'Review & Deposit'}
+                  </span>
+                </div>
+                <div className="w-full bg-[#E4DDD0] h-2 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-[#2F6E5D] transition-all duration-300"
-                    style={{
-                      width: `${((currentStep - 1) / 3) * 100}%`,
-                    }}
+                    className="bg-[#2F6E5D] h-full rounded-full transition-all duration-300"
+                    style={{ width: `${(currentStep / 5) * 100}%` }}
                   />
                 </div>
-                {[
-                  { step: 1, label: strings.step1Label },
-                  { step: 2, label: strings.step2Label },
-                  { step: 3, label: strings.step3Label },
-                  { step: 4, label: strings.step4Label },
-                ].map((s) => (
-                  <div key={s.step} className="relative z-10 flex flex-col items-center w-20 sm:w-28 text-center">
-                    <button
-                      type="button"
-                      disabled={s.step > currentStep}
-                      onClick={() => {
-                        if (s.step < currentStep) setCurrentStep(s.step as any);
+              </div>
+
+              {/* Desktop Step Nodes */}
+              <div className="hidden sm:block relative">
+                <div className="relative flex items-start justify-between">
+                  <div className="absolute left-8 right-8 top-[18px] -translate-y-1/2 h-0.5 bg-[#E4DDD0] z-0">
+                    <div
+                      className="h-full bg-[#2F6E5D] transition-all duration-300"
+                      style={{
+                        width: `${((currentStep - 1) / 4) * 100}%`,
                       }}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-medium font-mono transition-all ${
-                        currentStep === s.step
-                          ? 'bg-[#C97A3D] text-[#FAF7F1] ring-4 ring-[#C97A3D]/20 shadow-sm'
-                          : currentStep > s.step
-                          ? 'bg-[#2F6E5D] text-[#FAF7F1] cursor-pointer'
-                          : 'bg-[#FFFFFF] text-[#2A2420]/40 border border-[#E4DDD0]'
-                      }`}
-                    >
-                      {currentStep > s.step ? <Check className="w-4 h-4 stroke-[2.5]" /> : s.step}
-                    </button>
-                    <span
-                      className={`text-[11px] font-sans mt-2 text-center max-w-[100px] leading-tight hidden sm:block transition-colors ${
-                        currentStep === s.step
-                          ? 'text-[#C97A3D] font-semibold'
-                          : currentStep > s.step
-                          ? 'text-[#2F6E5D] font-medium'
-                          : 'text-[#2A2420]/50'
-                      }`}
-                    >
-                      {s.label}
-                    </span>
+                    />
                   </div>
-                ))}
+                  {[
+                    { step: 1, label: '1. Format' },
+                    { step: 2, label: '2. Category' },
+                    { step: 3, label: '3. Media' },
+                    { step: 4, label: '4. Context' },
+                    { step: 5, label: '5. Deposit' },
+                  ].map((s) => (
+                    <div key={s.step} className="relative z-10 flex flex-col items-center w-20 text-center">
+                      <button
+                        type="button"
+                        disabled={s.step > currentStep}
+                        onClick={() => {
+                          if (s.step < currentStep) setCurrentStep(s.step as any);
+                        }}
+                        className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-medium font-mono transition-all ${
+                          currentStep === s.step
+                            ? 'bg-[#C97A3D] text-[#FAF7F1] ring-4 ring-[#C97A3D]/20 shadow-sm'
+                            : currentStep > s.step
+                            ? 'bg-[#2F6E5D] text-[#FAF7F1] cursor-pointer'
+                            : 'bg-[#FFFFFF] text-[#2A2420]/40 border border-[#E4DDD0]'
+                        }`}
+                      >
+                        {currentStep > s.step ? <Check className="w-4 h-4 stroke-[2.5]" /> : s.step}
+                      </button>
+                      <span
+                        className={`text-[11px] font-sans mt-2 text-center max-w-[85px] leading-tight transition-colors ${
+                          currentStep === s.step
+                            ? 'text-[#C97A3D] font-semibold'
+                            : currentStep > s.step
+                            ? 'text-[#2F6E5D] font-medium'
+                            : 'text-[#2A2420]/50'
+                        }`}
+                      >
+                        {s.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -1438,577 +1467,296 @@ export default function CaptureWizardPage() {
             </div>
           ) : (
             <div className="bg-[#FFFFFF] border border-[#E4DDD0] rounded-2xl p-6 sm:p-10 shadow-none">
-              {/* STEP 1: Consent & Cultural Rights */}
+              {/* STEP 1: Choose Documentation Format (1 decision, large touch targets) */}
               {currentStep === 1 && (
                 <div>
                   <div className="flex items-center space-x-2 text-xs font-sans text-[#C97A3D] mb-1">
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>{strings.consentBadge}</span>
+                    <Sparkles className="w-4 h-4" />
+                    <span>Step 1 of 5 • Documentation Format</span>
                   </div>
-                  <h2 className="font-serif text-2xl text-[#2A2420] font-medium mb-2">
-                    {strings.consentTitle}
+                  <h2 className="font-serif text-2xl sm:text-3xl text-[#2A2420] font-medium mb-2">
+                    How will you record this memory?
                   </h2>
                   <p className="text-xs text-[#2A2420]/70 mb-6 leading-relaxed">
-                    {strings.consentDesc}
+                    Select the format of the cultural heritage you are depositing today.
                   </p>
 
-                  <div className="space-y-4 mb-6">
-                    {/* Visibility Choice */}
-                    <div>
-                      <label className="block text-xs font-sans text-[#2A2420]/90 mb-2 font-medium">
-                        {strings.accessibilityLevel}
-                      </label>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                        {[
-                          {
-                            id: 'PUBLIC',
-                            title: strings.publicTitle,
-                            desc: strings.publicDesc,
-                          },
-                          {
-                            id: 'COMMUNITY_ONLY',
-                            title: strings.communityTitle,
-                            desc: strings.communityDesc,
-                          },
-                          {
-                            id: 'PRIVATE',
-                            title: strings.privateTitle,
-                            desc: strings.privateDesc,
-                          },
-                        ].map((v) => (
-                          <div
-                            key={v.id}
-                            onClick={() => setVisibility(v.id as any)}
-                            className={`p-3.5 rounded-lg border cursor-pointer transition-all ${
-                              visibility === v.id
-                                ? 'bg-[#FAF7F1] border-[#C97A3D] text-[#2A2420] shadow-sm'
-                                : 'bg-[#FFFFFF] border-[#E4DDD0] text-[#2A2420]/70 hover:border-[#C97A3D]/40'
-                            }`}
-                          >
-                            <span className="font-serif font-medium block text-sm mb-1 text-[#C97A3D]">
-                              {v.title}
-                            </span>
-                            <p className="text-[11px] leading-relaxed text-[#2A2420]/70">{v.desc}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Scopes Granted */}
-                    <div className="pt-3 border-t border-[#E4DDD0] space-y-3 text-xs font-sans text-[#2A2420]">
-                      <label className="flex items-start space-x-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={allowPublicArchive}
-                          onChange={(e) => setAllowPublicArchive(e.target.checked)}
-                          className="mt-0.5 rounded accent-[#C97A3D]"
-                        />
-                        <span>
-                          <strong>{strings.preservationCharter}</strong> {strings.preservationCharterDesc}
-                        </span>
-                      </label>
-
-                      <label className="flex items-start space-x-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={allowAiTraining}
-                          onChange={(e) => setAllowAiTraining(e.target.checked)}
-                          className="mt-0.5 rounded accent-[#C97A3D]"
-                        />
-                        <span>
-                          <strong>{strings.langTechnology}</strong> {strings.langTechnologyDesc}
-                        </span>
-                      </label>
-
-                      <label className="flex items-start space-x-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={isAnonymous}
-                          onChange={(e) => setIsAnonymous(e.target.checked)}
-                          className="mt-0.5 rounded accent-[#C97A3D]"
-                        />
-                        <span>
-                          <strong>{strings.anonCustodian}</strong> {strings.anonCustodianDesc}
-                        </span>
-                      </label>
-                    </div>
-
-                    {/* Mandatory agreement tick */}
-                    <div className="pt-4 border-t border-[#E4DDD0]">
-                      <label className="flex items-start space-x-3 p-3 rounded-lg bg-[#FAF7F1] border border-[#E4DDD0] cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={consentConfirmed}
-                          onChange={(e) => setConsentConfirmed(e.target.checked)}
-                          className="mt-1 rounded accent-[#C97A3D]"
-                        />
-                        <span className="text-xs text-[#2A2420]">
-                          {strings.consentAgreement}
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <button
-                      disabled={!consentConfirmed}
-                      onClick={() => setCurrentStep(2)}
-                      className="px-6 py-2.5 rounded bg-[#C97A3D] text-[#FAF7F1] font-sans font-medium text-xs flex items-center space-x-1.5 hover:bg-[#B86B30] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                    >
-                      <span>{strings.proceedMetadata}</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* STEP 2: Cultural Metadata */}
-              {currentStep === 2 && (
-                <div>
-                  <div className="flex items-center space-x-2 text-xs font-sans text-[#C97A3D] mb-1">
-                    <MapPin className="w-4 h-4" />
-                    <span>{strings.contextBadge}</span>
-                  </div>
-                  <h2 className="font-serif text-2xl text-[#2A2420] font-medium mb-4">
-                    {strings.contextTitle}
-                  </h2>
-
-                  <div className="space-y-4 text-xs font-sans">
-                    {/* Documentation Format Selector */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-[#2A2420]/80 font-medium text-xs">
-                          Documentation Format *
-                        </label>
-                        <span className="text-[11px] text-[#2A2420]/50">Select media style</span>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        {[
-                          { id: 'AUDIO', label: 'Oral Audio', icon: <Mic className="w-4 h-4" />, hint: 'Songs, folktales, chants' },
-                          { id: 'IMAGE', label: 'Photo / Site', icon: <ImageIcon className="w-4 h-4" />, hint: 'Forts, temples, crafts' },
-                          { id: 'VIDEO', label: 'Field Video', icon: <Video className="w-4 h-4" />, hint: 'Rituals, dances, performances' },
-                          { id: 'TEXT', label: 'Written Text', icon: <FileText className="w-4 h-4" />, hint: 'Proverbs, idioms, scripts' },
-                        ].map((m) => (
-                          <button
-                            key={m.id}
-                            type="button"
-                            onClick={() => handleFormatSelect(m.id as any)}
-                            className={`p-3 rounded-lg border text-left transition-all ${
-                              mediaType === m.id
-                                ? 'bg-[#2F6E5D] border-[#2F6E5D] text-[#FAF7F1] shadow-sm'
-                                : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/80 hover:border-[#C97A3D]'
-                            }`}
-                          >
-                            <div className="flex items-center space-x-1.5 font-medium text-xs mb-0.5">
-                              {m.icon}
-                              <span>{m.label}</span>
-                            </div>
-                            <span
-                              className={`text-[10px] block leading-tight ${
-                                mediaType === m.id ? 'text-[#FAF7F1]/80' : 'text-[#2A2420]/50'
-                              }`}
-                            >
-                              {m.hint}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Tradition Genre Grid */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <label className="block text-[#2A2420]/80 font-medium text-xs">
-                            {strings.genreLabel} *
-                          </label>
-                          {isGenreAutoSuggested && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-sans font-medium px-2 py-0.5 rounded-full bg-[#2F6E5D]/10 text-[#2F6E5D] border border-[#2F6E5D]/20">
-                              <Sparkles className="w-2.5 h-2.5" /> Suggested for format
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[11px] text-[#2A2420]/50">
-                          {strings.genrePrompt}
-                        </span>
-                      </div>
-
-                      <p className="text-[11px] text-[#2A2420]/55 italic mb-2">
-                        {isGenreAutoSuggested
-                          ? 'Auto-suggested based on format above. Click any genre to change.'
-                          : 'Select the traditional genre that best classifies this cultural record.'}
-                      </p>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {CATEGORIES.map((c) => {
-                          const localizedCat = catMap[c.id] || c;
-                          const isSelected = category === c.id;
-                          return (
-                            <div
-                              key={c.id}
-                              onClick={() => handleGenreSelect(c.id)}
-                              className={`p-2.5 rounded border cursor-pointer transition-all ${
-                                isSelected
-                                  ? 'bg-[#2F6E5D] border-[#2F6E5D] text-[#FAF7F1] shadow-sm'
-                                  : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/75 hover:border-[#C97A3D]/40 hover:text-[#2A2420]'
-                              }`}
-                            >
-                              <div className="flex items-center justify-between mb-0.5">
-                                <span className="text-base">{c.icon}</span>
-                                {isSelected && isGenreAutoSuggested && (
-                                  <span className="inline-flex items-center gap-0.5 text-[9px] font-sans font-medium px-1.5 py-0.5 rounded bg-white/20 text-[#FAF7F1]">
-                                    <Sparkles className="w-2.5 h-2.5" /> Suggested
-                                  </span>
-                                )}
-                              </div>
-                              <span className="font-medium text-xs block">{localizedCat.label}</span>
-                              <span className="text-[10px] block opacity-70 mt-0.5 leading-tight">{localizedCat.desc}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Custom Category Input if OTHER is selected */}
-                      {category === 'OTHER' && (
-                        <div className="mt-3 p-3.5 bg-[#FAF7F1] border border-[#C97A3D]/40 rounded-lg shadow-sm">
-                          <label className="block text-xs font-semibold text-[#C97A3D] mb-1.5 flex items-center">
-                            <Sparkles className="w-3.5 h-3.5 mr-1" />
-                            Describe the heritage site or monument name (optional)
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Daulatabad Fort, Chand Baori, Ellora Caves, Warli sacred grove..."
-                            value={customCategory}
-                            onChange={(e) => {
-                              setCustomCategory(e.target.value);
-                              if (step2Errors.customCategory) {
-                                setStep2Errors((prev) => ({ ...prev, customCategory: '' }));
-                              }
-                            }}
-                            className={`w-full bg-[#FFFFFF] border ${
-                              step2Errors.customCategory ? 'border-[#B54A3A]' : 'border-[#E4DDD0]'
-                            } rounded px-3 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]`}
-                          />
-                          <p className="text-[11px] text-[#2A2420]/60 mt-1.5">
-                            This will be catalogued in the Living Cultural Atlas and searchable by name.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Reusable Hierarchical Region / District Selector */}
-                    <RegionHierarchySelect
-                      selectedState={selectedStateName}
-                      selectedDistrict={selectedDistrictName}
-                      label={strings.regionLabel}
-                      sublabel={strings.regionRef}
-                      suggestedBadge={
-                        isRegionAutoSuggested ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-sans font-medium px-2 py-0.5 rounded-full bg-[#2F6E5D]/10 text-[#2F6E5D] border border-[#2F6E5D]/20">
-                            <Sparkles className="w-2.5 h-2.5" /> Suggested from location
-                          </span>
-                        ) : undefined
-                      }
-                      onChange={handleRegionChange}
-                      error={step2Errors.region}
-                    />
-
-                    {/* Native Language / Dialect: Direct typing of any rare dialect + suggestions */}
-                    <LanguageCombobox
-                      value={languageName}
-                      onChange={handleLanguageChange}
-                      suggestions={languages}
-                      label={strings.langLabel}
-                      autoCatalogLabel={strings.langAutoCatalog}
-                      suggestedBadge={
-                        isLanguageAutoSuggested ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-sans font-medium px-2 py-0.5 rounded-full bg-[#2F6E5D]/10 text-[#2F6E5D] border border-[#2F6E5D]/20">
-                            <Sparkles className="w-2.5 h-2.5" /> Suggested for region
-                          </span>
-                        ) : undefined
-                      }
-                    />
-
-                    {/* Cultural Title (Validated: min length 5, no keyboard mash) */}
-                    <div>
-                      <label className="block text-[#2A2420]/80 mb-1.5 font-medium">
-                        {strings.titleLabel}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={strings.titlePlaceholder}
-                        value={titleText}
-                        onChange={(e) => {
-                          setTitleText(e.target.value);
-                          if (step2Errors.title) {
-                            setStep2Errors((prev) => ({ ...prev, title: '' }));
-                          }
-                        }}
-                        className={`w-full bg-[#FFFFFF] border ${
-                          step2Errors.title ? 'border-[#B54A3A]' : 'border-[#E4DDD0]'
-                        } rounded px-3 py-2 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]`}
-                      />
-                      {step2Errors.title && (
-                        <p className="text-[11px] text-[#B54A3A] mt-1">{step2Errors.title}</p>
-                      )}
-                    </div>
-
-                    {/* Contributor Attribution: "Who shared this with you?" — flexible for all formats & genres */}
-                    {!isAnonymous && (
-                      <div className="p-4 bg-[#FAF7F1] border border-[#E4DDD0] rounded-xl space-y-3 shadow-none">
-                        <div>
-                          <div className="flex items-center space-x-2 mb-1">
-                            <UserCheck className="w-4 h-4 text-[#C97A3D]" />
-                            <h3 className="font-sans font-medium text-xs text-[#2A2420]">
-                              Who shared this with you? <span className="text-[#2A2420]/50 font-normal">(optional)</span>
-                            </h3>
-                          </div>
-                          <p className="text-[11px] text-[#2A2420]/65 leading-tight">
-                            Attribute this tradition or knowledge to the community member, elder, singer, or artisan who shared it.
-                          </p>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                          {/* Role Selector */}
-                          <div>
-                            <label className="block text-[11px] font-medium text-[#2A2420]/80 mb-1">
-                              Role <span className="text-[#2A2420]/40 font-normal">(optional)</span>
-                            </label>
-                            <select
-                              value={speakerRole}
-                              onChange={(e) => setSpeakerRole(e.target.value)}
-                              className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-2.5 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D] transition-colors"
-                            >
-                              <option value="">Select role (optional)...</option>
-                              <option value="Speaker">Speaker</option>
-                              <option value="Storyteller">Storyteller</option>
-                              <option value="Practitioner/Artisan">Practitioner / Artisan</option>
-                              <option value="Singer">Singer</option>
-                              <option value="Elder">Elder</option>
-                              <option value="Not applicable/Other">Not applicable / Other</option>
-                            </select>
-                          </div>
-
-                          {/* Name Input */}
-                          <div>
-                            <label className="block text-[11px] font-medium text-[#2A2420]/80 mb-1">
-                              {speakerRole && speakerRole !== 'Not applicable/Other'
-                                ? `${speakerRole} Name`
-                                : 'Name'}{' '}
-                              <span className="text-[#2A2420]/40 font-normal">(optional)</span>
-                            </label>
-                            <input
-                              type="text"
-                              placeholder={
-                                speakerRole === 'Singer'
-                                  ? 'e.g. Sinamma Toda, Gangubai'
-                                  : speakerRole === 'Practitioner/Artisan'
-                                  ? 'e.g. Ramdev Suthar, Khatri ji'
-                                  : speakerRole === 'Elder'
-                                  ? 'e.g. Licho Elder, Shantabai'
-                                  : speakerRole === 'Storyteller'
-                                  ? 'e.g. Dhaniram Toto'
-                                  : speakerRole === 'Speaker'
-                                  ? 'e.g. Gangubai Thakar'
-                                  : 'e.g. Community member or artisan'
-                              }
-                              value={speakerName}
-                              onChange={(e) => setSpeakerName(e.target.value)}
-                              className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-2.5 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
-                            />
-                          </div>
-
-                          {/* Age Input */}
-                          <div>
-                            <label className="block text-[11px] font-medium text-[#2A2420]/80 mb-1">
-                              {speakerRole && speakerRole !== 'Not applicable/Other'
-                                ? `${speakerRole} Age`
-                                : 'Age'}{' '}
-                              <span className="text-[#2A2420]/40 font-normal">(optional)</span>
-                            </label>
-                            <input
-                              type="number"
-                              min={0}
-                              max={120}
-                              placeholder="e.g. 74"
-                              value={speakerAge}
-                              onChange={(e) => {
-                                setSpeakerAge(e.target.value ? Number(e.target.value) : '');
-                                if (step2Errors.speakerAge) {
-                                  setStep2Errors((prev) => ({ ...prev, speakerAge: '' }));
-                                }
-                              }}
-                              className={`w-full bg-[#FFFFFF] border ${
-                                step2Errors.speakerAge ? 'border-[#B54A3A]' : 'border-[#E4DDD0]'
-                              } rounded px-2.5 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]`}
-                            />
-                            {step2Errors.speakerAge && (
-                              <p className="text-[11px] text-[#B54A3A] mt-1">
-                                {step2Errors.speakerAge}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Description / Cultural Meaning (Validated: min length 10) */}
-                    <div>
-                      <label className="block text-[#2A2420]/80 mb-1.5 font-medium">
-                        {strings.descLabel}
-                      </label>
-                      <textarea
-                        rows={3}
-                        required
-                        value={descriptionText}
-                        onChange={(e) => {
-                          setDescriptionText(e.target.value);
-                          if (step2Errors.description) {
-                            setStep2Errors((prev) => ({ ...prev, description: '' }));
-                          }
-                        }}
-                        placeholder={strings.descPlaceholder}
-                        className={`w-full bg-[#FFFFFF] border ${
-                          step2Errors.description ? 'border-[#B54A3A]' : 'border-[#E4DDD0]'
-                        } rounded px-3 py-2 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]`}
-                      />
-                      {step2Errors.description && (
-                        <p className="text-[11px] text-[#B54A3A] mt-1">
-                          {step2Errors.description}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Tags */}
-                    <div>
-                      <label className="block text-[#2A2420]/80 mb-1.5">
-                        {strings.tagsLabel}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={strings.tagsPlaceholder}
-                        value={tagsInput}
-                        onChange={(e) => setTagsInput(e.target.value)}
-                        className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-3 py-2 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between mt-8 pt-4 border-t border-[#E4DDD0]">
-                    <button
-                      onClick={() => setCurrentStep(1)}
-                      className="px-4 py-2 rounded text-xs font-sans text-[#2A2420]/70 hover:text-[#2A2420] flex items-center space-x-1"
-                    >
-                      <ArrowLeft className="w-3.5 h-3.5" />
-                      <span>{strings.backBtn}</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (validateStep2()) {
-                          setCurrentStep(3);
-                        }
-                      }}
-                      className="px-6 py-2.5 rounded bg-[#C97A3D] text-[#FAF7F1] font-sans font-medium text-xs flex items-center space-x-1.5 hover:bg-[#B86B30] transition-all"
-                    >
-                      <span>{strings.proceedMedia}</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* STEP 3: Multi-Modal Media Capture & Real File Upload */}
-              {currentStep === 3 && (
-                <div>
-                  <div className="flex items-center space-x-2 text-xs font-sans text-[#C97A3D] mb-1">
-                    <Sparkles className="w-4 h-4" />
-                    <span>{strings.mediaBadge}</span>
-                  </div>
-                  <h2 className="font-serif text-2xl text-[#2A2420] font-medium mb-4">
-                    {strings.mediaTitle}
-                  </h2>
-
-                  {/* Media Type Selector */}
-                  <div className="flex items-center space-x-2 bg-[#FAF7F1] p-1.5 rounded-lg border border-[#E4DDD0] mb-6 text-xs font-sans">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
                     {[
-                      { id: 'AUDIO', label: strings.mediaModeAudio, icon: Mic },
-                      { id: 'VIDEO', label: strings.mediaModeVideo, icon: Video },
-                      { id: 'IMAGE', label: strings.mediaModeImage, icon: ImageIcon },
-                      { id: 'TEXT', label: strings.mediaModeText, icon: FileText },
-                    ].map((m) => {
-                      const Icon = m.icon;
+                      {
+                        id: 'AUDIO',
+                        label: 'Oral Audio',
+                        icon: Mic,
+                        desc: 'Folk songs, lullabies, oral stories, spoken myths, ancient chants',
+                        badge: 'Recommended for Oral Traditions',
+                      },
+                      {
+                        id: 'VIDEO',
+                        label: 'Field Video',
+                        icon: Video,
+                        desc: 'Sacred rituals, festive dances, artisan craft demonstrations, martial arts',
+                        badge: 'Best for Performance',
+                      },
+                      {
+                        id: 'IMAGE',
+                        label: 'Photo / Heritage Site',
+                        icon: ImageIcon,
+                        desc: 'Forts, temples, stepwells, manuscripts, sacred groves, craft artifacts',
+                        badge: 'Best for Monuments & Artifacts',
+                      },
+                      {
+                        id: 'TEXT',
+                        label: 'Written Text',
+                        icon: FileText,
+                        desc: 'Proverbs, idioms, traditional recipes, medicinal wisdom, folk lore',
+                        badge: 'Text & Wisdom',
+                      },
+                    ].map((fmt) => {
+                      const Icon = fmt.icon;
+                      const isSelected = mediaType === fmt.id;
                       return (
                         <button
-                          key={m.id}
-                          onClick={() => {
-                            setMediaType(m.id as any);
-                            removeSelectedFile();
-                            setStep3Error(null);
-                          }}
-                          className={`flex-1 py-2 rounded flex items-center justify-center space-x-1.5 transition-colors ${
-                            mediaType === m.id
-                              ? 'bg-[#C97A3D] text-[#FAF7F1] font-medium shadow-sm'
-                              : 'text-[#2A2420]/70 hover:text-[#2A2420]'
+                          key={fmt.id}
+                          type="button"
+                          onClick={() => handleFormatSelect(fmt.id as any)}
+                          className={`p-4 rounded-xl border text-left transition-all flex items-start space-x-3.5 ${
+                            isSelected
+                              ? 'bg-[#FAF7F1] border-[#C97A3D] ring-2 ring-[#C97A3D]/20 shadow-sm'
+                              : 'bg-[#FFFFFF] border-[#E4DDD0] hover:border-[#C97A3D]/50 hover:bg-[#FAF7F1]/50'
                           }`}
                         >
-                          <Icon className="w-3.5 h-3.5" />
-                          <span>{m.label}</span>
+                          <div
+                            className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                              isSelected
+                                ? 'bg-[#C97A3D] text-[#FAF7F1]'
+                                : 'bg-[#FAF7F1] text-[#2A2420]/70 border border-[#E4DDD0]'
+                            }`}
+                          >
+                            <Icon className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <span
+                                className={`font-serif text-base font-medium ${
+                                  isSelected ? 'text-[#C97A3D]' : 'text-[#2A2420]'
+                                }`}
+                              >
+                                {fmt.label}
+                              </span>
+                              {isSelected && (
+                                <CheckCircle2 className="w-4 h-4 text-[#C97A3D] shrink-0" />
+                              )}
+                            </div>
+                            <p className="text-[11px] text-[#2A2420]/70 leading-relaxed mb-1.5">
+                              {fmt.desc}
+                            </p>
+                            <span className="text-[10px] font-sans font-medium px-2 py-0.5 rounded-full bg-[#2F6E5D]/10 text-[#2F6E5D]">
+                              {fmt.badge}
+                            </span>
+                          </div>
                         </button>
                       );
                     })}
                   </div>
 
-                  {/* --- AUDIO CAPTURE: Mic or File Upload --- */}
+                  <div className="flex justify-end pt-4 border-t border-[#E4DDD0]">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(2)}
+                      className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-[#C97A3D] text-[#FAF7F1] font-sans font-medium text-xs sm:text-sm flex items-center justify-center space-x-2 hover:bg-[#B86B30] transition-all shadow-sm active:scale-[0.98]"
+                    >
+                      <span>Continue to Category</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2: Heritage Category (1 decision, 9 large touch tiles) */}
+              {currentStep === 2 && (
+                <div>
+                  <div className="flex items-center space-x-2 text-xs font-sans text-[#C97A3D] mb-1">
+                    <Sparkles className="w-4 h-4" />
+                    <span>Step 2 of 5 • Heritage Category</span>
+                  </div>
+                  <h2 className="font-serif text-2xl sm:text-3xl text-[#2A2420] font-medium mb-2">
+                    What kind of heritage is this?
+                  </h2>
+                  <p className="text-xs text-[#2A2420]/70 mb-6 leading-relaxed">
+                    Choose the cultural classification that best describes this tradition.
+                  </p>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 mb-6">
+                    {CATEGORIES.map((c) => {
+                      const localizedCat = catMap[c.id] || c;
+                      const isSelected = category === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => handleGenreSelect(c.id)}
+                          className={`p-3.5 sm:p-4 rounded-xl border text-left transition-all min-h-[88px] flex flex-col justify-between ${
+                            isSelected
+                              ? 'bg-[#2F6E5D] border-[#2F6E5D] text-[#FAF7F1] shadow-sm ring-2 ring-[#2F6E5D]/20'
+                              : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/80 hover:border-[#C97A3D]/50 hover:bg-[#FFFFFF]'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full mb-1">
+                            <span className="text-2xl">{c.icon}</span>
+                            {isSelected && (
+                              <CheckCircle2 className="w-4 h-4 text-[#FAF7F1] shrink-0" />
+                            )}
+                          </div>
+                          <div>
+                            <span className="font-medium text-xs sm:text-sm block leading-tight">
+                              {localizedCat.label}
+                            </span>
+                            <span
+                              className={`text-[10px] block mt-0.5 leading-tight line-clamp-1 ${
+                                isSelected ? 'text-[#FAF7F1]/80' : 'text-[#2A2420]/60'
+                              }`}
+                            >
+                              {localizedCat.desc}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Monument / Heritage Site Specific Field if OTHER is selected */}
+                  {category === 'OTHER' && (
+                    <div className="mb-6 p-4 bg-[#FAF7F1] border border-[#C97A3D]/40 rounded-xl">
+                      <label className="block text-xs font-semibold text-[#C97A3D] mb-1.5 flex items-center">
+                        <Sparkles className="w-3.5 h-3.5 mr-1" />
+                        Heritage Site / Monument Name (optional)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Daulatabad Fort, Ellora Caves, Chand Baori, Warli sacred grove..."
+                        value={customCategory}
+                        onChange={(e) => {
+                          setCustomCategory(e.target.value);
+                          if (step2Errors.customCategory) {
+                            setStep2Errors((prev) => ({ ...prev, customCategory: '' }));
+                          }
+                        }}
+                        className={`w-full bg-[#FFFFFF] border ${
+                          step2Errors.customCategory ? 'border-[#B54A3A]' : 'border-[#E4DDD0]'
+                        } rounded-lg px-3 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]`}
+                      />
+                      <p className="text-[11px] text-[#2A2420]/60 mt-1">
+                        Will be mapped on the Living Cultural Atlas under Heritage Sites.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-4 border-t border-[#E4DDD0]">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(1)}
+                      className="px-4 py-2.5 rounded-lg text-xs font-sans text-[#2A2420]/70 hover:text-[#2A2420] flex items-center space-x-1"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>{strings.backBtn}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(3)}
+                      className="px-6 py-3 rounded-xl bg-[#C97A3D] text-[#FAF7F1] font-sans font-medium text-xs sm:text-sm flex items-center space-x-2 hover:bg-[#B86B30] transition-all shadow-sm"
+                    >
+                      <span>Continue to Media</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 3: Multi-Modal Media Capture (Live Mic, Camera, File Upload) */}
+              {currentStep === 3 && (
+                <div>
+                  <div className="flex items-center space-x-2 text-xs font-sans text-[#C97A3D] mb-1">
+                    <Sparkles className="w-4 h-4" />
+                    <span>Step 3 of 5 • Media Capture</span>
+                  </div>
+                  <h2 className="font-serif text-2xl sm:text-3xl text-[#2A2420] font-medium mb-2">
+                    {mediaType === 'AUDIO'
+                      ? 'Record oral memory'
+                      : mediaType === 'IMAGE'
+                      ? 'Attach photo or site image'
+                      : mediaType === 'VIDEO'
+                      ? 'Attach field video'
+                      : 'Write native text or proverb'}
+                  </h2>
+                  <p className="text-xs text-[#2A2420]/70 mb-6 leading-relaxed">
+                    {mediaType === 'AUDIO'
+                      ? 'Capture high-fidelity oral audio with your microphone or upload an audio file.'
+                      : mediaType === 'IMAGE'
+                      ? 'Upload a clear photograph of the monument, artifact, or ritual.'
+                      : mediaType === 'VIDEO'
+                      ? 'Attach a field recording of this performance, craft, or celebration.'
+                      : 'Type or paste the ancestral text, proverb, or recipe.'}
+                  </p>
+
+                  {/* Validation Error Alert */}
+                  {step3Error && (
+                    <div className="mb-4 p-3.5 rounded-lg bg-[#B54A3A]/10 border border-[#B54A3A] text-xs text-[#B54A3A] flex items-center space-x-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{step3Error}</span>
+                    </div>
+                  )}
+
+                  {/* AUDIO CAPTURE */}
                   {mediaType === 'AUDIO' && (
                     <div className="space-y-4 mb-6">
-                      {/* Audio Mode Tabs */}
                       <div className="flex space-x-2 border-b border-[#E4DDD0] pb-2 text-xs">
                         <button
                           type="button"
                           onClick={() => setAudioMode('MIC')}
-                          className={`px-3 py-1.5 rounded flex items-center space-x-1.5 transition-colors ${
+                          className={`px-3.5 py-2 rounded-lg flex items-center space-x-1.5 transition-colors ${
                             audioMode === 'MIC'
                               ? 'bg-[#2F6E5D] text-[#FAF7F1] font-medium'
                               : 'text-[#2A2420]/70 hover:text-[#2A2420]'
                           }`}
                         >
                           <Mic className="w-3.5 h-3.5" />
-                          <span>{strings.audioLiveTab}</span>
+                          <span>Live Microphone</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => setAudioMode('FILE')}
-                          className={`px-3 py-1.5 rounded flex items-center space-x-1.5 transition-colors ${
+                          className={`px-3.5 py-2 rounded-lg flex items-center space-x-1.5 transition-colors ${
                             audioMode === 'FILE'
                               ? 'bg-[#2F6E5D] text-[#FAF7F1] font-medium'
                               : 'text-[#2A2420]/70 hover:text-[#2A2420]'
                           }`}
                         >
                           <Upload className="w-3.5 h-3.5" />
-                          <span>{strings.audioUploadTab}</span>
+                          <span>Upload Audio File</span>
                         </button>
                       </div>
 
-                      {/* Mic Recording UI */}
                       {audioMode === 'MIC' && (
-                        <div className="bg-[#FAF7F1] p-6 sm:p-8 rounded-xl border border-[#E4DDD0] flex flex-col items-center justify-center text-center">
+                        <div className="bg-[#FAF7F1] p-6 sm:p-8 rounded-2xl border border-[#E4DDD0] flex flex-col items-center justify-center text-center">
                           <div className="text-3xl font-mono text-[#C97A3D] mb-4">
                             {formatTimer(recordSeconds)}
                           </div>
 
                           {isRecording ? (
                             <button
+                              type="button"
                               onClick={stopRecording}
                               className="w-16 h-16 rounded-full bg-[#B54A3A] text-white flex items-center justify-center hover:scale-105 transition-all shadow-lg animate-pulse"
-                              title={strings.stopRecord}
+                              title="Stop Recording"
                             >
                               <Square className="w-6 h-6 fill-current" />
                             </button>
                           ) : (
                             <button
+                              type="button"
                               onClick={startRecording}
                               className="w-16 h-16 rounded-full bg-[#C97A3D] text-[#FAF7F1] flex items-center justify-center hover:bg-[#B86B30] hover:scale-105 transition-all shadow-md"
-                              title={strings.startRecord}
+                              title="Start Recording"
                             >
                               <Mic className="w-7 h-7" />
                             </button>
@@ -2016,26 +1764,25 @@ export default function CaptureWizardPage() {
 
                           <p className="text-xs text-[#2A2420]/70 mt-4">
                             {isRecording
-                              ? strings.audioPromptRecording
+                              ? 'Recording in progress... speak clearly into your mic.'
                               : recordedAudioUrl
-                              ? strings.audioPromptDone
-                              : strings.audioPromptIdle}
+                              ? 'Audio captured! You can review playback below or record again.'
+                              : 'Tap microphone button to start recording.'}
                           </p>
 
                           {recordedAudioUrl && (
                             <div className="mt-4 w-full max-w-md">
                               <CustomAudioPlayer
                                 src={recordedAudioUrl}
-                                title={strings.recordedSuccess}
+                                title="Field Audio Recording"
                               />
                             </div>
                           )}
                         </div>
                       )}
 
-                      {/* Audio File Picker */}
                       {audioMode === 'FILE' && (
-                        <div className="bg-[#FAF7F1] p-6 rounded-xl border border-[#E4DDD0]">
+                        <div className="bg-[#FAF7F1] p-6 rounded-2xl border border-[#E4DDD0]">
                           <input
                             type="file"
                             ref={fileInputRef}
@@ -2052,15 +1799,15 @@ export default function CaptureWizardPage() {
                             >
                               <FileAudio className="w-10 h-10 text-[#C97A3D] mb-3" />
                               <span className="text-sm font-medium text-[#2A2420] mb-1">
-                                {strings.audioFileClick}
+                                Click to select audio file from your device
                               </span>
                               <span className="text-xs text-[#2A2420]/60">
-                                {strings.audioFileTypes}
+                                MP3, WAV, AAC, M4A, OGG or WebM (up to 50MB)
                               </span>
                             </label>
                           ) : (
                             <div className="space-y-3">
-                              <div className="flex items-center justify-between bg-[#FFFFFF] p-3 rounded border border-[#2F6E5D]">
+                              <div className="flex items-center justify-between bg-[#FFFFFF] p-3 rounded-lg border border-[#2F6E5D]">
                                 <div className="flex items-center space-x-2 truncate">
                                   <CheckCircle2 className="w-4 h-4 text-[#2F6E5D] shrink-0" />
                                   <span className="text-xs text-[#2A2420] font-medium truncate">
@@ -2071,10 +1818,11 @@ export default function CaptureWizardPage() {
                                   </span>
                                 </div>
                                 <button
+                                  type="button"
                                   onClick={removeSelectedFile}
                                   className="text-xs text-[#B54A3A] hover:underline shrink-0 ml-2"
                                 >
-                                  {strings.changeFile}
+                                  Change file
                                 </button>
                               </div>
                               {filePreviewUrl && (
@@ -2092,363 +1840,613 @@ export default function CaptureWizardPage() {
                     </div>
                   )}
 
-                  {/* --- VIDEO CAPTURE: Real File Picker --- */}
-                  {mediaType === 'VIDEO' && (
-                    <div className="bg-[#FAF7F1] p-6 rounded-xl border border-[#E4DDD0] mb-6 text-xs">
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        accept="video/mp4,video/webm,video/ogg,video/quicktime,video/*"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                        id="video-file-picker"
-                      />
-
-                      {!selectedFile && !mediaUrl ? (
-                        <label
-                          htmlFor="video-file-picker"
-                          className="border-2 border-dashed border-[#C97A3D]/40 hover:border-[#C97A3D] rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-colors text-center"
-                        >
-                          <Film className="w-10 h-10 text-[#C97A3D] mb-3" />
-                          <span className="text-sm font-medium text-[#2A2420] mb-1">
-                            {strings.videoFileClick}
-                          </span>
-                          <span className="text-xs text-[#2A2420]/60">
-                            {strings.videoFileTypes}
-                          </span>
-                        </label>
-                      ) : (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between bg-[#FFFFFF] p-3 rounded border border-[#2F6E5D]">
-                            <div className="flex items-center space-x-2 truncate">
-                              <CheckCircle2 className="w-4 h-4 text-[#2F6E5D] shrink-0" />
-                              <span className="text-xs text-[#2A2420] font-medium truncate">
-                                {selectedFile?.name || 'External Video URL'}
-                              </span>
-                              {selectedFile && (
-                                <span className="text-[11px] text-[#C97A3D]">
-                                  ({(selectedFile.size / (1024 * 1024)).toFixed(1)} MB)
-                                </span>
-                              )}
-                            </div>
-                            <button
-                              onClick={removeSelectedFile}
-                              className="text-xs text-[#B54A3A] hover:underline shrink-0 ml-2"
-                            >
-                              {strings.removeReplace}
-                            </button>
-                          </div>
-
-                          {(filePreviewUrl || mediaUrl) && (
-                            <div className="rounded overflow-hidden border border-[#E4DDD0] bg-black">
-                              <video
-                                src={filePreviewUrl || mediaUrl}
-                                controls
-                                className="w-full max-h-60 mx-auto"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Manual URL toggle */}
-                      <div className="mt-3 pt-3 border-t border-[#E4DDD0]">
-                        <button
-                          type="button"
-                          onClick={() => setShowManualUrlInput(!showManualUrlInput)}
-                          className="text-[11px] text-[#C97A3D] hover:underline flex items-center space-x-1"
-                        >
-                          <LinkIcon className="w-3 h-3" />
-                          <span>
-                            {showManualUrlInput
-                              ? strings.hideDirectUrl
-                              : strings.enterDirectVideoUrl}
-                          </span>
-                        </button>
-                        {showManualUrlInput && (
-                          <div className="mt-2">
-                            <input
-                              type="text"
-                              placeholder="https://archive.org/download/.../video.mp4"
-                              value={mediaUrl}
-                              onChange={(e) => {
-                                setMediaUrl(e.target.value);
-                                setStep3Error(null);
-                              }}
-                              className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-3 py-2 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* --- IMAGE CAPTURE: Real File Picker --- */}
+                  {/* IMAGE CAPTURE */}
                   {mediaType === 'IMAGE' && (
-                    <div className="bg-[#FAF7F1] p-6 rounded-xl border border-[#E4DDD0] mb-6 text-xs">
+                    <div className="bg-[#FAF7F1] p-6 rounded-2xl border border-[#E4DDD0] mb-6 text-xs">
                       <input
                         type="file"
                         ref={fileInputRef}
-                        accept="image/jpeg,image/png,image/webp,image/gif,image/*"
+                        accept="image/jpeg,image/png,image/webp,image/*"
                         onChange={handleFileSelect}
                         className="hidden"
                         id="image-file-picker"
                       />
 
-                      {!selectedFile && !mediaUrl ? (
+                      {!selectedFile ? (
                         <label
                           htmlFor="image-file-picker"
                           className="border-2 border-dashed border-[#C97A3D]/40 hover:border-[#C97A3D] rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-colors text-center"
                         >
                           <ImageIcon className="w-10 h-10 text-[#C97A3D] mb-3" />
                           <span className="text-sm font-medium text-[#2A2420] mb-1">
-                            {strings.imageFileClick}
+                            Click to upload photo or monument image
                           </span>
                           <span className="text-xs text-[#2A2420]/60">
-                            {strings.imageFileTypes}
+                            JPEG, PNG or WebP photograph (up to 20MB)
                           </span>
                         </label>
                       ) : (
                         <div className="space-y-3">
-                          <div className="flex items-center justify-between bg-[#FFFFFF] p-3 rounded border border-[#2F6E5D]">
+                          <div className="flex items-center justify-between bg-[#FFFFFF] p-3 rounded-lg border border-[#2F6E5D]">
                             <div className="flex items-center space-x-2 truncate">
                               <CheckCircle2 className="w-4 h-4 text-[#2F6E5D] shrink-0" />
                               <span className="text-xs text-[#2A2420] font-medium truncate">
-                                {selectedFile?.name || 'External Image URL'}
+                                {selectedFile.name}
                               </span>
-                              {selectedFile && (
-                                <span className="text-[11px] text-[#C97A3D]">
-                                  ({(selectedFile.size / (1024 * 1024)).toFixed(1)} MB)
-                                </span>
-                              )}
+                              <span className="text-[11px] text-[#C97A3D]">
+                                ({(selectedFile.size / (1024 * 1024)).toFixed(1)} MB)
+                              </span>
                             </div>
                             <button
+                              type="button"
                               onClick={removeSelectedFile}
                               className="text-xs text-[#B54A3A] hover:underline shrink-0 ml-2"
                             >
-                              {strings.removeReplace}
+                              Change photo
                             </button>
                           </div>
-
-                          {(filePreviewUrl || mediaUrl) && (
-                            <div className="p-2 rounded bg-[#FFFFFF] border border-[#E4DDD0] text-center">
+                          {filePreviewUrl && (
+                            <div className="rounded-xl overflow-hidden border border-[#E4DDD0] max-h-64 flex justify-center bg-black/5">
                               <img
-                                src={filePreviewUrl || mediaUrl}
-                                alt="Artifact preview"
-                                className="max-h-56 rounded object-contain mx-auto border border-[#E4DDD0]"
+                                src={filePreviewUrl}
+                                alt="Preview"
+                                className="max-h-64 object-contain"
                               />
                             </div>
                           )}
                         </div>
                       )}
+                    </div>
+                  )}
 
-                      {/* Manual URL toggle */}
-                      <div className="mt-3 pt-3 border-t border-[#E4DDD0]">
-                        <button
-                          type="button"
-                          onClick={() => setShowManualUrlInput(!showManualUrlInput)}
-                          className="text-[11px] text-[#C97A3D] hover:underline flex items-center space-x-1"
+                  {/* VIDEO CAPTURE */}
+                  {mediaType === 'VIDEO' && (
+                    <div className="bg-[#FAF7F1] p-6 rounded-2xl border border-[#E4DDD0] mb-6 text-xs">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        accept="video/mp4,video/webm,video/quicktime,video/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        id="video-file-picker"
+                      />
+
+                      {!selectedFile ? (
+                        <label
+                          htmlFor="video-file-picker"
+                          className="border-2 border-dashed border-[#C97A3D]/40 hover:border-[#C97A3D] rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-colors text-center"
                         >
-                          <LinkIcon className="w-3 h-3" />
-                          <span>
-                            {showManualUrlInput
-                              ? strings.hideDirectUrl
-                              : strings.enterDirectImageUrl}
+                          <Film className="w-10 h-10 text-[#C97A3D] mb-3" />
+                          <span className="text-sm font-medium text-[#2A2420] mb-1">
+                            Click to select field video from your device
                           </span>
-                        </button>
-                        {showManualUrlInput && (
-                          <div className="mt-2">
-                            <input
-                              type="text"
-                              placeholder="https://images.unsplash.com/... or image link"
-                              value={mediaUrl}
-                              onChange={(e) => {
-                                setMediaUrl(e.target.value);
-                                setStep3Error(null);
-                              }}
-                              className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-3 py-2 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
-                            />
+                          <span className="text-xs text-[#2A2420]/60">
+                            MP4, WebM or MOV video (up to 100MB)
+                          </span>
+                        </label>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between bg-[#FFFFFF] p-3 rounded-lg border border-[#2F6E5D]">
+                            <div className="flex items-center space-x-2 truncate">
+                              <CheckCircle2 className="w-4 h-4 text-[#2F6E5D] shrink-0" />
+                              <span className="text-xs text-[#2A2420] font-medium truncate">
+                                {selectedFile.name}
+                              </span>
+                              <span className="text-[11px] text-[#C97A3D]">
+                                ({(selectedFile.size / (1024 * 1024)).toFixed(1)} MB)
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={removeSelectedFile}
+                              className="text-xs text-[#B54A3A] hover:underline shrink-0 ml-2"
+                            >
+                              Change video
+                            </button>
                           </div>
-                        )}
-                      </div>
+                          {filePreviewUrl && (
+                            <div className="rounded-xl overflow-hidden border border-[#E4DDD0] max-h-64 flex justify-center bg-black">
+                              <video
+                                src={filePreviewUrl}
+                                controls
+                                className="max-h-64 w-full object-contain"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  {/* --- NATIVE TEXT TRADITIONS --- */}
+                  {/* TEXT / NATIVE SCRIPT */}
                   {mediaType === 'TEXT' && (
-                    <div className="bg-[#FAF7F1] p-4 rounded-xl border border-[#E4DDD0] mb-6 text-xs">
-                      <p className="text-[#2A2420]/80 leading-relaxed mb-2">
-                        {strings.textTraditionDesc}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Transcription and Translation Draft Fields */}
-                  <div className="space-y-4 text-xs font-sans">
-                    <div>
-                      <label className="block text-[#2A2420]/80 mb-1 font-medium">
-                        {strings.nativeTransLabel}
+                    <div className="mb-6 space-y-2">
+                      <label className="block text-xs font-medium text-[#2A2420]/80">
+                        Native Script / Written Text *
                       </label>
                       <textarea
-                        rows={2}
+                        rows={6}
+                        placeholder="Type or paste the oral verses, ancestral proverb, or traditional recipe in native script or transliteration..."
                         value={transcriptionDraft}
                         onChange={(e) => {
                           setTranscriptionDraft(e.target.value);
-                          setStep3Error(null);
+                          if (step3Error) setStep3Error(null);
                         }}
-                        placeholder={strings.nativeTransPlaceholder}
-                        className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-3 py-2 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
+                        className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl p-3.5 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D] leading-relaxed"
                       />
-                    </div>
-                    <div>
-                      <label className="block text-[#2A2420]/80 mb-1 font-medium">
-                        {strings.translationLabel}
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={translationDraft}
-                        onChange={(e) => setTranslationDraft(e.target.value)}
-                        placeholder={strings.translationPlaceholder}
-                        className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded px-3 py-2 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Validation Error Banner for Step 3 */}
-                  {step3Error && (
-                    <div className="mt-4 p-3 rounded bg-[#B54A3A]/10 border border-[#B54A3A]/30 text-xs text-[#B54A3A] flex items-center space-x-2">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span>{step3Error}</span>
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between mt-8 pt-4 border-t border-[#E4DDD0]">
+                  {/* Progressive Disclosure: Optional Native Transcription / Translation Notes */}
+                  {mediaType !== 'TEXT' && (
+                    <div className="mb-6 pt-3 border-t border-[#E4DDD0]">
+                      <button
+                        type="button"
+                        onClick={() => setShowTranscriptionNotes(!showTranscriptionNotes)}
+                        className="text-xs font-sans text-[#C97A3D] hover:underline flex items-center space-x-1"
+                      >
+                        <span>
+                          {showTranscriptionNotes
+                            ? '− Hide native transcription & translation notes'
+                            : '+ Add native transcription or translation notes (Optional)'}
+                        </span>
+                      </button>
+
+                      {showTranscriptionNotes && (
+                        <div className="mt-3 space-y-3 bg-[#FAF7F1] p-4 rounded-xl border border-[#E4DDD0]">
+                          <div>
+                            <label className="block text-[11px] font-medium text-[#2A2420]/80 mb-1">
+                              Native Transcription (Original dialect words)
+                            </label>
+                            <textarea
+                              rows={3}
+                              placeholder="Original lyrics or spoken phrases..."
+                              value={transcriptionDraft}
+                              onChange={(e) => setTranscriptionDraft(e.target.value)}
+                              className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded-lg p-2.5 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-medium text-[#2A2420]/80 mb-1">
+                              English / Hindi Translation or Meaning
+                            </label>
+                            <textarea
+                              rows={2}
+                              placeholder="Translation or explanation in English/Hindi..."
+                              value={translationDraft}
+                              onChange={(e) => setTranslationDraft(e.target.value)}
+                              className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded-lg p-2.5 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-4 border-t border-[#E4DDD0]">
                     <button
+                      type="button"
                       onClick={() => setCurrentStep(2)}
-                      className="px-4 py-2 rounded text-xs font-sans text-[#2A2420]/70 hover:text-[#2A2420] flex items-center space-x-1"
+                      className="px-4 py-2.5 rounded-lg text-xs font-sans text-[#2A2420]/70 hover:text-[#2A2420] flex items-center space-x-1"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
                       <span>{strings.backBtn}</span>
                     </button>
                     <button
+                      type="button"
                       onClick={() => {
                         if (validateStep3()) {
                           setCurrentStep(4);
                         }
                       }}
-                      className="px-6 py-2.5 rounded bg-[#C97A3D] text-[#FAF7F1] font-sans font-medium text-xs flex items-center space-x-1.5 hover:bg-[#B86B30] transition-all"
+                      className="px-6 py-3 rounded-xl bg-[#C97A3D] text-[#FAF7F1] font-sans font-medium text-xs sm:text-sm flex items-center space-x-2 hover:bg-[#B86B30] transition-all shadow-sm"
                     >
-                      <span>{strings.reviewConfirm}</span>
+                      <span>Continue to Context</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* STEP 4: Confirmation & Submission */}
+              {/* STEP 4: Cultural Context, Geography & Attribution */}
               {currentStep === 4 && (
                 <div>
                   <div className="flex items-center space-x-2 text-xs font-sans text-[#C97A3D] mb-1">
-                    <Sparkles className="w-4 h-4" />
-                    <span>{strings.reviewBadge}</span>
+                    <MapPin className="w-4 h-4" />
+                    <span>Step 4 of 5 • Cultural Context & People</span>
                   </div>
-                  <h2 className="font-serif text-2xl text-[#2A2420] font-medium mb-4">
-                    {strings.reviewTitle}
+                  <h2 className="font-serif text-2xl sm:text-3xl text-[#2A2420] font-medium mb-2">
+                    Where and who is this from?
                   </h2>
+                  <p className="text-xs text-[#2A2420]/70 mb-6 leading-relaxed">
+                    Provide the region, dialect, title, and attribution for this cultural knowledge.
+                  </p>
 
-                  {/* Error banner if submission failed */}
+                  <div className="space-y-4 text-xs font-sans mb-6">
+                    {/* Region Selector */}
+                    <RegionHierarchySelect
+                      selectedState={selectedStateName}
+                      selectedDistrict={selectedDistrictName}
+                      label={strings.regionLabel}
+                      sublabel={strings.regionRef}
+                      suggestedBadge={
+                        isRegionAutoSuggested ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-sans font-medium px-2 py-0.5 rounded-full bg-[#2F6E5D]/10 text-[#2F6E5D] border border-[#2F6E5D]/20">
+                            <Sparkles className="w-2.5 h-2.5" /> Suggested from location
+                          </span>
+                        ) : undefined
+                      }
+                      onChange={handleRegionChange}
+                      error={step2Errors.region}
+                    />
+
+                    {/* Language Selector */}
+                    <LanguageCombobox
+                      value={languageName}
+                      onChange={handleLanguageChange}
+                      suggestions={languages}
+                      label={strings.langLabel}
+                      autoCatalogLabel={strings.langAutoCatalog}
+                      suggestedBadge={
+                        isLanguageAutoSuggested ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-sans font-medium px-2 py-0.5 rounded-full bg-[#2F6E5D]/10 text-[#2F6E5D] border border-[#2F6E5D]/20">
+                            <Sparkles className="w-2.5 h-2.5" /> Suggested for region
+                          </span>
+                        ) : undefined
+                      }
+                    />
+
+                    {/* Cultural Title */}
+                    <div>
+                      <label className="block text-[#2A2420]/80 mb-1.5 font-medium">
+                        Cultural Title *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Ahirani Monsoon Lullaby of Khandesh..."
+                        value={titleText}
+                        onChange={(e) => {
+                          setTitleText(e.target.value);
+                          if (step2Errors.title) {
+                            setStep2Errors((prev) => ({ ...prev, title: '' }));
+                          }
+                        }}
+                        className={`w-full bg-[#FFFFFF] border ${
+                          step2Errors.title ? 'border-[#B54A3A]' : 'border-[#E4DDD0]'
+                        } rounded-lg px-3 py-2.5 text-[#2A2420] focus:outline-none focus:border-[#C97A3D]`}
+                      />
+                      {step2Errors.title && (
+                        <p className="text-[11px] text-[#B54A3A] mt-1">{step2Errors.title}</p>
+                      )}
+                    </div>
+
+                    {/* Cultural Meaning / Description */}
+                    <div>
+                      <label className="block text-[#2A2420]/80 mb-1.5 font-medium">
+                        Cultural Meaning & Significance *
+                      </label>
+                      <textarea
+                        rows={3}
+                        placeholder="Explain when this is performed, what story or history it preserves, and its meaning to the community..."
+                        value={descriptionText}
+                        onChange={(e) => {
+                          setDescriptionText(e.target.value);
+                          if (step2Errors.description) {
+                            setStep2Errors((prev) => ({ ...prev, description: '' }));
+                          }
+                        }}
+                        className={`w-full bg-[#FFFFFF] border ${
+                          step2Errors.description ? 'border-[#B54A3A]' : 'border-[#E4DDD0]'
+                        } rounded-lg px-3 py-2.5 text-[#2A2420] focus:outline-none focus:border-[#C97A3D] leading-relaxed`}
+                      />
+                      {step2Errors.description && (
+                        <p className="text-[11px] text-[#B54A3A] mt-1">{step2Errors.description}</p>
+                      )}
+                    </div>
+
+                    {/* Contributor Attribution */}
+                    {!isAnonymous && (
+                      <div className="p-4 bg-[#FAF7F1] border border-[#E4DDD0] rounded-xl space-y-3">
+                        <div className="flex items-center space-x-2">
+                          <UserCheck className="w-4 h-4 text-[#C97A3D]" />
+                          <h3 className="font-sans font-medium text-xs text-[#2A2420]">
+                            Who shared this with you? <span className="text-[#2A2420]/50 font-normal">(optional)</span>
+                          </h3>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-medium text-[#2A2420]/80 mb-1">
+                              Role
+                            </label>
+                            <select
+                              value={speakerRole}
+                              onChange={(e) => setSpeakerRole(e.target.value)}
+                              className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded-lg px-2.5 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
+                            >
+                              <option value="">Select role (optional)...</option>
+                              <option value="Speaker">Speaker</option>
+                              <option value="Storyteller">Storyteller</option>
+                              <option value="Practitioner/Artisan">Practitioner / Artisan</option>
+                              <option value="Singer">Singer</option>
+                              <option value="Elder">Elder</option>
+                              <option value="Not applicable/Other">Not applicable / Other</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-medium text-[#2A2420]/80 mb-1">
+                              Name
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Laxmibai Shinde"
+                              value={speakerName}
+                              onChange={(e) => setSpeakerName(e.target.value)}
+                              className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded-lg px-2.5 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-medium text-[#2A2420]/80 mb-1">
+                              Age
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="120"
+                              placeholder="e.g. 72"
+                              value={speakerAge}
+                              onChange={(e) =>
+                                setSpeakerAge(e.target.value === '' ? '' : Number(e.target.value))
+                              }
+                              className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded-lg px-2.5 py-2 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D]"
+                            />
+                            {step2Errors.speakerAge && (
+                              <p className="text-[10px] text-[#B54A3A] mt-0.5">{step2Errors.speakerAge}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-[#E4DDD0]">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(3)}
+                      className="px-4 py-2.5 rounded-lg text-xs font-sans text-[#2A2420]/70 hover:text-[#2A2420] flex items-center space-x-1"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>{strings.backBtn}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (validateStep4()) {
+                          setCurrentStep(5);
+                        }
+                      }}
+                      className="px-6 py-3 rounded-xl bg-[#C97A3D] text-[#FAF7F1] font-sans font-medium text-xs sm:text-sm flex items-center space-x-2 hover:bg-[#B86B30] transition-all shadow-sm"
+                    >
+                      <span>Review & Deposit</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 5: Review & Progressive Consent & Deposit */}
+              {currentStep === 5 && (
+                <div>
+                  <div className="flex items-center space-x-2 text-xs font-sans text-[#C97A3D] mb-1">
+                    <Sparkles className="w-4 h-4" />
+                    <span>Step 5 of 5 • Review & Deposit</span>
+                  </div>
+                  <h2 className="font-serif text-2xl sm:text-3xl text-[#2A2420] font-medium mb-2">
+                    Review & Deposit
+                  </h2>
+                  <p className="text-xs text-[#2A2420]/70 mb-6 leading-relaxed">
+                    Verify the entry details before depositing into the National Living Archive.
+                  </p>
+
+                  {/* Submission Error Banner */}
                   {submitError && (
-                    <div className="mb-4 p-3.5 rounded bg-[#B54A3A]/10 border border-[#B54A3A] text-xs text-[#B54A3A] flex items-center space-x-2">
+                    <div className="mb-4 p-3.5 rounded-xl bg-[#B54A3A]/10 border border-[#B54A3A] text-xs text-[#B54A3A] flex items-center space-x-2">
                       <AlertCircle className="w-4 h-4 shrink-0" />
                       <span>{submitError}</span>
                     </div>
                   )}
 
-                  <div className="bg-[#FAF7F1] p-5 rounded-xl border border-[#E4DDD0] space-y-4 text-xs font-sans mb-6">
-                    <div className="flex justify-between border-b border-[#E4DDD0] pb-2">
-                      <span className="text-[#2A2420]/60">{strings.reviewTraditionTitle}</span>
-                      <span className="text-[#C97A3D] font-medium text-right max-w-xs truncate">
+                  {/* Summary Plaque Card */}
+                  <div className="bg-[#FAF7F1] p-5 sm:p-6 rounded-2xl border border-[#E4DDD0] space-y-3.5 text-xs font-sans mb-6 shadow-sm">
+                    <div className="flex justify-between border-b border-[#E4DDD0] pb-2.5">
+                      <span className="text-[#2A2420]/60">Tradition Title:</span>
+                      <span className="text-[#C97A3D] font-serif font-medium text-right max-w-xs truncate text-sm">
                         {titleText}
                       </span>
                     </div>
 
-                    <div className="flex justify-between border-b border-[#E4DDD0] pb-2">
-                      <span className="text-[#2A2420]/60">{strings.reviewRegion}</span>
+                    <div className="flex justify-between border-b border-[#E4DDD0] pb-2.5">
+                      <span className="text-[#2A2420]/60">Region / District:</span>
                       <span className="text-[#2A2420] font-medium text-right">
                         {selectedRegionLabel}
                       </span>
                     </div>
 
-                    <div className="flex justify-between border-b border-[#E4DDD0] pb-2">
-                      <span className="text-[#2A2420]/60">{strings.reviewNativeLang}</span>
+                    <div className="flex justify-between border-b border-[#E4DDD0] pb-2.5">
+                      <span className="text-[#2A2420]/60">Native Language:</span>
                       <span className="text-[#2A2420] text-right">{selectedLangDisplay}</span>
                     </div>
 
-                    <div className="flex justify-between border-b border-[#E4DDD0] pb-2">
-                      <span className="text-[#2A2420]/60">{strings.reviewGenre}</span>
-                      <span className="text-[#C97A3D] font-medium">{catMap[category]?.label || category}</span>
-                    </div>
-
-                    <div className="flex justify-between border-b border-[#E4DDD0] pb-2">
-                      <span className="text-[#2A2420]/60">{strings.reviewMediaMode}</span>
+                    <div className="flex justify-between border-b border-[#E4DDD0] pb-2.5">
+                      <span className="text-[#2A2420]/60">Heritage Category:</span>
                       <span className="text-[#2F6E5D] font-medium">
-                        {mediaType === 'AUDIO' ? strings.mediaModeAudio : mediaType === 'VIDEO' ? strings.mediaModeVideo : mediaType === 'IMAGE' ? strings.mediaModeImage : strings.mediaModeText}{' '}
-                        {selectedFile
-                          ? `(${selectedFile.name})`
-                          : recordedAudioUrl
-                          ? `(${strings.recordedSuccess})`
-                          : mediaUrl
-                          ? '(URL)'
-                          : ''}
+                        {catMap[category]?.label || category}
+                        {category === 'OTHER' && customCategory ? ` (${customCategory})` : ''}
                       </span>
                     </div>
 
-                    <div className="flex justify-between border-b border-[#E4DDD0] pb-2">
+                    <div className="flex justify-between border-b border-[#E4DDD0] pb-2.5">
+                      <span className="text-[#2A2420]/60">Format & Media:</span>
+                      <span className="text-[#2A2420] font-medium">
+                        {mediaType === 'AUDIO' ? 'Oral Audio' : mediaType === 'VIDEO' ? 'Field Video' : mediaType === 'IMAGE' ? 'Photo / Site' : 'Written Text'}
+                        {selectedFile ? ` (${selectedFile.name})` : recordedAudioUrl ? ' (Recorded Mic)' : ''}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between border-b border-[#E4DDD0] pb-2.5">
                       <span className="text-[#2A2420]/60">
                         {speakerRole && speakerRole !== 'Not applicable/Other'
                           ? `${speakerRole}:`
-                          : 'Attributed to / Shared by:'}
+                          : 'Attributed to:'}
                       </span>
                       <span className="text-[#2A2420]">
                         {isAnonymous
-                          ? (strings.anonCustodian.replace(':', '') || 'Anonymous Custodian')
+                          ? 'Anonymous Custodian'
                           : speakerName
                           ? `${speakerName}${speakerAge !== '' ? ` (${speakerAge} yrs)` : ''}`
                           : 'Not specified'}
                       </span>
                     </div>
 
-                    <div className="flex justify-between border-b border-[#E4DDD0] pb-2">
-                      <span className="text-[#2A2420]/60">{strings.reviewAccessLevel}</span>
-                      <span className="text-[#2F6E5D]">
-                        {visibility === 'PUBLIC'
-                          ? strings.publicTitle
-                          : visibility === 'COMMUNITY_ONLY'
-                          ? strings.communityTitle
-                          : strings.privateTitle}
-                      </span>
-                    </div>
-
                     <div>
-                      <span className="text-[#2A2420]/60 block mb-1">{strings.reviewCulturalMeaning}</span>
-                      <p className="text-[#2A2420]/90 italic bg-[#FFFFFF] p-2.5 rounded border border-[#E4DDD0] leading-relaxed">
+                      <span className="text-[#2A2420]/60 block mb-1">Cultural Significance:</span>
+                      <p className="text-[#2A2420]/90 italic bg-[#FFFFFF] p-3 rounded-lg border border-[#E4DDD0] leading-relaxed">
                         "{descriptionText}"
                       </p>
                     </div>
+
+                    {/* Media Preview inside Review */}
+                    {recordedAudioUrl && (
+                      <div className="pt-2">
+                        <CustomAudioPlayer src={recordedAudioUrl} title="Review Audio" />
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center justify-between pt-4 border-t border-[#E4DDD0]">
+                  {/* Progressive Consent & Archival Rights */}
+                  <div className="mb-6 space-y-3">
+                    {/* Primary Mandatory Agreement (Pre-checked for consumer simplicity) */}
+                    <label className="flex items-start space-x-3 p-3.5 rounded-xl bg-[#FAF7F1] border border-[#E4DDD0] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={consentConfirmed}
+                        onChange={(e) => setConsentConfirmed(e.target.checked)}
+                        className="mt-0.5 w-4 h-4 rounded accent-[#C97A3D]"
+                      />
+                      <span className="text-xs text-[#2A2420] leading-snug">
+                        <strong>Consent Confirmation:</strong> I confirm this cultural knowledge was shared respectfully with consent of the elder, community, or practitioner.
+                      </span>
+                    </label>
+
+                    {/* Collapsible: Advanced Archival Privacy & Permissions */}
+                    <div className="border border-[#E4DDD0] rounded-xl overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setShowAdvancedPrivacy(!showAdvancedPrivacy)}
+                        className="w-full px-4 py-3 bg-[#FFFFFF] hover:bg-[#FAF7F1] text-xs font-medium text-[#2A2420]/80 flex items-center justify-between transition-colors"
+                      >
+                        <span className="flex items-center space-x-2">
+                          <ShieldCheck className="w-4 h-4 text-[#C97A3D]" />
+                          <span>Archival Privacy & Permissions (Optional)</span>
+                        </span>
+                        <ChevronDown
+                          className={`w-4 h-4 text-[#2A2420]/50 transition-transform ${
+                            showAdvancedPrivacy ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </button>
+
+                      {showAdvancedPrivacy && (
+                        <div className="p-4 bg-[#FAF7F1] border-t border-[#E4DDD0] space-y-4 text-xs">
+                          <div>
+                            <label className="block text-[11px] font-medium text-[#2A2420]/80 mb-2">
+                              Accessibility Level
+                            </label>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                              {[
+                                { id: 'PUBLIC', title: 'Public Archive', desc: 'Open to everyone for cultural education' },
+                                { id: 'COMMUNITY_ONLY', title: 'Community Only', desc: 'Accessible only to verified community members' },
+                                { id: 'PRIVATE', title: 'Private Vault', desc: 'Preserved only in private secure archive' },
+                              ].map((v) => (
+                                <button
+                                  key={v.id}
+                                  type="button"
+                                  onClick={() => setVisibility(v.id as any)}
+                                  className={`p-2.5 rounded-lg border text-left transition-all ${
+                                    visibility === v.id
+                                      ? 'bg-[#FFFFFF] border-[#C97A3D] text-[#C97A3D] font-medium ring-1 ring-[#C97A3D]'
+                                      : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/70'
+                                  }`}
+                                >
+                                  <span className="block font-medium">{v.title}</span>
+                                  <span className="text-[10px] text-[#2A2420]/60 block leading-tight mt-0.5">
+                                    {v.desc}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="space-y-2.5 pt-2 border-t border-[#E4DDD0]">
+                            <label className="flex items-start space-x-2.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={allowPublicArchive}
+                                onChange={(e) => setAllowPublicArchive(e.target.checked)}
+                                className="mt-0.5 rounded accent-[#C97A3D]"
+                              />
+                              <span className="text-[11px] text-[#2A2420]">
+                                <strong>National Preservation Charter:</strong> Allow indexing in the national cultural repository.
+                              </span>
+                            </label>
+
+                            <label className="flex items-start space-x-2.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={allowAiTraining}
+                                onChange={(e) => setAllowAiTraining(e.target.checked)}
+                                className="mt-0.5 rounded accent-[#C97A3D]"
+                              />
+                              <span className="text-[11px] text-[#2A2420]">
+                                <strong>AI Language Technology:</strong> Allow non-commercial endangered dialect AI models to learn vocabulary.
+                              </span>
+                            </label>
+
+                            <label className="flex items-start space-x-2.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={isAnonymous}
+                                onChange={(e) => setIsAnonymous(e.target.checked)}
+                                className="mt-0.5 rounded accent-[#C97A3D]"
+                              />
+                              <span className="text-[11px] text-[#2A2420]">
+                                <strong>Anonymous Custodian:</strong> Do not publicly show custodian name on plaque.
+                              </span>
+                            </label>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Submission Navigation */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#E4DDD0]">
                     <button
-                      onClick={() => setCurrentStep(3)}
-                      className="px-4 py-2 rounded text-xs font-sans text-[#2A2420]/70 hover:text-[#2A2420] flex items-center space-x-1"
+                      type="button"
+                      onClick={() => setCurrentStep(4)}
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-lg text-xs font-sans text-[#2A2420]/70 hover:text-[#2A2420] flex items-center justify-center space-x-1"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
                       <span>{strings.backBtn}</span>
                     </button>
+
                     <button
-                      disabled={submitting}
+                      type="button"
+                      disabled={submitting || !consentConfirmed}
                       onClick={handleSubmit}
-                      className="px-8 py-3 rounded bg-[#C97A3D] text-[#FAF7F1] font-sans font-medium text-xs flex items-center space-x-2 hover:bg-[#B86B30] disabled:opacity-50 transition-all shadow-sm"
+                      className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-[#C97A3D] text-[#FAF7F1] font-sans font-medium text-xs sm:text-sm flex items-center justify-center space-x-2 hover:bg-[#B86B30] disabled:opacity-50 transition-all shadow-md active:scale-[0.98]"
                     >
                       {submitting ? (
                         <>
@@ -2458,13 +2456,18 @@ export default function CaptureWizardPage() {
                       ) : (
                         <>
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>{strings.submitArchiveBtn}</span>
+                          <span>
+                            {!isOnline
+                              ? 'Save Offline & Sync Later'
+                              : 'Deposit into National Archive'}
+                          </span>
                         </>
                       )}
                     </button>
                   </div>
                 </div>
               )}
+
             </div>
           )}
         </div>

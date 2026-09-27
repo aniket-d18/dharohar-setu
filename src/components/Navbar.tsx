@@ -69,13 +69,12 @@ export default function Navbar() {
     };
   }, [mobileMenuOpen]);
 
-  // Desktop navigation links
-  const showOntologies = !user || user.role === 'CONTRIBUTOR';
+  // Desktop navigation links — all discovery pages visible to all roles
   const desktopNavLinks = [
     { href: '/', label: t('home') },
     { href: '/atlas', label: t('atlas') },
     { href: '/archive', label: t('archive') },
-    ...(showOntologies ? [{ href: '/untranslatable', label: t('untranslatable') }] : []),
+    { href: '/untranslatable', label: t('untranslatable') },
     { href: '/dashboard', label: t('dashboard') },
     ...(canVerify ? [{ href: '/verify', label: t('verify') }] : []),
   ];
@@ -98,9 +97,9 @@ export default function Navbar() {
 
   // Tab active checks for mobile bottom bar
   const isHomeActive = pathname === '/';
-  const isExploreActive = pathname === '/archive' || pathname.startsWith('/record/');
+  const isExploreActive = pathname === '/archive' || pathname.startsWith('/record/') || pathname === '/atlas' || pathname === '/untranslatable';
   const isCaptureActive = pathname === '/capture';
-  const isProfileActive = pathname === '/dashboard' || pathname === '/login';
+  const isProfileActive = pathname === '/profile';
 
   return (
     <>
@@ -109,23 +108,9 @@ export default function Navbar() {
         <div className="hidden md:block bg-[#D2E3DD] border-b border-[#B8D4CB]/70 text-xs text-[#2A2420]/75 font-sans">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[36px] py-1 flex items-center justify-end">
             <div className="flex items-center space-x-3 sm:space-x-5 text-[#2A2420]/75">
-              <span className="inline-flex items-center space-x-1.5">
-                <span className="text-[#2F6E5D] font-semibold">49</span>
-                <span>{t('records')}</span>
-                <span className="text-[#2A2420]/35">·</span>
-                <span className="text-[#2F6E5D] font-semibold">32</span>
-                <span>{t('languages')}</span>
-              </span>
-              <span className="text-[#2A2420]/35">|</span>
               <Link href="/archive" className="hover:text-[#2F6E5D] transition-colors">
                 {t('archiveDirectory')}
               </Link>
-              <a
-                href="mailto:curator@dharoharsetu.in"
-                className="hover:text-[#2F6E5D] transition-colors hidden lg:inline"
-              >
-                {t('contactCurators')}
-              </a>
 
               {/* User Profile / Sign In Dropdown */}
               {user ? (
@@ -165,11 +150,19 @@ export default function Navbar() {
                         )}
                       </div>
                       <Link
+                        href="/profile"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="w-full text-left px-3 py-2 text-xs flex items-center space-x-2 text-[#2A2420]/80 hover:bg-[#E4DDD0]/50 transition-colors font-medium"
+                      >
+                        <User className="w-3.5 h-3.5 shrink-0 text-[#2F6E5D]" />
+                        <span>My Profile &amp; Records</span>
+                      </Link>
+                      <Link
                         href="/dashboard"
                         onClick={() => setUserMenuOpen(false)}
                         className="w-full text-left px-3 py-2 text-xs flex items-center space-x-2 text-[#2A2420]/80 hover:bg-[#E4DDD0]/50 transition-colors font-medium"
                       >
-                        <LayoutDashboard className="w-3.5 h-3.5 shrink-0 text-[#2F6E5D]" />
+                        <LayoutDashboard className="w-3.5 h-3.5 shrink-0 text-[#C97A3D]" />
                         <span>{t('dashboard')}</span>
                       </Link>
                       <button
@@ -317,7 +310,7 @@ export default function Navbar() {
       {/* Language Switcher, and Sign In/Out.                                      */}
       {/* ========================================================================= */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
+        <div className="fixed inset-0 z-[1100] md:hidden">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-[#2A2420]/50 backdrop-blur-xs transition-opacity"
@@ -337,7 +330,7 @@ export default function Navbar() {
                     Dharohar Setu
                   </span>
                   <span className="text-[10px] text-[#2F6E5D] font-sans font-medium block">
-                    Living Heritage Desk
+                    {t('brandSubtitle')}
                   </span>
                 </div>
               </div>
@@ -418,7 +411,30 @@ export default function Navbar() {
                 </div>
               </Link>
 
-              {/* 2. Verify Desk — STRICTLY ROLE-GATED */}
+              {/* 2. Heritage Archive (M-02) */}
+              <Link
+                href="/archive"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-start space-x-3 px-3 py-2.5 rounded-xl text-sm font-sans transition-colors min-h-[48px] ${
+                  pathname === '/archive' || pathname.startsWith('/record/')
+                    ? 'bg-[#2F6E5D]/10 text-[#2F6E5D] font-semibold border border-[#2F6E5D]/30'
+                    : 'text-[#2A2420]/85 hover:bg-[#E4DDD0]/60'
+                }`}
+              >
+                <div className="w-8 h-8 rounded-lg bg-[#C97A3D]/10 border border-[#C97A3D]/20 flex items-center justify-center text-[#C97A3D] shrink-0 mt-0.5">
+                  <Compass className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm leading-tight text-[#2A2420]">
+                    {t('archive')}
+                  </div>
+                  <div className="text-[11px] text-[#2A2420]/60 mt-0.5">
+                    Search audio, songs, folktales & rituals
+                  </div>
+                </div>
+              </Link>
+
+              {/* 3. Review Desk — STRICTLY ROLE-GATED */}
               {canVerify && (
                 <Link
                   href="/verify"
@@ -435,7 +451,7 @@ export default function Navbar() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-1.5">
                       <span className="font-semibold text-sm leading-tight text-[#2A2420]">
-                        {t('verify')} Desk
+                        {t('verify')}
                       </span>
                       <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#2F6E5D]/15 text-[#2F6E5D] font-semibold border border-[#2F6E5D]/30">
                         {user?.role}
@@ -448,7 +464,7 @@ export default function Navbar() {
                 </Link>
               )}
 
-              {/* 3. Cultural Ontologies / Untranslatable Words */}
+              {/* 4. Living Concepts */}
               <Link
                 href="/untranslatable"
                 onClick={() => setMobileMenuOpen(false)}
@@ -463,7 +479,7 @@ export default function Navbar() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-sm leading-tight text-[#2A2420]">
-                    Cultural Ontologies
+                    {t('untranslatable')}
                   </div>
                   <div className="text-[11px] text-[#2A2420]/60 mt-0.5">
                     Untranslatable words & indigenous concepts
@@ -471,7 +487,7 @@ export default function Navbar() {
                 </div>
               </Link>
 
-              {/* 4. Contributor Dashboard */}
+              {/* 5. Observatory */}
               <Link
                 href="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
@@ -489,7 +505,30 @@ export default function Navbar() {
                     {t('dashboard')}
                   </div>
                   <div className="text-[11px] text-[#2A2420]/60 mt-0.5">
-                    Your recordings, badges & verification queue
+                    Telemetry, preservation gaps &amp; national charts
+                  </div>
+                </div>
+              </Link>
+
+              {/* 6. Profile */}
+              <Link
+                href="/profile"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-start space-x-3 px-3 py-2.5 rounded-xl text-sm font-sans transition-colors min-h-[48px] ${
+                  pathname === '/profile'
+                    ? 'bg-[#2F6E5D]/10 text-[#2F6E5D] font-semibold border border-[#2F6E5D]/30'
+                    : 'text-[#2A2420]/85 hover:bg-[#E4DDD0]/60'
+                }`}
+              >
+                <div className="w-8 h-8 rounded-lg bg-[#2F6E5D]/10 border border-[#2F6E5D]/20 flex items-center justify-center text-[#2F6E5D] shrink-0 mt-0.5">
+                  <User className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm leading-tight text-[#2A2420]">
+                    Profile &amp; Contributions
+                  </div>
+                  <div className="text-[11px] text-[#2A2420]/60 mt-0.5">
+                    Your records, saved items &amp; settings
                   </div>
                 </div>
               </Link>
@@ -566,7 +605,7 @@ export default function Navbar() {
       {/* 4 Tabs: Home, Explore (Archive), Capture, Profile                         */}
       {/* ========================================================================= */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-[#FAF7F1]/98 backdrop-blur-md border-t border-[#B8D4CB] shadow-[0_-4px_16px_rgba(42,36,32,0.06)] h-16 pt-1.5 pb-[max(env(safe-area-inset-bottom),0.6rem)] px-2 overflow-visible"
+        className="fixed bottom-0 left-0 right-0 z-[1000] md:hidden bg-[#FAF7F1]/98 backdrop-blur-md border-t border-[#B8D4CB] shadow-[0_-4px_16px_rgba(42,36,32,0.06)] h-16 pt-1.5 pb-[max(env(safe-area-inset-bottom),0.6rem)] px-2 overflow-visible"
         aria-label="Mobile Navigation"
       >
         <div className="grid grid-cols-4 items-center justify-around max-w-md mx-auto h-full">
@@ -628,17 +667,17 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* TAB 4: Profile / Sign In */}
+          {/* TAB 4: Profile */}
           <Link
-            href={user ? '/dashboard' : '/login'}
+            href="/profile"
             className={`flex flex-col items-center justify-center h-full transition-colors relative ${
               isProfileActive ? 'text-[#2F6E5D]' : 'text-[#2A2420]/60 hover:text-[#2A2420]'
             }`}
-            aria-label={user ? 'User Profile' : 'Sign In'}
+            aria-label="Profile"
           >
             <User className="w-5 h-5 mb-0.5" strokeWidth={isProfileActive ? 2.3 : 1.8} />
             <span className={`text-[11px] font-sans leading-tight tracking-tight truncate max-w-[65px] ${isProfileActive ? 'font-semibold text-[#2F6E5D]' : 'font-medium'}`}>
-              {user ? 'Profile' : 'Sign In'}
+              Profile
             </span>
             {isProfileActive && (
               <span className="w-1.5 h-1.5 rounded-full bg-[#2F6E5D] absolute top-0.5 right-1/2 translate-x-3" />

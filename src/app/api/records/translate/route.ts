@@ -54,10 +54,10 @@ function cleanJson(rawText: string) {
 // Call Google Gemini with gemini-flash-latest and graceful fallback models
 async function queryGemini(apiKey: string, promptText: string) {
   const candidateModels = [
-    'gemini-flash-latest',
-    'gemini-2.5-flash-lite',
     'gemini-3.5-flash',
     'gemini-3.6-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-flash-latest',
   ];
 
   let lastError = '';
