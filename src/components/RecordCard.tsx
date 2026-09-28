@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Mic, Video, Image as ImageIcon, FileText, MapPin, Volume2, ShieldCheck, CheckCircle2, Sparkles, RefreshCw, ThumbsUp } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { useTranslations, useLanguage } from '@/context/LanguageContext';
 import { useRecordTranslation } from '@/hooks/useRecordTranslation';
@@ -157,7 +158,7 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
         );
       case 'STEWARD_ENDORSED':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-sans font-medium bg-[#C97A3D]/10 text-[#C97A3D] border border-[#C97A3D]/30">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-sans font-medium bg-[#9C4D18]/10 text-[#9C4D18] border border-[#9C4D18]/30">
             {t('stewardEndorsed')}
           </span>
         );
@@ -169,7 +170,7 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
         );
       case 'COMMUNITY_SUPPORTED':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-sans font-medium bg-[#D97706]/10 text-[#D97706] border border-[#D97706]/30">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-sans font-medium bg-[#92400E]/10 text-[#92400E] border border-[#92400E]/30">
             {t('communitySupported') || 'Community Supported'}
           </span>
         );
@@ -182,7 +183,7 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
       case 'UNVERIFIED':
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-sans font-medium border border-[#E4DDD0] text-[#2A2420]/60 bg-[#FAF7F1]">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-sans font-medium border border-[#E4DDD0] text-[#2A2420]/75 bg-[#FAF7F1]">
             {upvoteCount < threshold
               ? `${t('awaitingCommunitySupport') || 'Awaiting community support'} (${upvoteCount}/${threshold})`
               : (t('pendingReview') || 'Pending review')}
@@ -203,11 +204,13 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
         {/* Card Media Preview Header */}
         <Link href={`/record/${record.id}`} className="block relative aspect-[16/9] w-full bg-[#1E1B18] overflow-hidden cursor-pointer">
           {photoUrl ? (
-            <img
+            <Image
               src={photoUrl}
-              alt={record.summaryText || 'Cultural heritage record'}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-95 group-hover:opacity-100"
-              loading="lazy"
+              alt={record.summaryText || 'Cultural heritage record preview'}
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-95 group-hover:opacity-100"
+              unoptimized={photoUrl.startsWith('http') && !photoUrl.includes(process.env.NEXT_PUBLIC_APP_URL || '')}
             />
           ) : (
             /* Dignified Archival Voice & Oral Lore Plaque (Strictly 0% dummy photos, 0% AI) */
@@ -322,7 +325,7 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
               <span className="truncate">{record.region?.name || 'India'}</span>
             </span>
             {record.language?.name && (
-              <span className="text-[#C97A3D] font-medium truncate shrink-0">
+              <span className="text-[#9C4D18] font-medium truncate shrink-0">
                 {record.language.name}
               </span>
             )}

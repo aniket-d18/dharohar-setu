@@ -13,7 +13,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
           <div className="md:col-span-2">
             <div className="flex items-center space-x-2.5 text-[#2A2420] font-serif text-lg font-medium mb-2.5">
-              <img src="/images/logo.png" alt="Dharohar Setu" className="w-8 h-8 object-cover rounded-md" />
+              <img src="/images/logo.png" alt="Dharohar Setu Emblem" className="w-8 h-8 object-cover rounded-md" />
               <span>Dharohar Setu</span>
             </div>
             <p className="text-xs sm:text-sm text-[#2A2420]/70 max-w-md leading-relaxed">
@@ -70,8 +70,17 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-[#E4DDD0] pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-[#2A2420]/60 gap-2 text-center sm:text-left">
+        <div className="border-t border-[#E4DDD0] pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-[#2A2420]/60 gap-3 text-center sm:text-left">
           <p>{t('copyright')}</p>
+          <div className="flex items-center space-x-4">
+            <Link href="/privacy" className="hover:text-[#C97A3D] transition-colors underline decoration-[#E4DDD0]">
+              Privacy Policy
+            </Link>
+            <span>•</span>
+            <Link href="/terms" className="hover:text-[#C97A3D] transition-colors underline decoration-[#E4DDD0]">
+              Terms of Contribution
+            </Link>
+          </div>
           <p className="flex items-center space-x-1">
             <span>{t('mission')}</span>
           </p>

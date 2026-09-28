@@ -29,6 +29,7 @@ export class CreateRecordDto {
   consentScopes?: string[];
   isAnonymous?: boolean;
   contributorId?: string;
+  turnstileToken?: string;
 }
 
 export class RecordFilterQuery {
@@ -76,6 +77,31 @@ export class RecordsService {
 
   // 2. Create Record with ConsentRecord & validation
   async createRecord(dto: CreateRecordDto) {
+    // 0. CAPTCHA verification for anonymous submissions if Cloudflare Turnstile secret configured
+    const turnstileSecret = process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY;
+    if ((dto.isAnonymous || !dto.contributorId) && turnstileSecret) {
+      if (!dto.turnstileToken) {
+        throw new BadRequestException('Security CAPTCHA verification required for anonymous submissions.');
+      }
+      try {
+        const formData = new URLSearchParams();
+        formData.append('secret', turnstileSecret);
+        formData.append('response', dto.turnstileToken);
+
+        const cfRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+          method: 'POST',
+          body: formData,
+        });
+        const cfData = await cfRes.json();
+        if (!cfData.success) {
+          throw new BadRequestException('Turnstile CAPTCHA verification failed. Please try again.');
+        }
+      } catch (err: any) {
+        if (err instanceof BadRequestException) throw err;
+        console.error('Turnstile verification error:', err);
+      }
+    }
+
     // 1. Title/Description validation
     const summary = (dto.summaryText || '').trim();
     if (summary.length < 8) {

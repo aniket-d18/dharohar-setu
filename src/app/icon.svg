@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="14" fill="#FAF7F1"/>
+  <rect width="62" height="62" x="1" y="1" rx="13" fill="none" stroke="#E4DDD0" stroke-width="2"/>
+  
+  <!-- Stylized Heritage Arch & Temple Mandapa Motif -->
+  <path d="M14 48 L14 36 C14 26 22 18 32 18 C42 18 50 26 50 36 L50 48" fill="none" stroke="#C97A3D" stroke-width="4" stroke-linecap="round"/>
+  <path d="M22 48 L22 38 C22 32 26 28 32 28 C38 28 42 32 42 38 L42 48" fill="none" stroke="#2F6E5D" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="32" cy="14" r="3" fill="#C97A3D"/>
+  <line x1="10" y1="48" x2="54" y2="48" stroke="#2A2420" stroke-width="3" stroke-linecap="round"/>
+</svg>

@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Delete, Body, Param, Query, Headers, Inject, UseInterceptors, UploadedFile, BadRequestException, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
@@ -16,6 +17,7 @@ export class RecordsController {
     private readonly service: RecordsService,
   ) {}
 
+  @Throttle({ default: { limit: 15, ttl: 60000 } }) // Max 15 uploads per min
   @Post('upload')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -57,6 +59,7 @@ export class RecordsController {
     return this.service.generatePresignedUrl(body.mediaType || 'AUDIO', body.filename || 'recording.mp3');
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // Max 10 record deposits per min per IP
   @Post()
   async createRecord(@Body() dto: CreateRecordDto) {
     return this.service.createRecord(dto);
@@ -140,6 +143,7 @@ export class RecordsController {
     return this.service.triggerAiEnrichment(id);
   }
 
+  @Throttle({ default: { limit: 30, ttl: 60000 } }) // Max 30 upvotes per min per IP
   @Post(':id/upvote')
   async toggleUpvote(
     @Param('id') id: string,

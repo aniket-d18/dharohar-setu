@@ -26,6 +26,15 @@ const nextConfig: NextConfig = {
   // Allow mobile devices on the local network to connect to the dev server
   allowedDevOrigins: ['10.66.14.237', 'localhost', '127.0.0.1'],
 
+  // Remote image patterns for record thumbnails and cultural media
+  images: {
+    remotePatterns: [
+      { protocol: 'http', hostname: 'localhost' },
+      { protocol: 'http', hostname: '127.0.0.1' },
+      { protocol: 'https', hostname: '**' },
+    ],
+  },
+
   // Proxy all /backend/* requests to the NestJS server running locally or on Render.
   async rewrites() {
     const backendUrl = resolveBackendUrl();

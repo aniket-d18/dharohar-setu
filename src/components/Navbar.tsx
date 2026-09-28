@@ -323,7 +323,7 @@ export default function Navbar() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#B8D4CB] bg-[#DCE9E4]">
               <div className="flex items-center space-x-2.5">
                 <div className="w-8 h-8 rounded-lg bg-[#FFFFFF] border border-[#B8D4CB] overflow-hidden flex items-center justify-center shrink-0">
-                  <img src="/images/logo.png" alt="Logo" className="w-full h-full object-cover" />
+                  <img src="/images/logo.png" alt="Dharohar Setu Emblem" className="w-full h-full object-cover" />
                 </div>
                 <div>
                   <span className="font-serif text-base font-semibold text-[#2A2420] block leading-tight">

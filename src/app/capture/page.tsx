@@ -44,6 +44,7 @@ import { getApiUrl } from '@/utils/apiUrl';
 import { CAPTURE_I18N, CATEGORY_I18N, SupportedLang } from '@/utils/captureI18n';
 import { cachedFetch } from '@/utils/apiCache';
 import { enqueueSubmission, countQueued, flushQueue } from '@/utils/syncManager';
+import TurnstileWidget from '@/components/TurnstileWidget';
 
 interface LanguageItem {
   id: string;
@@ -760,7 +761,8 @@ export default function CaptureWizardPage() {
   const [allowAiTraining, setAllowAiTraining] = useState(true);
   const [allowPublicArchive, setAllowPublicArchive] = useState(true);
   const [isAnonymous, setIsAnonymous] = useState(false);
-  const [consentConfirmed, setConsentConfirmed] = useState(true);
+  const [consentConfirmed, setConsentConfirmed] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   // Step 2 & 3: Metadata & Media Type
   const [mediaType, setMediaType] = useState<'AUDIO' | 'VIDEO' | 'IMAGE' | 'TEXT'>('AUDIO');
@@ -1200,6 +1202,7 @@ export default function CaptureWizardPage() {
       summaryText: finalSummary,
       consentScopes: scopesGranted,
       isAnonymous,
+      turnstileToken: turnstileToken || undefined,
     };
 
     // Determine blob to save for offline queuing (if any)
@@ -2325,23 +2328,92 @@ export default function CaptureWizardPage() {
                     )}
                   </div>
 
-                  {/* Progressive Consent & Archival Rights */}
-                  <div className="mb-6 space-y-3">
-                    {/* Primary Mandatory Agreement (Pre-checked for consumer simplicity) */}
-                    <label className="flex items-start space-x-3 p-3.5 rounded-xl bg-[#FAF7F1] border border-[#E4DDD0] cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={consentConfirmed}
-                        onChange={(e) => setConsentConfirmed(e.target.checked)}
-                        className="mt-0.5 w-4 h-4 rounded accent-[#C97A3D]"
-                      />
-                      <span className="text-xs text-[#2A2420] leading-snug">
-                        <strong>Consent Confirmation:</strong> I confirm this cultural knowledge was shared respectfully with consent of the elder, community, or practitioner.
-                      </span>
-                    </label>
+                  {/* Step 5: Progressive Consent & Archival Rights */}
+                  <div className="mb-6 space-y-4">
+                    {/* 1. VISIBLE CHOICE: Who can see it */}
+                    <div className="bg-[#FAF7F1] p-4 rounded-xl border border-[#E4DDD0]">
+                      <label className="block text-xs font-semibold text-[#2A2420] mb-1">
+                        Who can see this recording? *
+                      </label>
+                      <p className="text-[11px] text-[#2A2420]/65 mb-3">
+                        Choose who has access to view and listen to this preserved record.
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {[
+                          { id: 'PUBLIC', title: 'Public', desc: 'Open to everyone for education & research' },
+                          { id: 'COMMUNITY_ONLY', title: 'Community only', desc: 'Accessible only to community members' },
+                          { id: 'PRIVATE', title: 'Private', desc: 'Restricted custodian vault' },
+                        ].map((v) => (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => setVisibility(v.id as any)}
+                            className={`p-3 rounded-lg border text-left transition-all ${
+                              visibility === v.id
+                                ? 'bg-[#FFFFFF] border-[#2F6E5D] text-[#2F6E5D] font-medium ring-1 ring-[#2F6E5D] shadow-xs'
+                                : 'bg-[#FFFFFF]/70 border-[#E4DDD0] text-[#2A2420]/75 hover:bg-[#FFFFFF]'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold">{v.title}</span>
+                              {visibility === v.id && <Check className="w-3.5 h-3.5 text-[#2F6E5D]" />}
+                            </div>
+                            <span className="text-[10px] text-[#2A2420]/60 block leading-tight mt-1">
+                              {v.desc}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-                    {/* Collapsible: Advanced Archival Privacy & Permissions */}
-                    <div className="border border-[#E4DDD0] rounded-xl overflow-hidden">
+                    {/* 2. VISIBLE CHOICE: AI Transcription & Translation Toggle */}
+                    <div className="bg-[#FAF7F1] p-4 rounded-xl border border-[#E4DDD0]">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <Sparkles className="w-4 h-4 text-[#C97A3D]" />
+                            <span className="text-xs font-semibold text-[#2A2420]">
+                              AI transcription &amp; translation
+                            </span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                              allowAiTraining ? 'bg-[#2F6E5D]/10 text-[#2F6E5D]' : 'bg-[#B54A3A]/10 text-[#B54A3A]'
+                            }`}>
+                              {allowAiTraining ? 'Enabled' : 'Disabled'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[#2A2420]/75 leading-relaxed">
+                            Let AI transcribe and translate this recording. Your audio is processed by Google's Gemini service.
+                          </p>
+                          {!allowAiTraining && (
+                            <p className="text-[10px] text-[#B54A3A] mt-1.5 font-medium">
+                              Note: Without AI processing, transcription and summaries will wait for manual contributor review.
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Modern Toggle Switch (Default ON, One-tap OFF) */}
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={allowAiTraining}
+                          onClick={() => setAllowAiTraining(!allowAiTraining)}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                            allowAiTraining ? 'bg-[#2F6E5D]' : 'bg-[#E4DDD0]'
+                          }`}
+                          title="Toggle AI transcription & translation"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                              allowAiTraining ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 3. ACCORDION: Anonymity & Other Archival Options */}
+                    <div className="border border-[#E4DDD0] rounded-xl overflow-hidden bg-[#FFFFFF]">
                       <button
                         type="button"
                         onClick={() => setShowAdvancedPrivacy(!showAdvancedPrivacy)}
@@ -2349,7 +2421,7 @@ export default function CaptureWizardPage() {
                       >
                         <span className="flex items-center space-x-2">
                           <ShieldCheck className="w-4 h-4 text-[#C97A3D]" />
-                          <span>Archival Privacy & Permissions (Optional)</span>
+                          <span>Additional Archival Rights &amp; Anonymity (Optional)</span>
                         </span>
                         <ChevronDown
                           className={`w-4 h-4 text-[#2A2420]/50 transition-transform ${
@@ -2359,76 +2431,76 @@ export default function CaptureWizardPage() {
                       </button>
 
                       {showAdvancedPrivacy && (
-                        <div className="p-4 bg-[#FAF7F1] border-t border-[#E4DDD0] space-y-4 text-xs">
-                          <div>
-                            <label className="block text-[11px] font-medium text-[#2A2420]/80 mb-2">
-                              Accessibility Level
-                            </label>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                              {[
-                                { id: 'PUBLIC', title: 'Public Archive', desc: 'Open to everyone for cultural education' },
-                                { id: 'COMMUNITY_ONLY', title: 'Community Only', desc: 'Accessible only to verified community members' },
-                                { id: 'PRIVATE', title: 'Private Vault', desc: 'Preserved only in private secure archive' },
-                              ].map((v) => (
-                                <button
-                                  key={v.id}
-                                  type="button"
-                                  onClick={() => setVisibility(v.id as any)}
-                                  className={`p-2.5 rounded-lg border text-left transition-all ${
-                                    visibility === v.id
-                                      ? 'bg-[#FFFFFF] border-[#C97A3D] text-[#C97A3D] font-medium ring-1 ring-[#C97A3D]'
-                                      : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/70'
-                                  }`}
-                                >
-                                  <span className="block font-medium">{v.title}</span>
-                                  <span className="text-[10px] text-[#2A2420]/60 block leading-tight mt-0.5">
-                                    {v.desc}
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
+                        <div className="p-4 bg-[#FAF7F1] border-t border-[#E4DDD0] space-y-3 text-xs">
+                          <label className="flex items-start space-x-3 cursor-pointer p-2 rounded-lg hover:bg-white transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={allowPublicArchive}
+                              onChange={(e) => setAllowPublicArchive(e.target.checked)}
+                              className="mt-0.5 w-4 h-4 rounded accent-[#2F6E5D]"
+                            />
+                            <span className="text-[11px] text-[#2A2420] leading-snug">
+                              <strong>National Preservation Charter:</strong> Allow indexing in the national cultural repository for long-term archival.
+                            </span>
+                          </label>
 
-                          <div className="space-y-2.5 pt-2 border-t border-[#E4DDD0]">
-                            <label className="flex items-start space-x-2.5 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={allowPublicArchive}
-                                onChange={(e) => setAllowPublicArchive(e.target.checked)}
-                                className="mt-0.5 rounded accent-[#C97A3D]"
-                              />
-                              <span className="text-[11px] text-[#2A2420]">
-                                <strong>National Preservation Charter:</strong> Allow indexing in the national cultural repository.
-                              </span>
-                            </label>
-
-                            <label className="flex items-start space-x-2.5 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={allowAiTraining}
-                                onChange={(e) => setAllowAiTraining(e.target.checked)}
-                                className="mt-0.5 rounded accent-[#C97A3D]"
-                              />
-                              <span className="text-[11px] text-[#2A2420]">
-                                <strong>AI Language Technology:</strong> Allow non-commercial endangered dialect AI models to learn vocabulary.
-                              </span>
-                            </label>
-
-                            <label className="flex items-start space-x-2.5 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={isAnonymous}
-                                onChange={(e) => setIsAnonymous(e.target.checked)}
-                                className="mt-0.5 rounded accent-[#C97A3D]"
-                              />
-                              <span className="text-[11px] text-[#2A2420]">
-                                <strong>Anonymous Custodian:</strong> Do not publicly show custodian name on plaque.
-                              </span>
-                            </label>
-                          </div>
+                          <label className="flex items-start space-x-3 cursor-pointer p-2 rounded-lg hover:bg-white transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={isAnonymous}
+                              onChange={(e) => setIsAnonymous(e.target.checked)}
+                              className="mt-0.5 w-4 h-4 rounded accent-[#2F6E5D]"
+                            />
+                            <span className="text-[11px] text-[#2A2420] leading-snug">
+                              <strong>Anonymous Custodian:</strong> Do not publicly display the custodian or speaker name on the public archive plaque.
+                            </span>
+                          </label>
                         </div>
                       )}
                     </div>
+
+                    {/* 4. MANDATORY UNCHECKED CONSENT CHECKBOX */}
+                    <label className={`flex items-start space-x-3 p-4 rounded-xl border transition-all cursor-pointer ${
+                      consentConfirmed
+                        ? 'bg-[#2F6E5D]/5 border-[#2F6E5D]/40 ring-1 ring-[#2F6E5D]/20'
+                        : 'bg-[#FAF7F1] border-[#C97A3D]/40 hover:border-[#C97A3D]'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={consentConfirmed}
+                        onChange={(e) => setConsentConfirmed(e.target.checked)}
+                        className="mt-0.5 w-4 h-4 rounded accent-[#C97A3D]"
+                      />
+                      <div className="text-xs text-[#2A2420] leading-snug">
+                        <span className="font-semibold text-[#2A2420]">
+                          I confirm the people in this recording agreed to share it. *
+                        </span>
+                        <p className="text-[11px] text-[#2A2420]/60 mt-0.5">
+                          You must verify that all participants, elders, or oral storytellers consented to have this heritage documented.
+                        </p>
+                      </div>
+                    </label>
+
+                    {/* Legal Links Footer Notice */}
+                    <div className="text-[11px] text-[#2A2420]/60 text-center pt-1">
+                      By depositing, you agree to our{' '}
+                      <Link href="/terms" target="_blank" className="text-[#C97A3D] hover:underline font-medium">
+                        Terms of Contribution
+                      </Link>{' '}
+                      and acknowledge our{' '}
+                      <Link href="/privacy" target="_blank" className="text-[#C97A3D] hover:underline font-medium">
+                        Privacy Policy
+                      </Link>.
+                    </div>
+
+                    {/* Cloudflare Turnstile CAPTCHA (Rendered on Anonymous Submissions) */}
+                    {!user && (
+                      <TurnstileWidget
+                        onVerify={(token) => setTurnstileToken(token)}
+                        onError={() => setTurnstileToken(null)}
+                        onExpire={() => setTurnstileToken(null)}
+                      />
+                    )}
                   </div>
 
                   {/* Submission Navigation */}
