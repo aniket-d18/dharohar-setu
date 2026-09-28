@@ -1,23 +1,42 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Work+Sans:ital,wght@0,300..800;1,300..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Work+Sans:ital,wght@0,300..800;1,300..800&family=Tiro+Devanagari+Hindi:ital@0;1&display=swap');
 @import "tailwindcss";
 
 @theme {
   --color-parchment: #FAF7F1;
+  --color-parchment-deep: #F1EADC;
   --color-ink: #2A2420;
+  --color-ink-deep: #1B1714;
   --color-terracotta: #C97A3D;
-  --color-marigold: #C97A3D;
+  --color-marigold: #E0A23C;
   --color-deep-teal: #2F6E5D;
+  --color-teal-deep: #1E4C41;
   --color-brick: #B54A3A;
+  --color-indigo-dye: #2C3E63;
   --color-sage: #6B8F5E;
   --color-soft-border: #E4DDD0;
 
   --font-serif: 'Fraunces', serif;
   --font-sans: 'Work Sans', sans-serif;
+  --font-devanagari: 'Tiro Devanagari Hindi', serif;
 }
 
 :root {
   --background: #FAF7F1;
   --foreground: #2A2420;
+
+  /* Elevation scale — warm shadows so cards sit on parchment, not float on grey */
+  --shadow-raise: 0 1px 2px rgba(42, 36, 32, 0.04), 0 2px 8px rgba(42, 36, 32, 0.04);
+  --shadow-lift: 0 2px 6px rgba(42, 36, 32, 0.06), 0 12px 28px -10px rgba(42, 36, 32, 0.18);
+  --shadow-deep: 0 10px 40px -12px rgba(42, 36, 32, 0.35);
+
+  /* Handwoven paper grain */
+  --texture-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+
+  /* Jali lattice — traditional perforated screen motif */
+  --texture-jali: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23C97A3D' stroke-width='1'%3E%3Cpath d='M28 0 L56 28 L28 56 L0 28 Z'/%3E%3Ccircle cx='28' cy='28' r='7'/%3E%3Cpath d='M0 0 L8 8 M56 0 L48 8 M0 56 L8 48 M56 56 L48 48'/%3E%3C/g%3E%3C/svg%3E");
+
+  /* Kolam dot grid — floor-art motif used on light panels */
+  --texture-kolam: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cg fill='%23C97A3D'%3E%3Ccircle cx='4' cy='4' r='1.3'/%3E%3Ccircle cx='20' cy='12' r='1.3'/%3E%3Ccircle cx='12' cy='20' r='1.3'/%3E%3Ccircle cx='28' cy='28' r='1.3'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 body {
@@ -31,22 +50,276 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Parchment grain over the whole page so flat cream reads as handmade paper */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: var(--texture-grain);
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+}
+
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
 h1, h2, h3, h4, h5, h6, .font-serif {
   font-family: 'Fraunces', serif;
 }
 
-/* Custom Heritage Component Utilities (Light Archival Museum) */
+.font-devanagari {
+  font-family: 'Tiro Devanagari Hindi', 'Fraunces', serif;
+}
+
+/* ===================================================================== */
+/* Surfaces                                                              */
+/* ===================================================================== */
 .heritage-card {
   background-color: #FFFFFF;
   border: 1px solid #E4DDD0;
-  border-radius: 0.5rem;
-  transition: border-color 0.2s ease;
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-raise);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
 .heritage-card:hover {
-  border-color: #C97A3D;
+  border-color: rgba(201, 122, 61, 0.55);
+  box-shadow: var(--shadow-lift);
+  transform: translateY(-3px);
 }
 
+/* Cream panel with a hairline gold top edge — used for stat strips & callouts */
+.heritage-panel {
+  position: relative;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FCFAF5 100%);
+  border: 1px solid #E4DDD0;
+  border-radius: 1rem;
+  box-shadow: var(--shadow-raise);
+  overflow: hidden;
+}
+
+.heritage-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, #C97A3D 0%, #E0A23C 45%, #2F6E5D 100%);
+}
+
+/* Deep ink panel — hero bands, footer, feature strips */
+.ink-panel {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(120% 90% at 12% 0%, rgba(201, 122, 61, 0.28) 0%, transparent 55%),
+    radial-gradient(100% 90% at 95% 15%, rgba(47, 110, 93, 0.35) 0%, transparent 60%),
+    linear-gradient(155deg, #2A2420 0%, #1B1714 55%, #241D18 100%);
+  color: #F6F1E7;
+  overflow: hidden;
+}
+
+.ink-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--texture-jali);
+  background-size: 56px 56px;
+  opacity: 0.09;
+}
+
+.kolam-surface {
+  position: relative;
+  isolation: isolate;
+}
+
+.kolam-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--texture-kolam);
+  background-size: 32px 32px;
+  opacity: 0.14;
+  pointer-events: none;
+}
+
+/* ===================================================================== */
+/* Ornament                                                              */
+/* ===================================================================== */
+.motif-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: rgba(201, 122, 61, 0.75);
+}
+
+.motif-divider::before,
+.motif-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201, 122, 61, 0.45), transparent);
+}
+
+.section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'Work Sans', sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #9C4D18;
+}
+
+.section-eyebrow::before {
+  content: '';
+  width: 1.75rem;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #C97A3D, #E0A23C);
+}
+
+.gold-rule {
+  height: 2px;
+  border: 0;
+  background: linear-gradient(90deg, transparent, #C97A3D 20%, #E0A23C 50%, #C97A3D 80%, transparent);
+  opacity: 0.6;
+}
+
+/* Watermark script for hero bands */
+.script-watermark {
+  font-family: 'Tiro Devanagari Hindi', serif;
+  color: rgba(246, 241, 231, 0.07);
+  line-height: 0.85;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ===================================================================== */
+/* Controls                                                              */
+/* ===================================================================== */
+.btn-ochre {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #D08643 0%, #C97A3D 55%, #B0642C 100%);
+  color: #FDFBF6;
+  box-shadow: 0 6px 18px -8px rgba(176, 100, 44, 0.9);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.btn-ochre:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 10px 26px -10px rgba(176, 100, 44, 0.95);
+  transform: translateY(-1px);
+}
+
+.btn-ochre:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.btn-teal {
+  background: linear-gradient(135deg, #347966 0%, #2F6E5D 55%, #1E4C41 100%);
+  color: #F6F1E7;
+  box-shadow: 0 6px 18px -8px rgba(30, 76, 65, 0.85);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.btn-teal:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.btn-quiet {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #E4DDD0;
+  color: #2A2420;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-quiet:hover {
+  border-color: rgba(201, 122, 61, 0.7);
+  box-shadow: var(--shadow-raise);
+  transform: translateY(-1px);
+}
+
+/* Translucent header that gains weight once the page scrolls */
+.nav-glass {
+  background: linear-gradient(180deg, rgba(220, 233, 228, 0.96) 0%, rgba(214, 229, 223, 0.9) 100%);
+  backdrop-filter: saturate(1.25) blur(12px);
+  -webkit-backdrop-filter: saturate(1.25) blur(12px);
+  transition: box-shadow 0.25s ease, background-color 0.25s ease;
+}
+
+.nav-glass[data-scrolled='true'] {
+  box-shadow: 0 8px 24px -16px rgba(42, 36, 32, 0.55);
+}
+
+.nav-link-active {
+  position: relative;
+}
+
+.nav-link-active::after {
+  content: '';
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: -0.35rem;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #C97A3D, #E0A23C);
+}
+
+/* ===================================================================== */
+/* Motion                                                                */
+/* ===================================================================== */
+@keyframes heritage-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+.animate-rise {
+  animation: heritage-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes heritage-pulse-ring {
+  0% { transform: scale(0.85); opacity: 0.55; }
+  70% { transform: scale(1.35); opacity: 0; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+.pulse-ring::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid currentColor;
+  animation: heritage-pulse-ring 2.4s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .pulse-ring::after {
+    animation: none;
+  }
+
+  .heritage-card:hover,
+  .btn-ochre:hover,
+  .btn-teal:hover,
+  .btn-quiet:hover {
+    transform: none;
+  }
+}
+
+/* ===================================================================== */
+/* Badges                                                                */
+/* ===================================================================== */
 .heritage-badge-critical {
   background-color: rgba(181, 74, 58, 0.1);
   color: #B54A3A;
@@ -105,4 +378,3 @@ h1, h2, h3, h4, h5, h6, .font-serif {
   color: #E8A33D !important;
   text-decoration: none !important;
 }
-

@@ -34,6 +34,14 @@ export default function Navbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Verification is strictly role-gated: only reviewers, stewards, experts, admins can verify
   const canVerify = Boolean(user && user.role !== 'CONTRIBUTOR');
@@ -103,7 +111,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-[#DCE9E4] border-b border-[#B8D4CB]">
+      <header className="nav-glass sticky top-0 z-50 border-b border-[#B8D4CB]" data-scrolled={scrolled}>
         {/* Top Utility Strip — desktop only */}
         <div className="hidden md:block bg-[#D2E3DD] border-b border-[#B8D4CB]/70 text-xs text-[#2A2420]/75 font-sans">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[36px] py-1 flex items-center justify-end">
@@ -201,6 +209,7 @@ export default function Navbar() {
             <div>
               <span className="font-serif text-base sm:text-xl lg:text-2xl font-semibold tracking-tight text-[#2A2420] block leading-none">
                 Dharohar Setu
+                <span className="font-devanagari text-[#C97A3D] text-sm sm:text-base ml-2 align-middle">धरोहर</span>
               </span>
               <span className="text-[9px] sm:text-xs text-[#2F6E5D] font-sans tracking-wide font-medium mt-0.5 inline-block">
                 {t('brandSubtitle')}
@@ -219,7 +228,7 @@ export default function Navbar() {
                     href={link.href}
                     className={`px-2.5 py-1.5 lg:px-3.5 lg:py-2 rounded-md text-xs lg:text-sm font-sans transition-colors ${
                       isActive
-                        ? 'text-[#2F6E5D] bg-[#FFFFFF] font-semibold border border-[#B8D4CB]'
+                        ? 'nav-link-active text-[#1E4C41] font-semibold'
                         : 'text-[#2A2420]/80 hover:text-[#2F6E5D] hover:bg-[#FFFFFF]/60'
                     }`}
                   >
@@ -272,7 +281,7 @@ export default function Navbar() {
               {/* Desktop Capture Button */}
               <Link
                 href="/capture"
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 lg:px-4 lg:py-2 rounded-md bg-[#C97A3D] text-[#FAF7F1] font-sans font-medium text-xs lg:text-sm hover:bg-[#B86B30] transition-colors shadow-xs whitespace-nowrap min-h-[38px]"
+                className="btn-ochre inline-flex items-center space-x-1.5 px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg font-sans font-semibold text-xs lg:text-sm whitespace-nowrap min-h-[38px]"
               >
                 <Mic className="w-4 h-4" />
                 <span>{t('capture')}</span>

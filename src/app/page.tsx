@@ -6,6 +6,8 @@ import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import RecordCard, { RecordCardData } from '@/components/RecordCard';
+import HeritageHero from '@/components/HeritageHero';
+import TraditionTiles from '@/components/TraditionTiles';
 import { useTranslations } from '@/context/LanguageContext';
 import { getApiUrl } from '@/utils/apiUrl';
 import { cachedFetch } from '@/utils/apiCache';
@@ -248,75 +250,17 @@ export default function HomePage() {
       <Navbar />
 
       <main className="flex-1 pb-20 md:pb-0">
+        <HeritageHero counters={counters} />
+
+        <div className="pt-10 sm:pt-14">
+          <TraditionTiles />
+        </div>
+
         {/* ========================================================= */}
         {/* MOBILE CONSUMER EXPERIENCE (Strictly block md:hidden)     */}
         {/* Simple like a real consumer application                   */}
         {/* ========================================================= */}
-        <div className="block md:hidden px-4 pt-4 pb-8 space-y-5">
-          {/* 1. Header & Mission Statement */}
-          <div className="text-center pt-2">
-            <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#2F6E5D]/10 border border-[#2F6E5D]/20 text-[11px] font-sans font-medium text-[#2F6E5D] mb-3">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Living Heritage Repository</span>
-            </div>
-            <h1 className="font-serif text-2xl font-medium text-[#2A2420] tracking-tight leading-snug mb-2">
-              Dharohar Setu
-            </h1>
-            <p className="text-xs text-[#2A2420]/75 font-sans leading-relaxed max-w-xs mx-auto">
-              Preserving India's endangered oral traditions, folk songs, ceremonies, and ancient craftsmanship before they vanish.
-            </p>
-          </div>
-
-          {/* 2. Primary & Secondary Action CTAs (Large Touch Targets) */}
-          <div className="flex flex-col gap-2.5">
-            <Link
-              href="/capture"
-              className="w-full min-h-[50px] inline-flex items-center justify-center space-x-2 px-5 py-3.5 rounded-xl bg-[#C97A3D] text-[#FAF7F1] font-sans font-semibold text-sm hover:bg-[#B86B30] active:scale-[0.98] transition-all shadow-sm"
-            >
-              <Mic className="w-4 h-4" />
-              <span>Capture a Memory</span>
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </Link>
-
-            <Link
-              href="/archive"
-              className="w-full min-h-[46px] inline-flex items-center justify-center space-x-2 px-5 py-3 rounded-xl border border-[#E4DDD0] bg-[#FFFFFF] text-[#2A2420] font-sans font-medium text-sm hover:bg-[#FAF7F1] active:scale-[0.98] transition-all shadow-xs"
-            >
-              <Compass className="w-4 h-4 text-[#C97A3D]" />
-              <span>Explore Heritage</span>
-            </Link>
-          </div>
-
-          {/* 3. Compact Impact Summary (3 Key Metrics in 1 Row) */}
-          <div className="bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl p-3 shadow-none">
-            <div className="grid grid-cols-3 divide-x divide-[#E4DDD0] text-center">
-              <div className="px-2">
-                <p className="font-serif text-xl font-bold text-[#2A2420]">
-                  {counters.totalRecords || 49}+
-                </p>
-                <p className="text-[10px] font-sans text-[#2A2420]/60 uppercase tracking-tight mt-0.5">
-                  Records
-                </p>
-              </div>
-              <div className="px-2">
-                <p className="font-serif text-xl font-bold text-[#C97A3D]">
-                  {counters.totalLanguages || 32}
-                </p>
-                <p className="text-[10px] font-sans text-[#2A2420]/60 uppercase tracking-tight mt-0.5">
-                  Languages
-                </p>
-              </div>
-              <div className="px-2">
-                <p className="font-serif text-xl font-bold text-[#2F6E5D]">
-                  {counters.regionsCovered || 18}
-                </p>
-                <p className="text-[10px] font-sans text-[#2A2420]/60 uppercase tracking-tight mt-0.5">
-                  Regions
-                </p>
-              </div>
-            </div>
-          </div>
-
+        <div className="block md:hidden px-4 pb-8 space-y-5">
           {/* 4. One Featured Heritage Record */}
           <div>
             <div className="flex items-center justify-between mb-2 px-0.5">
@@ -329,7 +273,7 @@ export default function HomePage() {
               </span>
             </div>
 
-            <div className="bg-[#FFFFFF] border-2 border-[#C97A3D]/40 rounded-xl p-4 shadow-sm">
+            <div className="heritage-card border-[#C97A3D]/45 p-4">
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div>
                   <h3 className="font-serif text-base font-medium text-[#2A2420] leading-snug">
@@ -385,7 +329,7 @@ export default function HomePage() {
                   <RecordCard key={record.id} record={record} />
                 ))
               ) : (
-                <div className="p-4 text-center bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl text-xs text-[#2A2420]/60">
+                <div className="heritage-card p-4 text-center text-xs text-[#2A2420]/60">
                   Loading living records...
                 </div>
               )}
@@ -397,39 +341,12 @@ export default function HomePage() {
         {/* DESKTOP EXPERIENCE (Strictly hidden md:block)             */}
         {/* ========================================================= */}
         <div className="hidden md:block">
-        <section className="relative pt-6 pb-10 sm:pt-16 sm:pb-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
-          <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-16">
-            <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#C97A3D]/10 border border-[#C97A3D]/30 text-xs font-sans text-[#C97A3D] mb-4 sm:mb-6 shadow-xs">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>{tHome('heroBadge')}</span>
-            </div>
-
-            <h1 className="font-serif text-2xl sm:text-5xl lg:text-6xl font-medium tracking-tight leading-[1.2] text-[#2A2420] mb-3 sm:mb-6">
-              {tHome('heroTitle')}
-            </h1>
-
-            <p className="text-sm sm:text-lg text-[#2A2420]/75 font-sans leading-relaxed max-w-2xl mx-auto mb-6 sm:mb-8">
-              {tHome('heroSubtitle')}
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full">
-              <Link
-                href="/capture"
-                className="w-full sm:w-auto min-h-[48px] inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-lg bg-[#C97A3D] text-[#FAF7F1] font-sans font-semibold text-sm sm:text-base hover:bg-[#B86B30] active:scale-[0.98] transition-all shadow-sm group"
-              >
-                <Mic className="w-4 h-4" />
-                <span>{tNav('capture')}</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
-
-              <Link
-                href="/archive"
-                className="w-full sm:w-auto min-h-[48px] inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-lg border border-[#E4DDD0] bg-[#FFFFFF] text-[#2A2420] font-sans font-medium text-sm sm:text-base hover:bg-[#E4DDD0]/30 hover:border-[#C97A3D] active:scale-[0.98] transition-all shadow-xs"
-              >
-                <Compass className="w-4 h-4 text-[#C97A3D]" />
-                <span>{tCommon('exploreArchive')}</span>
-              </Link>
-            </div>
+        <section className="relative pt-2 pb-10 sm:pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
+          <div className="max-w-3xl mb-6 sm:mb-10">
+            <span className="section-eyebrow">{tHome('fannedCarouselLabel')}</span>
+            <h2 className="font-serif text-2xl sm:text-3xl font-medium text-[#2A2420] mt-2.5">
+              Voices from the collection
+            </h2>
           </div>
 
           {/* CAROUSEL — Mobile Single Card / Desktop Fanned */}
@@ -682,53 +599,27 @@ export default function HomePage() {
         {/* 2. LIVE IMPACT COUNTERS STRIP                             */}
         {/* ========================================================= */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 sm:mb-16">
-          <div className="bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl p-3.5 sm:p-8 shadow-xs">
-            {/* Mobile: 2-column micro-cards + 1 full width. Desktop: 5-column divided strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-0 text-center sm:divide-x divide-[#E4DDD0]">
-              <div className="bg-[#FAF7F1] sm:bg-transparent border border-[#E4DDD0]/80 sm:border-0 rounded-lg sm:rounded-none p-3 sm:py-0 sm:px-4">
-                <p className="font-serif text-2xl sm:text-4xl font-semibold text-[#2A2420] mb-0.5 sm:mb-1">
-                  {counters.totalRecords}
-                </p>
-                <p className="text-[10px] sm:text-xs font-sans text-[#2A2420]/60 tracking-wider uppercase">
-                  {tHome('totalRecords')}
-                </p>
-              </div>
-
-              <div className="bg-[#FAF7F1] sm:bg-transparent border border-[#E4DDD0]/80 sm:border-0 rounded-lg sm:rounded-none p-3 sm:py-0 sm:px-4">
-                <p className="font-serif text-2xl sm:text-4xl font-semibold text-[#C97A3D] mb-0.5 sm:mb-1">
-                  {counters.totalLanguages}
-                </p>
-                <p className="text-[10px] sm:text-xs font-sans text-[#2A2420]/60 tracking-wider uppercase">
-                  {tHome('languagesDocumented')}
-                </p>
-              </div>
-
-              <div className="bg-[#FAF7F1] sm:bg-transparent border border-[#E4DDD0]/80 sm:border-0 rounded-lg sm:rounded-none p-3 sm:py-0 sm:px-4">
-                <p className="font-serif text-2xl sm:text-4xl font-semibold text-[#6B8F5E] mb-0.5 sm:mb-1">
-                  {counters.verifiedRecords}
-                </p>
-                <p className="text-[10px] sm:text-xs font-sans text-[#2A2420]/60 tracking-wider uppercase">
-                  {tHome('verifiedRecords')}
-                </p>
-              </div>
-
-              <div className="bg-[#FAF7F1] sm:bg-transparent border border-[#E4DDD0]/80 sm:border-0 rounded-lg sm:rounded-none p-3 sm:py-0 sm:px-4">
-                <p className="font-serif text-2xl sm:text-4xl font-semibold text-[#2A2420] mb-0.5 sm:mb-1">
-                  {counters.totalContributors}
-                </p>
-                <p className="text-[10px] sm:text-xs font-sans text-[#2A2420]/60 tracking-wider uppercase">
-                  {tHome('activeContributors')}
-                </p>
-              </div>
-
-              <div className="col-span-2 sm:col-span-1 bg-[#FAF7F1] sm:bg-transparent border border-[#E4DDD0]/80 sm:border-0 rounded-lg sm:rounded-none p-3 sm:py-0 sm:px-4">
-                <p className="font-serif text-2xl sm:text-4xl font-semibold text-[#2F6E5D] mb-0.5 sm:mb-1">
-                  {counters.regionsCovered}
-                </p>
-                <p className="text-[10px] sm:text-xs font-sans text-[#2A2420]/60 tracking-wider uppercase">
-                  {tHome('regionsCovered')}
-                </p>
-              </div>
+          <div className="heritage-panel kolam-surface p-4 sm:p-8">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-0 text-center sm:divide-x divide-[#E4DDD0]">
+              {[
+                { value: counters.totalRecords, label: tHome('totalRecords'), tone: 'text-[#2A2420]' },
+                { value: counters.totalLanguages, label: tHome('languagesDocumented'), tone: 'text-[#C97A3D]' },
+                { value: counters.verifiedRecords, label: tHome('verifiedRecords'), tone: 'text-[#6B8F5E]' },
+                { value: counters.totalContributors, label: tHome('activeContributors'), tone: 'text-[#2A2420]' },
+                { value: counters.regionsCovered, label: tHome('regionsCovered'), tone: 'text-[#2F6E5D]' },
+              ].map((stat, i) => (
+                <div
+                  key={stat.label}
+                  className={`${i === 4 ? 'col-span-2 sm:col-span-1 ' : ''}rounded-lg sm:rounded-none border border-[#E4DDD0]/70 sm:border-0 p-3 sm:py-1 sm:px-4`}
+                >
+                  <p className={`font-serif text-3xl sm:text-4xl font-semibold mb-0.5 sm:mb-1 ${stat.tone}`}>
+                    {stat.value}
+                  </p>
+                  <p className="text-[10px] sm:text-xs font-sans text-[#2A2420]/60 tracking-[0.12em] uppercase">
+                    {stat.label}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -792,7 +683,8 @@ export default function HomePage() {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16 sm:mb-20">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2.5 mb-6 sm:mb-8">
             <div>
-              <h2 className="font-serif text-2xl sm:text-3xl font-medium text-[#2A2420]">
+              <span className="section-eyebrow">{tHome('fadingFastest')}</span>
+              <h2 className="font-serif text-2xl sm:text-3xl font-medium text-[#2A2420] mt-2.5">
                 {tHome('recentRecords')}
               </h2>
               <p className="text-xs sm:text-sm text-[#2A2420]/70 mt-1">
@@ -816,7 +708,7 @@ export default function HomePage() {
               ))}
             </div>
           ) : (
-            <div className="p-8 sm:p-12 text-center border border-[#E4DDD0] rounded-xl bg-[#FFFFFF]">
+            <div className="heritage-panel p-8 sm:p-12 text-center">
               <p className="text-sm text-[#2A2420]/60">{tCommon('loading')}</p>
             </div>
           )}
@@ -825,12 +717,15 @@ export default function HomePage() {
         {/* ========================================================= */}
         {/* 5. EDITORIAL "WHY THIS MATTERS" (PRD & Design Doc Spec)   */}
         {/* ========================================================= */}
-        <section className="border-t border-[#E4DDD0] bg-[#F5F0E6] py-10 sm:py-16 px-4 sm:px-6 lg:px-8">
+        <section className="ink-panel py-14 sm:py-20 px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="font-serif text-2xl sm:text-3xl font-medium text-[#2A2420] mb-3 sm:mb-6">
+            <p className="font-devanagari text-[#E0A23C] text-base sm:text-xl mb-3">
+              जो कहा नहीं गया, वह खो जाता है
+            </p>
+            <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-[#FDFBF6] mb-5 sm:mb-7">
               {tHome('whyMattersTitle')}
             </h2>
-            <div className="text-sm sm:text-base text-[#2A2420]/80 leading-relaxed space-y-3 sm:space-y-4 mb-6 sm:mb-8 text-left sm:text-center">
+            <div className="text-sm sm:text-base text-[#F6F1E7]/75 leading-relaxed space-y-3 sm:space-y-4 mb-7 sm:mb-9 text-left sm:text-center">
               <p>
                 {tHome('whyMattersP1', { count: 197 })}
               </p>
@@ -842,7 +737,7 @@ export default function HomePage() {
             <div className="inline-flex flex-wrap items-center justify-center gap-4 w-full sm:w-auto">
               <Link
                 href="/archive"
-                className="w-full sm:w-auto min-h-[48px] inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-lg bg-[#2F6E5D] text-[#FAF7F1] text-sm font-sans font-medium hover:bg-[#25584a] active:scale-[0.98] transition-all shadow-sm"
+                className="btn-ochre w-full sm:w-auto min-h-[50px] inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl text-sm font-sans font-semibold"
               >
                 <BookOpen className="w-4 h-4" />
                 <span>{tHome('browseEndangered')}</span>

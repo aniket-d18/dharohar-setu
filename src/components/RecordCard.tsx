@@ -199,7 +199,7 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
     : (record.thumbnailUrl && !record.thumbnailUrl.includes('unsplash.com') ? record.thumbnailUrl : null);
 
   return (
-    <div className="group bg-[#FFFFFF] border border-[#E4DDD0] rounded-lg overflow-hidden hover:border-[#C97A3D] transition-all duration-300 flex flex-col justify-between relative">
+    <div className="group heritage-card overflow-hidden flex flex-col justify-between relative">
       <div>
         {/* Card Media Preview Header */}
         <Link href={`/record/${record.id}`} className="block relative aspect-[16/9] w-full bg-[#1E1B18] overflow-hidden cursor-pointer">
@@ -245,6 +245,9 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
             </div>
           )}
 
+          {/* Warm scrim so captions stay legible over photography */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#1B1714]/75 via-[#1B1714]/10 to-transparent z-10 pointer-events-none" />
+
           {/* Top-Right Quiet Media Type Icon */}
           <div className="absolute top-2.5 right-2.5 p-1.5 rounded bg-[#FFFFFF]/90 backdrop-blur-sm border border-[#E4DDD0] shadow-none z-20">
             {getMediaIcon(record.mediaType)}
@@ -252,7 +255,7 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
 
           {/* Category Tag (Deep Teal as per Design Doc) */}
           <div className="absolute bottom-2.5 left-2.5 z-20">
-            <span className="inline-block px-2.5 py-0.5 rounded text-xs font-sans font-medium bg-[#2F6E5D] text-[#FAF7F1] shadow-none">
+            <span className="inline-block px-2.5 py-1 rounded-full text-[11px] font-sans font-semibold tracking-wide bg-[#2F6E5D] text-[#FAF7F1] shadow-[0_4px_12px_-6px_rgba(0,0,0,0.8)]">
               {formatCategory(record.category)}
             </span>
           </div>
@@ -333,7 +336,7 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
 
           {/* Title / Summary */}
           <Link href={`/record/${record.id}`} className="block">
-            <h3 className="font-serif text-base sm:text-lg font-medium text-[#2A2420] mb-2.5 line-clamp-2 leading-snug group-hover:text-[#C97A3D] transition-colors cursor-pointer">
+            <h3 className="font-serif text-base sm:text-lg font-semibold text-[#2A2420] mb-2.5 line-clamp-2 leading-snug group-hover:text-[#B0642C] transition-colors cursor-pointer">
               {displayedTitle || 'Recorded oral heritage memory'}
             </h3>
           </Link>
