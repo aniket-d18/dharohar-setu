@@ -34,6 +34,7 @@ const AtlasMap = dynamic(() => import('@/components/AtlasMap'), { ssr: false });
 
 const CHIP_CATEGORIES = [
   { id: '', label: 'All', icon: '✦' },
+  { id: 'TRADITIONAL_MEDICINE', label: 'Medicines', icon: '🌿' },
   { id: 'LULLABY', label: 'Songs', icon: '🎵' },
   { id: 'STORY', label: 'Stories', icon: '📖' },
   { id: 'PROVERB', label: 'Proverbs', icon: '💬' },
@@ -41,7 +42,7 @@ const CHIP_CATEGORIES = [
   { id: 'RITUAL', label: 'Rituals', icon: '🙏' },
   { id: 'RECIPE', label: 'Recipes', icon: '🍲' },
   { id: 'OTHER', label: 'Sites', icon: '🏛️' },
-  { id: 'LIFE_SKILL', label: 'Skills', icon: '🌿' },
+  { id: 'LIFE_SKILL', label: 'Skills', icon: '🪵' },
 ];
 
 interface RegionItem {
@@ -295,7 +296,7 @@ function ArchiveContent() {
     if (selectedSort) params.append('sort', selectedSort);
     params.append('limit', '30');
 
-    cachedFetch(`${API_URL}/api/records?${params.toString()}`, { maxAgeMs: 30 * 1000 })
+    cachedFetch(`${API_URL}/api/records?${params.toString()}`, { maxAgeMs: 5 * 60 * 1000 })
       .then(data => {
         if (data && Array.isArray(data.data)) {
           setRecords(data.data);
@@ -359,31 +360,65 @@ function ArchiveContent() {
     <div className="min-h-screen bg-[#FAF7F1] text-[#2A2420] flex flex-col selection:bg-[#C97A3D]/20">
       <Navbar />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 pb-24 md:pb-10">
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="inline-flex items-center space-x-2 text-xs font-sans text-[#C97A3D] mb-2">
-            <Compass className="w-3.5 h-3.5" />
-            <span>{tCommon('fieldDocumentation')}</span>
+      <main className="flex-1 pb-24 md:pb-10">
+        {/* Visual Header Banner */}
+        <div className="relative bg-[#1A1714] overflow-hidden mb-8">
+          {/* Background image */}
+          <div className="absolute inset-0 opacity-20">
+            <img
+              src="/images/hero-banner.jpg"
+              alt=""
+              className="w-full h-full object-cover"
+            />
           </div>
-          <h1 className="font-serif text-3xl sm:text-4xl font-medium text-[#2A2420]">
-            {t('title')}
-          </h1>
-          <p className="text-sm text-[#2A2420]/70 mt-1 max-w-2xl">
-            {t('subtitle')}
-          </p>
+          <div className="absolute inset-0 bg-gradient-to-b from-[#1A1714]/60 via-[#1A1714]/80 to-[#1A1714]" />
+
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+            {/* Breadcrumbs */}
+            <div className="flex items-center space-x-2 text-xs font-sans text-[#FAF7F1]/40 mb-4">
+              <Link href="/" className="hover:text-[#C5A55A] transition-colors">Home</Link>
+              <span className="text-[#C5A55A]">›</span>
+              <span className="text-[#C5A55A]">{t('title')}</span>
+            </div>
+
+            <div className="flex items-end justify-between">
+              <div>
+                <div className="inline-flex items-center space-x-2 text-xs font-sans text-[#C5A55A] mb-3">
+                  <Compass className="w-3.5 h-3.5" />
+                  <span className="tracking-wider uppercase">{tCommon('fieldDocumentation')}</span>
+                </div>
+                <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-medium text-[#FAF7F1] tracking-tight">
+                  {t('title')}
+                </h1>
+                <p className="text-sm text-[#FAF7F1]/50 mt-2 max-w-2xl">
+                  {t('subtitle')}
+                </p>
+              </div>
+
+              {/* Record count */}
+              <div className="hidden sm:block text-right">
+                <p className="font-serif text-3xl font-semibold text-gradient-gold">{totalCount}</p>
+                <p className="text-[10px] text-[#C5A55A] tracking-widest uppercase font-sans">Records</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Gold divider */}
+          <div className="gold-divider" />
         </div>
+
+        <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Record Deletion Success Notice */}
         {deletedNotice && (
-          <div className="mb-6 p-4 rounded-xl bg-[#2F6E5D]/10 border border-[#2F6E5D]/30 text-xs text-[#2F6E5D] flex items-center space-x-2 animate-in fade-in">
+          <div className="mb-6 p-4 rounded-xl bg-[#2F6E5D]/10 border border-[#2F6E5D]/30 text-xs text-[#2F6E5D] flex items-center space-x-2 animate-fadeIn">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>Artifact permanently deleted from archives. Cultural registry and geospatial atlas updated.</span>
           </div>
         )}
 
         {/* Search & Filter Controls Bar */}
-        <div className="bg-[#FFFFFF] border border-[#E4DDD0] rounded-2xl p-4 sm:p-5 mb-6 shadow-none">
+        <div className="bg-[#FFFCF7] border border-[#E4DDD0] rounded-2xl p-4 sm:p-5 mb-6 shadow-sm">
           {/* Top Row: Search Input + Mobile Filter Button + View Mode Toggle */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-3">
             <div className="relative flex-1">
@@ -452,23 +487,29 @@ function ArchiveContent() {
             </div>
           </div>
 
-          {/* Simple Category Chips (Horizontal Scroll on Mobile & Desktop) */}
-          <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar py-1">
-            {CHIP_CATEGORIES.map(chip => (
-              <button
-                key={chip.id}
-                type="button"
-                onClick={() => setSelectedCategory(selectedCategory === chip.id ? '' : chip.id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-sans whitespace-nowrap transition-all flex items-center space-x-1 ${
-                  (chip.id === '' && !selectedCategory) || selectedCategory === chip.id
-                    ? 'bg-[#2F6E5D] text-[#FAF7F1] font-medium shadow-xs'
-                    : 'bg-[#FAF7F1] border border-[#E4DDD0] text-[#2A2420]/80 hover:border-[#C97A3D]'
-                }`}
-              >
-                <span>{chip.icon}</span>
-                <span>{chip.label}</span>
-              </button>
-            ))}
+          {/* Category Chips with Museum styling (Horizontal Scroll on Mobile & Desktop) */}
+          <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar py-1.5">
+            {CHIP_CATEGORIES.map(chip => {
+              const isActive = (chip.id === '' && !selectedCategory) || selectedCategory === chip.id;
+              return (
+                <button
+                  key={chip.id}
+                  type="button"
+                  onClick={() => setSelectedCategory(selectedCategory === chip.id ? '' : chip.id)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-sans whitespace-nowrap transition-all flex items-center space-x-1.5 cursor-pointer ${
+                    isActive
+                      ? 'bg-[#2F6E5D] text-[#FAF7F1] font-semibold shadow-sm ring-1 ring-[#C5A55A]/50'
+                      : 'bg-[#FAF7F1] border border-[#E4DDD0] text-[#2A2420]/80 hover:border-[#C5A55A] hover:bg-[#F5F0E6]'
+                  }`}
+                >
+                  <span className="text-xs">{chip.icon}</span>
+                  <span>{chip.label}</span>
+                  {isActive && chip.id !== '' && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#C5A55A] ml-0.5" />
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* Desktop Filter Dropdowns (hidden on mobile, visible on desktop) */}
@@ -611,7 +652,7 @@ function ArchiveContent() {
                 ))}
               </div>
             ) : !isLoading ? (
-              <div className="bg-[#FFFFFF] border border-[#E4DDD0] rounded-2xl p-8 sm:p-12 text-center max-w-lg mx-auto shadow-none">
+              <div className="heritage-card p-8 sm:p-12 text-center max-w-lg mx-auto shadow-md">
                 <Compass className="w-12 h-12 text-[#C97A3D]/40 mx-auto mb-3" />
                 <h3 className="font-serif text-lg font-medium text-[#2A2420] mb-1">
                   {searchTerm ? `No recordings found for "${searchTerm}"` : t('emptyTitle')}
@@ -735,6 +776,7 @@ function ArchiveContent() {
             </div>
           </div>
         )}
+        </div>
       </main>
 
       <Footer />

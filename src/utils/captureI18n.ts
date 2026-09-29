@@ -533,6 +533,7 @@ export const CATEGORY_I18N: Record<SupportedLang, Record<string, { label: string
     RECIPE: { label: 'Culinary Heritage', desc: 'Ancient recipes and medicinal foraging' },
     RITUAL: { label: 'Sacred Ritual / Chant', desc: 'Dairy shrines, prayers, transitions' },
     LIFE_SKILL: { label: 'Ecology & Life Skill', desc: 'Weather reading, tracking, woodcraft' },
+    TRADITIONAL_MEDICINE: { label: 'Traditional Medicine & Wild Herbs', desc: 'Ancient herbal cures, tribal healing, wild flora remedies' },
     OTHER: { label: 'Fort, Monument & Heritage Site', desc: 'Forts, temples, stepwells, monuments, architectural wonders' },
   },
   mr: {
@@ -544,6 +545,7 @@ export const CATEGORY_I18N: Record<SupportedLang, Record<string, { label: string
     RECIPE: { label: 'पारंपरिक पाककला', desc: 'प्राचीन पाककृती आणि औषधी वनस्पती' },
     RITUAL: { label: 'पवित्र विधी / मंत्र', desc: 'पूजा, धार्मिक विधी आणि प्रार्थना' },
     LIFE_SKILL: { label: 'पर्यावरण व जीवनकौशल्य', desc: 'हवामान वाचन, शोध आणि वनकौशल्य' },
+    TRADITIONAL_MEDICINE: { label: 'पारंपरिक औषधोपचार व रानभाज्या/वनौषधी', desc: 'प्राचीन वनौषधी, आदिवासी उपचार पद्धती आणि वनस्पतींचे ज्ञान' },
     OTHER: { label: 'किल्ला, स्मारक व ऐतिहासिक स्थळ', desc: 'किल्ले, मंदिरे, पायऱ्यांच्या विहिरी (बारव), ऐतिहासिक वास्तू' },
   },
   hi: {
@@ -555,6 +557,7 @@ export const CATEGORY_I18N: Record<SupportedLang, Record<string, { label: string
     RECIPE: { label: 'पारंपरिक खानपान', desc: 'प्राचीन व्यंजन और औषधीय ज्ञान' },
     RITUAL: { label: 'पवित्र अनुष्ठान / मंत्र', desc: 'पूजा, धार्मिक अनुष्ठान और मंत्रोच्चार' },
     LIFE_SKILL: { label: 'पर्यावरण एवं जीवन कौशल', desc: 'मौसम का ज्ञान, ट्रैकिंग, वन कौशल' },
+    TRADITIONAL_MEDICINE: { label: 'पारंपरिक चिकित्सा एवं वनौषधियां', desc: 'प्राचीन जड़ी-बूटी, आदिवासी उपचार पद्धति और प्राकृतिक चिकित्सा' },
     OTHER: { label: 'किला, स्मारक एवं ऐतिहासिक स्थल', desc: 'किले, प्राचीन मंदिर, बावड़ियां, स्मारक, ऐतिहासिक वास्तुकला' },
   },
   ta: {
@@ -566,6 +569,7 @@ export const CATEGORY_I18N: Record<SupportedLang, Record<string, { label: string
     RECIPE: { label: 'பாரம்பரிய சமையற்கலை', desc: 'பண்டைய சமையல் குறிப்புகள் மற்றும் மூலிகை அறிவு' },
     RITUAL: { label: 'புனித சடங்கு / மந்திரம்', desc: 'வழிபாட்டுச் சடங்குகள், பிரார்த்தனைகள்' },
     LIFE_SKILL: { label: 'சுற்றுச்சூழல் & வாழ்க்கைத் திறன்', desc: 'வானிலை அறிதல், தடம் அறிதல், வனத் திறன்' },
+    TRADITIONAL_MEDICINE: { label: 'பாரம்பரிய மருத்துவம் & மூலிகைகள்', desc: 'பண்டைய மூலிகை சிகிச்சைகள், பழங்குடி மருத்துவம்' },
     OTHER: { label: 'கோட்டை, நினைவுச்சின்னம் & வரலாற்று தளம்', desc: 'கோட்டைகள், கோயில்கள், பண்டைய கட்டடங்கள், வரலாற்று தளங்கள்' },
   },
   bn: {
@@ -577,6 +581,7 @@ export const CATEGORY_I18N: Record<SupportedLang, Record<string, { label: string
     RECIPE: { label: 'ঐতিহ্যবাহী রন্ধনপ্রণালী', desc: 'প্রাচীন রেসিপি এবং ওষধি ভেষজ জ্ঞান' },
     RITUAL: { label: 'পবিত্র আচার / স্তোত্র', desc: 'পূজা-অর্চনা, ধর্মীয় আচার ও প্রার্থনা' },
     LIFE_SKILL: { label: 'পরিবেশ ও জীবনদক্ষতা', desc: 'আবহাওয়া পাঠ, ট্র্যাকিং ও বন্য দক্ষতা' },
+    TRADITIONAL_MEDICINE: { label: 'ঐতিহ্যবাহী চিকিৎসা ও বনৌষধি', desc: 'প্রাচীন ভেষজ নিরাময়, আদিবাসী চিকিৎসা এবং বন্য উদ্ভিদের জ্ঞান' },
     OTHER: { label: 'দুর্গ, স্মৃতিস্তম্ভ ও ঐতিহাসিক স্থান', desc: 'দুর্গ, মন্দির, প্রাচীন স্থাপত্য, ঐতিহাসিক নিদর্শন' },
   },
 };

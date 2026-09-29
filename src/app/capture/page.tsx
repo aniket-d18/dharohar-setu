@@ -42,7 +42,7 @@ import { INDIA_REGION_HIERARCHY, StaticState } from '@/data/indiaHierarchy';
 import { getCategoryCover } from '@/utils/categoryCovers';
 import { getApiUrl } from '@/utils/apiUrl';
 import { CAPTURE_I18N, CATEGORY_I18N, SupportedLang } from '@/utils/captureI18n';
-import { cachedFetch } from '@/utils/apiCache';
+import { cachedFetch, invalidateClientCache } from '@/utils/apiCache';
 import { enqueueSubmission, countQueued, flushQueue } from '@/utils/syncManager';
 import TurnstileWidget from '@/components/TurnstileWidget';
 
@@ -53,15 +53,16 @@ interface LanguageItem {
 }
 
 const CATEGORIES = [
-  { id: 'OTHER',          label: 'Fort, Monument & Heritage Site', desc: 'Forts, temples, stepwells, monuments, architectural wonders', icon: '🏛️' },
-  { id: 'LULLABY',        label: 'Song / Lullaby',        desc: 'Folk songs, lullabies, oral melodies',   icon: '🎵' },
-  { id: 'STORY',          label: 'Story / Folktale',      desc: 'Myths, legends, oral narratives',         icon: '📖' },
-  { id: 'PROVERB',        label: 'Proverb / Saying',      desc: 'Ancestral wisdom, idioms',                icon: '💬' },
-  { id: 'RITUAL',         label: 'Ritual / Chant',        desc: 'Sacred ceremonies, prayers, chants',      icon: '🙏' },
-  { id: 'FESTIVAL',       label: 'Festival / Event',      desc: 'Seasonal events, harvest rituals',        icon: '🎉' },
-  { id: 'RECIPE',         label: 'Culinary Heritage',     desc: 'Traditional recipes, food practices',     icon: '🍲' },
-  { id: 'CRAFT_TECHNIQUE',label: 'Craft / Skill',         desc: 'Weaving, pottery, metalwork, woodcraft',  icon: '🏺' },
-  { id: 'LIFE_SKILL',     label: 'Ecology / Life Skill',  desc: 'Farming, tracking, weather reading',      icon: '🌿' },
+  { id: 'OTHER',          label: 'Fort, Monument & Heritage Site', desc: 'Forts, temples, stepwells, monuments, architectural wonders', icon: '🏛️', media: ['IMAGE', 'VIDEO', 'TEXT'] },
+  { id: 'LULLABY',        label: 'Song / Lullaby',        desc: 'Folk songs, lullabies, oral melodies',   icon: '🎵', media: ['AUDIO', 'VIDEO', 'TEXT'] },
+  { id: 'STORY',          label: 'Story / Folktale',      desc: 'Myths, legends, oral narratives',         icon: '📖', media: ['AUDIO', 'VIDEO', 'TEXT'] },
+  { id: 'PROVERB',        label: 'Proverb / Saying',      desc: 'Ancestral wisdom, idioms',                icon: '💬', media: ['TEXT', 'AUDIO'] },
+  { id: 'RITUAL',         label: 'Ritual / Chant',        desc: 'Sacred ceremonies, prayers, chants',      icon: '🙏', media: ['VIDEO', 'AUDIO', 'IMAGE'] },
+  { id: 'FESTIVAL',       label: 'Festival / Event',      desc: 'Seasonal events, harvest rituals',        icon: '🎉', media: ['VIDEO', 'IMAGE', 'AUDIO'] },
+  { id: 'RECIPE',         label: 'Culinary Heritage',     desc: 'Traditional recipes, food practices',     icon: '🍲', media: ['TEXT', 'VIDEO', 'IMAGE'] },
+  { id: 'CRAFT_TECHNIQUE',label: 'Craft / Skill',         desc: 'Weaving, pottery, metalwork, woodcraft',  icon: '🏺', media: ['VIDEO', 'IMAGE', 'AUDIO'] },
+  { id: 'TRADITIONAL_MEDICINE', label: 'Traditional Medicine', desc: 'Ancient remedies, herbal cures, wild medicine, Ayurveda', icon: '🌿🧪', media: ['TEXT', 'VIDEO', 'IMAGE', 'AUDIO'] },
+  { id: 'LIFE_SKILL',     label: 'Ecology / Life Skill',  desc: 'Farming, tracking, weather reading',      icon: '🌾', media: ['VIDEO', 'AUDIO', 'TEXT', 'IMAGE'] },
 ];
 
 // Primary State -> Native Language Mapping for Living Cultural Archive
@@ -1094,10 +1095,12 @@ export default function CaptureWizardPage() {
     const hasTranscription = transcriptionDraft.trim().length >= 5;
 
     if (!hasMedia && !hasTranscription) {
-      setStep3Error(
-        strings.step3RequiredError ||
-        'At minimum, please attach/record a media file (audio, video, photo) or enter native transcription text before proceeding.'
-      );
+      if (mediaType === 'TEXT') {
+        setStep3Error('Please enter at least 5 characters of native text, proverb, or traditional medicine wisdom.');
+      } else {
+        const modeName = mediaType === 'AUDIO' ? 'an audio recording or file' : mediaType === 'VIDEO' ? 'a video file' : 'a photo';
+        setStep3Error(`Please attach or record ${modeName}, or switch to the "Written Text" tab above to submit written knowledge.`);
+      }
       return false;
     }
 
@@ -1225,6 +1228,8 @@ export default function CaptureWizardPage() {
         if (res.ok) {
           const created = await res.json();
           setSubmittedRecordId(created.id);
+          invalidateClientCache('/api/records');
+          invalidateClientCache('/api/analytics');
         } else {
           const errorData = await res.json().catch(() => ({}));
           throw new Error(errorData.message || 'API submission returned validation error');
@@ -1338,6 +1343,36 @@ export default function CaptureWizardPage() {
               <span>{strings.onlineStatus}</span>
             </>
           )}
+        </div>
+
+        {/* Visual Header Banner */}
+        <div className="relative bg-[#1A1714] overflow-hidden border-b border-[#C5A55A]/20">
+          <div className="absolute inset-0 opacity-15">
+            <img
+              src="/images/categories/oral-stories.jpg"
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-b from-[#1A1714]/70 via-[#1A1714]/85 to-[#1A1714]" />
+
+          <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10 text-center">
+            {/* Breadcrumb */}
+            <div className="flex items-center justify-center space-x-2 text-xs font-sans text-[#FAF7F1]/40 mb-3">
+              <Link href="/" className="hover:text-[#C5A55A] transition-colors">Home</Link>
+              <span className="text-[#C5A55A]">›</span>
+              <span className="text-[#C5A55A]">Field Contribution Desk</span>
+            </div>
+
+            <div className="ornamental-top" />
+            <h1 className="font-serif text-2xl sm:text-4xl font-medium tracking-tight text-[#FAF7F1] mb-2">
+              Preserve a Cultural Memory
+            </h1>
+            <p className="font-sans text-xs sm:text-sm text-[#FAF7F1]/65 max-w-xl mx-auto leading-relaxed">
+              Deposit voice recordings, indigenous folklore, sacred crafts, and oral genealogies into India's living cultural registry.
+            </p>
+          </div>
+          <div className="gold-divider" />
         </div>
 
         {/* Wizard Container */}
@@ -1585,47 +1620,132 @@ export default function CaptureWizardPage() {
                   <h2 className="font-serif text-2xl sm:text-3xl text-[#2A2420] font-medium mb-2">
                     What kind of heritage is this?
                   </h2>
-                  <p className="text-xs text-[#2A2420]/70 mb-6 leading-relaxed">
+                  <p className="text-xs text-[#2A2420]/70 mb-4 leading-relaxed">
                     Choose the cultural classification that best describes this tradition.
                   </p>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 mb-6">
-                    {CATEGORIES.map((c) => {
-                      const localizedCat = catMap[c.id] || c;
-                      const isSelected = category === c.id;
-                      return (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => handleGenreSelect(c.id)}
-                          className={`p-3.5 sm:p-4 rounded-xl border text-left transition-all min-h-[88px] flex flex-col justify-between ${
-                            isSelected
-                              ? 'bg-[#2F6E5D] border-[#2F6E5D] text-[#FAF7F1] shadow-sm ring-2 ring-[#2F6E5D]/20'
-                              : 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/80 hover:border-[#C97A3D]/50 hover:bg-[#FFFFFF]'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between w-full mb-1">
-                            <span className="text-2xl">{c.icon}</span>
-                            {isSelected && (
-                              <CheckCircle2 className="w-4 h-4 text-[#FAF7F1] shrink-0" />
-                            )}
-                          </div>
+                  {/* Active Documentation Format Bar */}
+                  <div className="flex items-center justify-between bg-[#FAF7F1] border border-[#E4DDD0] rounded-xl px-3.5 py-2 mb-4 text-xs">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[#2A2420]/60 font-sans">Documenting via:</span>
+                      <span className="font-semibold text-[#2F6E5D] flex items-center gap-1.5">
+                        {mediaType === 'AUDIO' && <Mic className="w-3.5 h-3.5" />}
+                        {mediaType === 'VIDEO' && <Video className="w-3.5 h-3.5" />}
+                        {mediaType === 'IMAGE' && <ImageIcon className="w-3.5 h-3.5" />}
+                        {mediaType === 'TEXT' && <FileText className="w-3.5 h-3.5" />}
+                        {mediaType === 'AUDIO' ? 'Oral Audio 🎙️' : mediaType === 'VIDEO' ? 'Field Video 📹' : mediaType === 'IMAGE' ? 'Photo / Artifact 📷' : 'Written Text ✍️'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(1)}
+                      className="text-[#C97A3D] hover:underline font-medium cursor-pointer text-[11px]"
+                    >
+                      Change format
+                    </button>
+                  </div>
+
+                  {/* Contextual Format / Category Assistant */}
+                  {(() => {
+                    const currentCat = CATEGORIES.find((c) => c.id === category);
+                    if (!currentCat) return null;
+                    const primaryMedia = currentCat.media[0];
+                    const isMismatch = primaryMedia !== mediaType;
+                    if (!isMismatch) return null;
+
+                    const mediaLabels: Record<string, string> = {
+                      AUDIO: 'Oral Audio 🎙️',
+                      VIDEO: 'Field Video 📹',
+                      IMAGE: 'Photo / Artifact 📷',
+                      TEXT: 'Written Text ✍️',
+                    };
+
+                    return (
+                      <div className="mb-4 p-3 rounded-xl bg-[#C5A55A]/10 border border-[#C5A55A]/30 text-xs text-[#2A2420] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                        <div className="flex items-start space-x-2">
+                          <Sparkles className="w-4 h-4 text-[#C5A55A] shrink-0 mt-0.5" />
                           <div>
-                            <span className="font-medium text-xs sm:text-sm block leading-tight">
-                              {localizedCat.label}
-                            </span>
-                            <span
-                              className={`text-[10px] block mt-0.5 leading-tight line-clamp-1 ${
-                                isSelected ? 'text-[#FAF7F1]/80' : 'text-[#2A2420]/60'
+                            <p className="font-medium text-[#2A2420]">
+                              {currentCat.label} is often documented as <span className="font-semibold text-[#2F6E5D]">{mediaLabels[primaryMedia]}</span>.
+                            </p>
+                            <p className="text-[11px] text-[#2A2420]/70 mt-0.5">
+                              You can continue with {mediaLabels[mediaType]} (e.g. demonstration, elder recitation), or switch format with one click.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleFormatSelect(primaryMedia as any)}
+                            className="px-3 py-1.5 rounded-lg bg-[#2F6E5D] text-[#FAF7F1] font-medium text-[11px] hover:bg-[#25584a] transition-colors cursor-pointer shadow-xs"
+                          >
+                            Switch to {mediaLabels[primaryMedia]}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Smart-sorted: categories compatible with chosen media type appear first */}
+                  {(() => {
+                    const sorted = [...CATEGORIES].sort((a, b) => {
+                      const aMatch = a.media.indexOf(mediaType);
+                      const bMatch = b.media.indexOf(mediaType);
+                      const aPri = aMatch === -1 ? 999 : aMatch;
+                      const bPri = bMatch === -1 ? 999 : bMatch;
+                      return aPri - bPri;
+                    });
+                    return (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 mb-6">
+                        {sorted.map((c) => {
+                          const localizedCat = catMap[c.id] || c;
+                          const isSelected = category === c.id;
+                          const isRecommended = c.media[0] === mediaType;
+                          const isCompatible = c.media.includes(mediaType);
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => handleGenreSelect(c.id)}
+                              className={`p-3.5 sm:p-4 rounded-xl border text-left transition-all min-h-[88px] flex flex-col justify-between ${
+                                isSelected
+                                  ? 'bg-[#2F6E5D] border-[#2F6E5D] text-[#FAF7F1] shadow-sm ring-2 ring-[#2F6E5D]/20'
+                                  : isCompatible
+                                  ? 'bg-[#FAF7F1] border-[#E4DDD0] text-[#2A2420]/80 hover:border-[#C97A3D]/50 hover:bg-[#FFFFFF]'
+                                  : 'bg-[#FAF7F1]/50 border-[#E4DDD0]/50 text-[#2A2420]/40 hover:border-[#C97A3D]/30'
                               }`}
                             >
-                              {localizedCat.desc}
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                              <div className="flex items-center justify-between w-full mb-1">
+                                <span className="text-2xl">{c.icon}</span>
+                                <div className="flex items-center space-x-1">
+                                  {isRecommended && !isSelected && (
+                                    <span className="text-[8px] font-sans font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#2F6E5D]/10 text-[#2F6E5D]">
+                                      Best match
+                                    </span>
+                                  )}
+                                  {isSelected && (
+                                    <CheckCircle2 className="w-4 h-4 text-[#FAF7F1] shrink-0" />
+                                  )}
+                                </div>
+                              </div>
+                              <div>
+                                <span className="font-medium text-xs sm:text-sm block leading-tight">
+                                  {localizedCat.label}
+                                </span>
+                                <span
+                                  className={`text-[10px] block mt-0.5 leading-tight line-clamp-1 ${
+                                    isSelected ? 'text-[#FAF7F1]/80' : 'text-[#2A2420]/60'
+                                  }`}
+                                >
+                                  {localizedCat.desc}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
 
                   {/* Monument / Heritage Site Specific Field if OTHER is selected */}
                   {category === 'OTHER' && (
@@ -1691,15 +1811,51 @@ export default function CaptureWizardPage() {
                       ? 'Attach field video'
                       : 'Write native text or proverb'}
                   </h2>
-                  <p className="text-xs text-[#2A2420]/70 mb-6 leading-relaxed">
+                  <p className="text-xs text-[#2A2420]/70 mb-4 leading-relaxed">
                     {mediaType === 'AUDIO'
                       ? 'Capture high-fidelity oral audio with your microphone or upload an audio file.'
                       : mediaType === 'IMAGE'
                       ? 'Upload a clear photograph of the monument, artifact, or ritual.'
                       : mediaType === 'VIDEO'
                       ? 'Attach a field recording of this performance, craft, or celebration.'
-                      : 'Type or paste the ancestral text, proverb, or recipe.'}
+                      : 'Type or paste the ancestral text, proverb, recipe, or traditional medicine wisdom.'}
                   </p>
+
+                  {/* Format Selector Tabs — Allows instant switching between Video, Audio, Photo, and Text */}
+                  <div className="mb-6">
+                    <label className="block text-[11px] font-sans font-medium text-[#2A2420]/70 mb-1.5">
+                      Media Mode (switch anytime if your documentation format changed):
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1.5 bg-[#FAF7F1] rounded-xl border border-[#E4DDD0]">
+                      {[
+                        { id: 'AUDIO', label: 'Oral Audio', icon: Mic },
+                        { id: 'VIDEO', label: 'Field Video', icon: Video },
+                        { id: 'IMAGE', label: 'Photo / Artifact', icon: ImageIcon },
+                        { id: 'TEXT', label: 'Written Text', icon: FileText },
+                      ].map((fmt) => {
+                        const Icon = fmt.icon;
+                        const isActive = mediaType === fmt.id;
+                        return (
+                          <button
+                            key={fmt.id}
+                            type="button"
+                            onClick={() => {
+                              setMediaType(fmt.id as any);
+                              setStep3Error(null);
+                            }}
+                            className={`py-2 px-3 rounded-lg text-xs font-sans font-medium flex items-center justify-center space-x-2 transition-all cursor-pointer ${
+                              isActive
+                                ? 'bg-[#2F6E5D] text-[#FAF7F1] shadow-xs ring-1 ring-[#2F6E5D]'
+                                : 'text-[#2A2420]/70 hover:text-[#2A2420] hover:bg-[#FFFFFF]'
+                            }`}
+                          >
+                            <Icon className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">{fmt.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
                   {/* Validation Error Alert */}
                   {step3Error && (
@@ -1963,20 +2119,85 @@ export default function CaptureWizardPage() {
 
                   {/* TEXT / NATIVE SCRIPT */}
                   {mediaType === 'TEXT' && (
-                    <div className="mb-6 space-y-2">
-                      <label className="block text-xs font-medium text-[#2A2420]/80">
-                        Native Script / Written Text *
-                      </label>
-                      <textarea
-                        rows={6}
-                        placeholder="Type or paste the oral verses, ancestral proverb, or traditional recipe in native script or transliteration..."
-                        value={transcriptionDraft}
-                        onChange={(e) => {
-                          setTranscriptionDraft(e.target.value);
-                          if (step3Error) setStep3Error(null);
-                        }}
-                        className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl p-3.5 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D] leading-relaxed"
-                      />
+                    <div className="mb-6 space-y-3">
+                      {category === 'TRADITIONAL_MEDICINE' && (
+                        <div className="p-3.5 rounded-xl bg-[#2F6E5D]/10 border border-[#2F6E5D]/30 text-xs text-[#2A2420] space-y-2">
+                          <p className="font-semibold text-[#2F6E5D] flex items-center gap-1.5">
+                            <span>🌿</span> Traditional Medicine & Wild Herb Documentation Guide
+                          </p>
+                          <ul className="list-disc list-inside space-y-1 text-[11px] text-[#2A2420]/80 pl-1 leading-relaxed">
+                            <li><strong>Vernacular/Tribal Name:</strong> Regional name of the plant, bark, root, or leaf (e.g. Karunochi, Ran-methi)</li>
+                            <li><strong>Habitat & Season:</strong> Where it grows (forest, riverbank, mountain) and when to harvest</li>
+                            <li><strong>Preparation:</strong> Decoction (kashayam), herbal paste, oil infusion, powder (churna)</li>
+                            <li><strong>Healing Application:</strong> Symptoms/ailments treated and oral wisdom from clan elders</li>
+                          </ul>
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-xs font-medium text-[#2A2420]/80 mb-1">
+                          {category === 'TRADITIONAL_MEDICINE'
+                            ? 'Medicinal Remedy, Preparation & Herbal Wisdom *'
+                            : 'Native Script / Written Text *'}
+                        </label>
+                        <textarea
+                          rows={6}
+                          placeholder={
+                            category === 'TRADITIONAL_MEDICINE'
+                              ? 'Document the medicinal plant names, traditional preparation steps, dosage, ailments treated, and warnings passed down through generations...'
+                              : category === 'PROVERB'
+                              ? 'Write the ancestral proverb, meaning, and customary situations where it is recited...'
+                              : category === 'RECIPE'
+                              ? 'Write the traditional ingredients, preparation method, and festive/cultural significance...'
+                              : 'Type or paste the oral verses, ancestral wisdom, or script in native alphabet or transliteration...'
+                          }
+                          value={transcriptionDraft}
+                          onChange={(e) => {
+                            setTranscriptionDraft(e.target.value);
+                            if (step3Error) setStep3Error(null);
+                          }}
+                          className="w-full bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl p-3.5 text-xs text-[#2A2420] focus:outline-none focus:border-[#C97A3D] leading-relaxed"
+                        />
+                      </div>
+
+                      {/* Optional Photo Attachment for Text/Manuscript/Medicinal Plant */}
+                      <div className="pt-2">
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          accept="image/jpeg,image/png,image/webp,image/*"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                          id="text-image-picker"
+                        />
+                        {!selectedFile ? (
+                          <label
+                            htmlFor="text-image-picker"
+                            className="inline-flex items-center space-x-2 text-xs text-[#C97A3D] hover:underline cursor-pointer font-sans"
+                          >
+                            <ImageIcon className="w-3.5 h-3.5" />
+                            <span>
+                              {category === 'TRADITIONAL_MEDICINE'
+                                ? '+ Attach a photo of the medicinal plant / prepared remedy (Optional)'
+                                : '+ Attach a photo of original manuscript, inscription, or artifact (Optional)'}
+                            </span>
+                          </label>
+                        ) : (
+                          <div className="flex items-center justify-between bg-[#FAF7F1] p-2.5 rounded-lg border border-[#2F6E5D]/40 text-xs">
+                            <div className="flex items-center space-x-2 truncate">
+                              <CheckCircle2 className="w-4 h-4 text-[#2F6E5D] shrink-0" />
+                              <span className="truncate font-medium text-[#2A2420]">{selectedFile.name}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={removeSelectedFile}
+                              className="text-xs text-[#B54A3A] hover:underline shrink-0 ml-2"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -2102,11 +2323,17 @@ export default function CaptureWizardPage() {
                     {/* Cultural Title */}
                     <div>
                       <label className="block text-[#2A2420]/80 mb-1.5 font-medium">
-                        Cultural Title *
+                        {category === 'TRADITIONAL_MEDICINE' ? 'Remedy / Tradition Title *' : 'Cultural Title *'}
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g. Ahirani Monsoon Lullaby of Khandesh..."
+                        placeholder={
+                          category === 'TRADITIONAL_MEDICINE'
+                            ? 'e.g. Toda Nilgiri Wild Herb Decoction / Khandesh Forest Healing Balm...'
+                            : category === 'OTHER'
+                            ? 'e.g. Daulatabad Fort Stepwell / Hemadpanthi Temple Architecture...'
+                            : 'e.g. Ahirani Monsoon Lullaby of Khandesh...'
+                        }
                         value={titleText}
                         onChange={(e) => {
                           setTitleText(e.target.value);
@@ -2126,11 +2353,15 @@ export default function CaptureWizardPage() {
                     {/* Cultural Meaning / Description */}
                     <div>
                       <label className="block text-[#2A2420]/80 mb-1.5 font-medium">
-                        Cultural Meaning & Significance *
+                        {category === 'TRADITIONAL_MEDICINE' ? 'Medicinal Knowledge, Lineage & Preparation *' : 'Cultural Meaning & Significance *'}
                       </label>
                       <textarea
                         rows={3}
-                        placeholder="Explain when this is performed, what story or history it preserves, and its meaning to the community..."
+                        placeholder={
+                          category === 'TRADITIONAL_MEDICINE'
+                            ? 'Detail the medicinal plant preparation, ailments cured, elder harvesting traditions, and forest lineage...'
+                            : 'Explain when this is performed, what story or history it preserves, and its meaning to the community...'
+                        }
                         value={descriptionText}
                         onChange={(e) => {
                           setDescriptionText(e.target.value);

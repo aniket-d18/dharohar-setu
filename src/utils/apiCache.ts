@@ -15,7 +15,9 @@ export async function cachedFetch<T = any>(
   options?: RequestInit & { maxAgeMs?: number; ttl?: number; fallbackData?: T }
 ): Promise<T> {
   const maxAgeMs = options?.maxAgeMs ?? options?.ttl ?? 10 * 60 * 1000; // 10 minutes default
-  const token = typeof window !== 'undefined' ? localStorage.getItem('dharohar_auth_token') : null;
+  const token = typeof window !== 'undefined'
+    ? (localStorage.getItem('dharohar_token') || localStorage.getItem('dharohar_auth_token'))
+    : null;
   const authScope = token ? `auth_${token.slice(-12)}` : 'anon';
   const cacheKey = `dharohar_cache_${authScope}_${url}`;
 
@@ -99,7 +101,9 @@ export async function cachedFetch<T = any>(
 
 async function silentRevalidate(url: string, cacheKey: string, options?: RequestInit) {
   try {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('dharohar_auth_token') : null;
+    const token = typeof window !== 'undefined'
+      ? (localStorage.getItem('dharohar_token') || localStorage.getItem('dharohar_auth_token'))
+      : null;
     const headers = new Headers(options?.headers || {});
     if (token && !headers.has('Authorization')) {
       headers.set('Authorization', `Bearer ${token}`);

@@ -10,7 +10,7 @@ import { getCategoryCover } from '@/utils/categoryCovers';
 import { getApiUrl } from '@/utils/apiUrl';
 import { useAuth } from '@/context/AuthContext';
 import { useTranslations, useLanguage } from '@/context/LanguageContext';
-import { cachedFetch } from '@/utils/apiCache';
+import { cachedFetch, invalidateClientCache } from '@/utils/apiCache';
 import { CATEGORY_I18N } from '@/utils/captureI18n';
 import {
   Play,
@@ -228,6 +228,8 @@ export default function RecordDetailPage() {
         if (data.verificationStatus) {
           setCurrentVerificationStatus(data.verificationStatus);
         }
+        invalidateClientCache(`/api/records/${recordId}`);
+        invalidateClientCache('/api/records');
       } else {
         setHasUpvoted(!nextHasUpvoted);
         setUpvoteCount(upvoteCount);
@@ -248,13 +250,8 @@ export default function RecordDetailPage() {
       else setIsRefreshing(true);
 
       const userParam = user?.id ? `?userId=${encodeURIComponent(user.id)}` : '';
-      const separator = userParam ? '&' : '?';
-      const res = await fetch(`${apiUrl}/api/records/${recordId}${userParam}${separator}_t=${Date.now()}`, {
-        cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
-      });
-      if (!res.ok) throw new Error('Record not found');
-      const data: RecordDetail = await res.json();
+      const url = `${apiUrl}/api/records/${recordId}${userParam}`;
+      const data = await cachedFetch<RecordDetail>(url, { ttl: silent ? 0 : 5 * 60 * 1000 });
       setRecord(data);
       setUpvoteCount(data.upvoteCount ?? 0);
       setHasUpvoted(Boolean(data.hasUpvoted));
@@ -272,7 +269,7 @@ export default function RecordDetailPage() {
       const relUrl = (data as any).languageId
         ? `${apiUrl}/api/records?languageId=${(data as any).languageId}&limit=4`
         : `${apiUrl}/api/records?regionId=${(data as any).regionId}&limit=4`;
-      const relData = await cachedFetch<any>(relUrl, { ttl: 60 * 1000 });
+      const relData = await cachedFetch<any>(relUrl, { ttl: 5 * 60 * 1000 });
       if (relData && Array.isArray(relData.data)) {
         setRelatedRecords(
           relData.data.filter((r: RecordCardData) => r.id !== recordId).slice(0, 3)
@@ -316,6 +313,7 @@ export default function RecordDetailPage() {
 
           if (!isStillPending) {
             setIsAiProcessing(false);
+            invalidateClientCache(`/api/records/${recordId}`);
             setEnrichmentNotice('✨ AI native transcription & cultural translation completed!');
             setTimeout(() => setEnrichmentNotice(null), 8000);
           }
@@ -337,6 +335,7 @@ export default function RecordDetailPage() {
         method: 'POST',
       });
       if (res.ok) {
+        invalidateClientCache(`/api/records/${recordId}`);
         setIsAiProcessing(true);
         await fetchDetail(true);
       }
@@ -512,8 +511,8 @@ export default function RecordDetailPage() {
       <Navbar />
 
       <main className="flex-1 pb-24 md:pb-0">
-        {/* Breadcrumb Top Bar */}
-        <div className="border-b border-[#E4DDD0] bg-[#FFFFFF] py-3 px-4 sm:px-8">
+        {/* Breadcrumb Top Bar — Premium museum-dark style */}
+        <div className="border-b border-[#FAF7F1]/10 bg-[#1A1714] py-3 px-4 sm:px-8">
           <div className="max-w-6xl mx-auto flex items-center justify-between">
             <button
               type="button"
@@ -524,7 +523,7 @@ export default function RecordDetailPage() {
                   router.push('/archive');
                 }
               }}
-              className="inline-flex items-center text-xs text-[#2A2420]/70 hover:text-[#C97A3D] transition-colors group font-sans cursor-pointer"
+              className="inline-flex items-center text-xs text-[#FAF7F1]/60 hover:text-[#C5A55A] transition-colors group font-sans cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5 mr-1.5 group-hover:-translate-x-1 transition-transform" />
               <span>{t('backToArchive')}</span>
@@ -534,7 +533,7 @@ export default function RecordDetailPage() {
                 <button
                   type="button"
                   onClick={() => setIsDeleteModalOpen(true)}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded border border-[#B54A3A]/40 bg-[#B54A3A]/5 text-xs font-sans text-[#B54A3A] hover:bg-[#B54A3A]/15 hover:border-[#B54A3A] transition-colors font-medium"
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded border border-[#B54A3A]/50 bg-[#B54A3A]/15 text-xs font-sans text-[#B54A3A] hover:bg-[#B54A3A]/25 hover:border-[#B54A3A] transition-colors font-medium"
                   title="Permanently delete record (Admin / Verifier only)"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -548,19 +547,19 @@ export default function RecordDetailPage() {
                 className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded border text-xs font-sans transition-colors font-medium ${
                   hasUpvoted
                     ? 'bg-[#C97A3D] text-[#FAF7F1] border-[#C97A3D]'
-                    : 'bg-[#FAF7F1] text-[#2A2420]/80 border-[#E4DDD0] hover:bg-[#FFFFFF] hover:border-[#C97A3D] hover:text-[#C97A3D]'
+                    : 'bg-[#FAF7F1]/10 text-[#FAF7F1]/70 border-[#FAF7F1]/20 hover:bg-[#FAF7F1]/15 hover:border-[#C5A55A] hover:text-[#C5A55A]'
                 }`}
                 title={user ? (hasUpvoted ? 'Remove your community upvote' : 'Upvote this record for community verification') : 'Sign in to upvote'}
               >
-                <ThumbsUp className={`w-3.5 h-3.5 ${hasUpvoted ? 'fill-current text-[#FAF7F1]' : 'text-[#C97A3D]'}`} />
+                <ThumbsUp className={`w-3.5 h-3.5 ${hasUpvoted ? 'fill-current text-[#FAF7F1]' : 'text-[#C5A55A]'}`} />
                 <span className="hidden sm:inline">{hasUpvoted ? 'Upvoted' : 'Upvote'}</span>
-                <span className="font-mono text-[11px] ml-0.5 px-1 py-0.2 rounded bg-black/5">
+                <span className="font-mono text-[11px] ml-0.5 px-1 py-0.5 rounded bg-[#FAF7F1]/10">
                   {upvoteCount}
                 </span>
               </button>
               <button
                 onClick={handleCopyLink}
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded border border-[#E4DDD0] bg-[#FAF7F1] text-xs font-sans text-[#2A2420]/80 hover:bg-[#FFFFFF] hover:border-[#C97A3D] hover:text-[#C97A3D] transition-colors"
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded border border-[#FAF7F1]/20 bg-[#FAF7F1]/10 text-xs font-sans text-[#FAF7F1]/70 hover:bg-[#FAF7F1]/15 hover:border-[#C5A55A] hover:text-[#C5A55A] transition-colors"
               >
                 {copied ? (
                   <>
@@ -576,7 +575,7 @@ export default function RecordDetailPage() {
               </button>
               <button
                 onClick={() => setFlagModalOpen(true)}
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded border border-[#E4DDD0] bg-[#FAF7F1] text-xs font-sans text-[#2A2420]/60 hover:text-[#C97A3D] hover:border-[#C97A3D] hover:bg-[#FFFFFF] transition-colors"
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded border border-[#FAF7F1]/20 bg-[#FAF7F1]/10 text-xs font-sans text-[#FAF7F1]/50 hover:text-[#C5A55A] hover:border-[#C5A55A] hover:bg-[#FAF7F1]/15 transition-colors"
               >
                 <Flag className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">{t('flagTerm')}</span>
@@ -586,10 +585,10 @@ export default function RecordDetailPage() {
         </div>
 
         {/* Media Artifact Stage */}
-        <section className="bg-[#FAF7F1] border-b border-[#E4DDD0] py-8 sm:py-12 px-4 sm:px-8">
+        <section className="bg-[#F5F0E6] border-b border-[#E4DDD0] py-8 sm:py-12 px-4 sm:px-8">
           <div className="max-w-4xl mx-auto">
             {/* Custom Media Player */}
-            <div className="bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-[#FFFCF7] border border-[#E4DDD0] rounded-xl overflow-hidden shadow-lg">
               {/* If Image Record */}
               {record.mediaType === 'IMAGE' && (
                 <div className="relative aspect-[16/9] w-full bg-[#FAF7F1] flex items-center justify-center overflow-hidden">

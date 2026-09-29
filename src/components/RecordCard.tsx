@@ -199,7 +199,7 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
     : (record.thumbnailUrl && !record.thumbnailUrl.includes('unsplash.com') ? record.thumbnailUrl : null);
 
   return (
-    <div className="group bg-[#FFFFFF] border border-[#E4DDD0] rounded-lg overflow-hidden hover:border-[#C97A3D] transition-all duration-300 flex flex-col justify-between relative">
+    <div className="group heritage-card overflow-hidden flex flex-col justify-between relative">
       <div>
         {/* Card Media Preview Header */}
         <Link href={`/record/${record.id}`} className="block relative aspect-[16/9] w-full bg-[#1E1B18] overflow-hidden cursor-pointer">

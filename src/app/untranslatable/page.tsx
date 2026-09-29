@@ -111,26 +111,44 @@ export default function UntranslatableGalleryPage() {
       <Navbar />
 
       <main className="flex-1 pb-24 md:pb-16">
-        {/* Header Hero Section */}
-        <section className="bg-[#FAF7F1] py-14 px-4 sm:px-8 border-b border-[#E4DDD0]">
-          <div className="max-w-5xl mx-auto text-center">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#C97A3D]/10 border border-[#C97A3D]/30 text-[#C97A3D] text-xs font-sans mb-4">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Cultural Ontologies</span>
+        {/* Visual Header Banner */}
+        <div className="relative bg-[#1A1714] overflow-hidden mb-10 border-b border-[#C5A55A]/20">
+          <div className="absolute inset-0 opacity-20">
+            <img
+              src="/images/categories/oral-stories.jpg"
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-b from-[#1A1714]/70 via-[#1A1714]/85 to-[#1A1714]" />
+
+          <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-8 py-12 sm:py-16 text-center">
+            {/* Breadcrumb */}
+            <div className="flex items-center justify-center space-x-2 text-xs font-sans text-[#FAF7F1]/40 mb-4">
+              <Link href="/" className="hover:text-[#C5A55A] transition-colors">Home</Link>
+              <span className="text-[#C5A55A]">›</span>
+              <span className="text-[#C5A55A]">{t('title')}</span>
             </div>
-            <h1 className="font-serif text-3xl sm:text-5xl font-medium text-[#2A2420] mb-4">
+
+            <div className="ornamental-top" />
+            <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#C5A55A]/15 border border-[#C5A55A]/30 text-xs font-sans text-[#C5A55A] mb-4">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="tracking-wider uppercase font-semibold">Living Lexicon of India</span>
+            </div>
+            <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-medium tracking-tight text-[#FAF7F1] mb-4">
               {t('title')}
             </h1>
-            <p className="font-sans text-sm sm:text-base text-[#2A2420]/75 max-w-2xl mx-auto leading-relaxed">
+            <p className="font-sans text-sm sm:text-base text-[#FAF7F1]/65 max-w-2xl mx-auto leading-relaxed">
               {t('subtitle')}
             </p>
           </div>
-        </section>
+          <div className="gold-divider" />
+        </div>
 
         {/* Discovery of the Day (Featured Card) */}
         {featured && (
           <section className="max-w-5xl mx-auto px-4 sm:px-8 -mt-6">
-            <div className="bg-[#FFFFFF] border-2 border-[#C97A3D] rounded-xl p-6 sm:p-10 shadow-none relative overflow-hidden">
+            <div className="heritage-card p-6 sm:p-10 shadow-lg relative overflow-hidden border-2 border-[#C5A55A]/40">
               <div className="flex items-center justify-between mb-4">
                 <span className="inline-flex items-center space-x-1.5 text-xs font-sans font-medium text-[#C97A3D] bg-[#C97A3D]/10 px-3 py-1 rounded border border-[#C97A3D]/30">
                   <Flame className="w-3.5 h-3.5" />
@@ -252,7 +270,7 @@ export default function UntranslatableGalleryPage() {
               {filteredEntries.map((entry) => (
                 <div
                   key={entry.id}
-                  className="bg-[#FFFFFF] border border-[#E4DDD0] rounded-xl p-6 hover:border-[#C97A3D] transition-all duration-300 flex flex-col justify-between group shadow-none"
+                  className="heritage-card p-6 flex flex-col justify-between group shadow-sm"
                 >
                   <div>
                     {/* Top Row: Language & Region badge */}

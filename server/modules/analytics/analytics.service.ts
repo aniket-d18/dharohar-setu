@@ -58,7 +58,7 @@ export class AnalyticsService {
       regionsCovered: regionsWithRecords.length,
     };
 
-    serverCache.set(cacheKey, result, 30 * 1000); // 30s TTL
+    serverCache.set(cacheKey, result, 15 * 60 * 1000); // 15 mins TTL (invalidated on any record/verification write)
     return result;
   }
 
@@ -185,7 +185,7 @@ export class AnalyticsService {
       })),
     };
 
-    serverCache.set(cacheKey, dashboardResult, 60 * 1000); // 60s TTL
+    serverCache.set(cacheKey, dashboardResult, 15 * 60 * 1000); // 15 mins TTL
     return dashboardResult;
   }
 }

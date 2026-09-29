@@ -211,6 +211,7 @@ enum Category {
   RECIPE
   RITUAL
   LIFE_SKILL
+  TRADITIONAL_MEDICINE
   OTHER
 }
 

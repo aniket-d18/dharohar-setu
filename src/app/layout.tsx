@@ -3,6 +3,7 @@ import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { LanguageProvider } from '@/context/LanguageContext';
 import ServerWakeupDetector from '@/components/ServerWakeupDetector';
+import LoadingScreen from '@/components/LoadingScreen';
 import { Analytics } from '@vercel/analytics/react';
 
 export const viewport: Viewport = {
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
   },
   description: 'National repository for documenting, peer-verifying, and preserving India’s endangered oral traditions, folk songs, and living cultural heritage.',
   applicationName: 'Dharohar Setu',
-  authors: [{ name: 'Dharohar Setu Community & Ministry of Culture' }],
+  authors: [{ name: 'Dharohar Setu Community' }],
   keywords: [
     'Indian Cultural Heritage',
     'Endangered Languages',
@@ -81,11 +82,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="bg-[#FAF7F1] text-[#2A2420] font-sans antialiased min-h-screen flex flex-col">
+    <html lang="en" className="overflow-x-hidden">
+      <body className="bg-[#FAF7F1] text-[#2A2420] font-sans antialiased min-h-screen flex flex-col overflow-x-hidden max-w-[100vw]">
         <AuthProvider>
           <LanguageProvider>
             <ServerWakeupDetector />
+            <LoadingScreen />
             {children}
             <Analytics />
           </LanguageProvider>

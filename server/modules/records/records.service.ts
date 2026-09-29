@@ -413,7 +413,7 @@ export class RecordsService {
       },
     };
 
-    serverCache.set(cacheKey, result, 45 * 1000); // 45s TTL
+    serverCache.set(cacheKey, result, 15 * 60 * 1000); // 15 mins TTL (auto-invalidated on any record create/edit/upvote)
     return result;
   }
 
@@ -516,7 +516,7 @@ export class RecordsService {
     };
 
     if (!isAiProcessing) {
-      serverCache.set(cacheKey, result, 30 * 1000); // 30s TTL only when AI processing is complete
+      serverCache.set(cacheKey, result, 15 * 60 * 1000); // 15 mins TTL (invalidated on edits/upvotes)
     }
     return result;
   }

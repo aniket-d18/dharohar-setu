@@ -8,6 +8,7 @@ export const CATEGORY_COVERS: Record<string, string> = {
   RECIPE: '/images/categories/recipe.jpg', // Traditional Indian spices, mortar & pestle
   RITUAL: '/images/categories/ritual.jpg', // Sacred ceremonial brass diya lamps & offerings
   LIFE_SKILL: '/images/categories/life_skill.jpg', // Indigenous knowledge, rural agriculture & heritage skills
+  TRADITIONAL_MEDICINE: '/images/categories/traditional-medicine.jpg', // Ancient herbal remedies, wild medicine, ethnobotany
   OTHER: '/images/categories/other.jpg', // Indian heritage architecture
 };
 

@@ -7,7 +7,7 @@ import Footer from '@/components/Footer';
 import { useAuth } from '@/context/AuthContext';
 import { getCategoryCover } from '@/utils/categoryCovers';
 import { getApiUrl } from '@/utils/apiUrl';
-import { cachedFetch } from '@/utils/apiCache';
+import { cachedFetch, invalidateClientCache } from '@/utils/apiCache';
 import {
   AlertTriangle,
   Flame,
@@ -164,7 +164,7 @@ export default function DashboardPage() {
     async function loadDashboard() {
       try {
         setLoading(true);
-        const json = await cachedFetch<any>(`${apiUrl}/api/analytics/dashboard`, { ttl: 60 * 1000 });
+        const json = await cachedFetch<any>(`${apiUrl}/api/analytics/dashboard`, { ttl: 15 * 60 * 1000 });
         if (json) {
           setData(json);
         }
@@ -190,12 +190,9 @@ export default function DashboardPage() {
     try {
       if (!silent) setLoadingMyRecords(true);
       else setIsRefreshingMyRecords(true);
-      const res = await fetch(`${apiUrl}/api/records/contributor/${user.id}?_t=${Date.now()}`, {
-        cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
-      });
-      if (res.ok) {
-        const records = await res.json();
+      const url = `${apiUrl}/api/records/contributor/${user.id}`;
+      const records = await cachedFetch<ContributorRecord[]>(url, { ttl: silent ? 0 : 5 * 60 * 1000 });
+      if (Array.isArray(records)) {
         setMyRecords(records);
       }
     } catch (err) {
@@ -416,6 +413,7 @@ export default function DashboardPage() {
       });
 
       if (res.ok) {
+        invalidateClientCache('/api/records');
         setResubmitMessage('Successfully updated sound recording, texts, and resubmitted to reviewer queue!');
         setTimeout(() => {
           setEditingRecord(null);
@@ -522,71 +520,92 @@ export default function DashboardPage() {
       <Navbar />
 
       <main className="flex-1 pb-24 md:pb-16">
-        {/* Top Header */}
-        <section className="bg-[#FAF7F1] py-12 px-4 sm:px-8 border-b border-[#E4DDD0]">
-          <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#B54A3A]/10 border border-[#B54A3A]/30 text-[#B54A3A] text-xs font-sans mb-3">
-                <AlertTriangle className="w-3.5 h-3.5" />
-                <span>Urgency Projection & Heritage Loss Monitor</span>
-              </div>
-              <h1 className="font-serif text-3xl sm:text-4xl text-[#2A2420] font-medium">
-                {t('title')}
-              </h1>
-              <p className="font-sans text-xs sm:text-sm text-[#2A2420]/70 mt-1 max-w-2xl leading-relaxed">
-                {t('subtitle')}
-              </p>
-            </div>
-
-            <div className="flex items-center space-x-3 self-start md:self-center">
-              <button
-                onClick={handleExport}
-                className="inline-flex items-center space-x-2 px-4 py-2.5 rounded bg-[#C97A3D] text-[#FAF7F1] font-sans font-medium text-xs hover:bg-[#B86B30] transition-colors shadow-none"
-              >
-                <Download className="w-4 h-4" />
-                <span>{t('downloadReport')}</span>
-              </button>
-            </div>
+        {/* Visual Header Banner */}
+        <div className="relative bg-[#1A1714] overflow-hidden mb-8 border-b border-[#C5A55A]/20">
+          <div className="absolute inset-0 opacity-20">
+            <img
+              src="/images/hero-banner.jpg"
+              alt=""
+              className="w-full h-full object-cover"
+            />
           </div>
+          <div className="absolute inset-0 bg-gradient-to-b from-[#1A1714]/70 via-[#1A1714]/85 to-[#1A1714]" />
 
-          {/* Navigation Tabs (Analytics vs Contributor Feedback Loop) */}
-          <div className="max-w-6xl mx-auto mt-8 flex items-center border-b border-[#E4DDD0]">
-            <button
-              onClick={() => setActiveTab('analytics')}
-              className={`pb-3 px-4 text-sm font-sans font-medium flex items-center space-x-2 border-b-2 transition-colors ${
-                activeTab === 'analytics'
-                  ? 'border-[#C97A3D] text-[#C97A3D]'
-                  : 'border-transparent text-[#2A2420]/60 hover:text-[#2A2420]'
-              }`}
-            >
-              <BarChart3 className="w-4 h-4" />
-              <span>National Heritage Analytics</span>
-            </button>
+          <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-8 py-10 sm:py-14">
+            {/* Breadcrumb */}
+            <div className="flex items-center space-x-2 text-xs font-sans text-[#FAF7F1]/40 mb-4">
+              <Link href="/" className="hover:text-[#C5A55A] transition-colors">Home</Link>
+              <span className="text-[#C5A55A]">›</span>
+              <span className="text-[#C5A55A]">{t('title')}</span>
+            </div>
 
-            {user && (
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div>
+                <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#B54A3A]/20 border border-[#B54A3A]/40 text-[#FAF7F1] text-xs font-sans mb-3">
+                  <AlertTriangle className="w-3.5 h-3.5 text-[#B54A3A]" />
+                  <span>Urgency Projection &amp; Heritage Loss Monitor</span>
+                </div>
+                <h1 className="font-serif text-3xl sm:text-4xl text-[#FAF7F1] font-medium">
+                  {t('title')}
+                </h1>
+                <p className="font-sans text-xs sm:text-sm text-[#FAF7F1]/65 mt-1 max-w-2xl leading-relaxed">
+                  {t('subtitle')}
+                </p>
+              </div>
+
+              <div className="flex items-center space-x-3 self-start md:self-center">
+                <button
+                  onClick={handleExport}
+                  className="btn-gold inline-flex items-center space-x-2 px-4 py-2.5 font-sans font-medium text-xs shadow-md"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>{t('downloadReport')}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Navigation Tabs (Analytics vs Contributor Feedback Loop) */}
+            <div className="mt-8 flex items-center border-b border-[#FAF7F1]/10">
               <button
-                onClick={() => setActiveTab('my_contributions')}
+                onClick={() => setActiveTab('analytics')}
                 className={`pb-3 px-4 text-sm font-sans font-medium flex items-center space-x-2 border-b-2 transition-colors ${
-                  activeTab === 'my_contributions'
-                    ? 'border-[#2F6E5D] text-[#2F6E5D]'
-                    : 'border-transparent text-[#2A2420]/60 hover:text-[#2A2420]'
+                  activeTab === 'analytics'
+                    ? 'border-[#C5A55A] text-[#C5A55A]'
+                    : 'border-transparent text-[#FAF7F1]/50 hover:text-[#FAF7F1]'
                 }`}
               >
-                <FolderHeart className="w-4 h-4 shrink-0" />
-                <span className="hidden sm:inline">My Contributions &amp; Reviewer Feedback</span>
-                <span className="sm:hidden">My Submissions</span>
-                {myRecords.length > 0 && (
-                  <span className="ml-1.5 px-2 py-0.5 rounded-full text-[11px] bg-[#2F6E5D]/10 text-[#2F6E5D]">
-                    {myRecords.length}
-                  </span>
-                )}
+                <BarChart3 className="w-4 h-4" />
+                <span>National Heritage Analytics</span>
               </button>
-            )}
-          </div>
 
-          {/* Guest Contributor Banner (Fix F-20) */}
-          {!user && (
-            <div className="max-w-6xl mx-auto mt-4 px-4 py-3 rounded-xl bg-[#2F6E5D]/5 border border-[#2F6E5D]/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-sans">
+              {user && (
+                <button
+                  onClick={() => setActiveTab('my_contributions')}
+                  className={`pb-3 px-4 text-sm font-sans font-medium flex items-center space-x-2 border-b-2 transition-colors ${
+                    activeTab === 'my_contributions'
+                      ? 'border-[#2F6E5D] text-[#2F6E5D]'
+                      : 'border-transparent text-[#FAF7F1]/50 hover:text-[#FAF7F1]'
+                  }`}
+                >
+                  <FolderHeart className="w-4 h-4 shrink-0" />
+                  <span className="hidden sm:inline">My Contributions &amp; Reviewer Feedback</span>
+                  <span className="sm:hidden">My Submissions</span>
+                  {myRecords.length > 0 && (
+                    <span className="ml-1.5 px-2 py-0.5 rounded-full text-[11px] bg-[#2F6E5D]/20 text-[#FAF7F1]">
+                      {myRecords.length}
+                    </span>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="gold-divider" />
+        </div>
+
+        {/* Guest Contributor Banner (Fix F-20) */}
+        {!user && (
+          <div className="max-w-6xl mx-auto px-4 sm:px-8 mb-6">
+            <div className="px-4 py-3 rounded-xl bg-[#2F6E5D]/5 border border-[#2F6E5D]/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-sans">
               <div className="flex items-center space-x-2 text-[#2A2420]">
                 <FolderHeart className="w-4 h-4 text-[#2F6E5D] shrink-0" />
                 <span>
@@ -601,8 +620,8 @@ export default function DashboardPage() {
                 <span aria-hidden="true">&rarr;</span>
               </Link>
             </div>
-          )}
-        </section>
+          </div>
+        )}
 
         {/* Tab 1: Analytics Observatory */}
         {activeTab === 'analytics' && (

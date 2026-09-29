@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTranslations } from '@/context/LanguageContext';
 import { getCategoryCover } from '@/utils/categoryCovers';
 import { getApiUrl } from '@/utils/apiUrl';
+import { invalidateClientCache } from '@/utils/apiCache';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -377,6 +378,9 @@ export default function VerificationConsolePage() {
         return;
       }
 
+      invalidateClientCache('/api/records');
+      invalidateClientCache('/api/analytics');
+
       setActionFeedback(
         action === 'ENDORSE'
           ? 'Record officially endorsed with Cultural Steward certification.'
@@ -438,6 +442,8 @@ export default function VerificationConsolePage() {
       );
 
       if (res.ok) {
+        invalidateClientCache('/api/records');
+        invalidateClientCache('/api/analytics');
         const remaining = queue.filter((r) => r.id !== selectedRecord.id);
         setQueue(remaining);
         setSelectedRecord(remaining.length > 0 ? remaining[0] : null);
@@ -496,18 +502,18 @@ export default function VerificationConsolePage() {
       <Navbar />
 
       <main className="flex-1 flex flex-col pb-24 md:pb-0">
-        {/* Verification Subheader Bar */}
-        <div className="bg-[#FAF7F1] border-b border-[#E4DDD0] px-6 py-4">
+        {/* Verification Subheader Bar — Museum Dark */}
+        <div className="bg-[#1A1714] text-[#FAF7F1] border-b border-[#C5A55A]/30 px-6 py-4">
           <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 rounded-lg bg-[#C97A3D]/10 border border-[#C97A3D]/30 flex items-center justify-center text-[#C97A3D]">
+              <div className="w-9 h-9 rounded-lg bg-[#C5A55A]/15 border border-[#C5A55A]/30 flex items-center justify-center text-[#C5A55A]">
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <h1 className="font-serif text-lg sm:text-xl text-[#2A2420] font-medium leading-none">
+                <h1 className="font-serif text-lg sm:text-xl text-[#FAF7F1] font-medium leading-none">
                   Community Verification Workbench
                 </h1>
-                <p className="text-[11px] text-[#2A2420]/60 font-sans mt-1">
+                <p className="text-[11px] text-[#FAF7F1]/60 font-sans mt-1">
                   Peer dialect accreditation • Acoustic consensus • Living Cultural Atlas governance
                 </p>
               </div>
@@ -515,16 +521,16 @@ export default function VerificationConsolePage() {
 
             {/* Current Active Reviewer Badge */}
             <div className="flex items-center space-x-3 text-xs font-sans">
-              <div className="px-3 py-1.5 rounded-md bg-[#FFFFFF] border border-[#E4DDD0] flex items-center space-x-2">
-                <span className="text-[#2A2420]/60">Logged in as:</span>
-                <span className="font-medium text-[#2A2420]">{user.displayName}</span>
+              <div className="px-3 py-1.5 rounded-md bg-[#FAF7F1]/10 border border-[#FAF7F1]/20 flex items-center space-x-2 text-[#FAF7F1]/90">
+                <span className="text-[#FAF7F1]/60">Logged in as:</span>
+                <span className="font-medium text-[#FAF7F1]">{user.displayName}</span>
                 <span
                   className={`text-[10px] px-2 py-0.5 rounded-full border uppercase tracking-wider font-semibold ${
                     user.role === 'ADMIN'
-                      ? 'bg-[#B54A3A]/10 text-[#B54A3A] border-[#B54A3A]/30'
+                      ? 'bg-[#B54A3A]/20 text-[#FAF7F1] border-[#B54A3A]/50'
                       : user.role === 'STEWARD'
-                      ? 'bg-[#2F6E5D]/15 text-[#2F6E5D] border-[#2F6E5D]/40'
-                      : 'bg-[#6B8F5E]/15 text-[#6B8F5E] border-[#6B8F5E]/40'
+                      ? 'bg-[#2F6E5D]/30 text-[#FAF7F1] border-[#2F6E5D]/50'
+                      : 'bg-[#6B8F5E]/30 text-[#FAF7F1] border-[#6B8F5E]/50'
                   }`}
                 >
                   {user.role}

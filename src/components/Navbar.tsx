@@ -20,31 +20,50 @@ import {
   BookOpen,
   LayoutDashboard,
   Check,
+  Layers,
+  ArrowRight,
+  ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useLanguage, useTranslations, LANGUAGE_OPTIONS, SupportedLanguage } from '@/context/LanguageContext';
+import { useLanguage, useTranslations, LANGUAGE_OPTIONS } from '@/context/LanguageContext';
 
 export default function Navbar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { language, setLanguage } = useLanguage();
   const t = useTranslations('nav');
-  const [langMenuOpen, setLangMenuOpen] = useState(false);
-  const langMenuRef = useRef<HTMLDivElement>(null);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Verification is strictly role-gated: only reviewers, stewards, experts, admins can verify
+  // Dropdown & drawer states
+  const [directoryOpen, setDirectoryOpen] = useState(false);
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  const directoryRef = useRef<HTMLDivElement>(null);
+  const langRef = useRef<HTMLDivElement>(null);
+  const userRef = useRef<HTMLDivElement>(null);
+
+  // Role gating for verification desk
   const canVerify = Boolean(user && user.role !== 'CONTRIBUTOR');
 
-  // Close desktop dropdowns on click outside
+  // Track scroll for subtle shadow
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Close dropdowns on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (langMenuRef.current && !langMenuRef.current.contains(e.target as Node)) {
+      if (directoryRef.current && !directoryRef.current.contains(e.target as Node)) {
+        setDirectoryOpen(false);
+      }
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
         setLangMenuOpen(false);
       }
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+      if (userRef.current && !userRef.current.contains(e.target as Node)) {
         setUserMenuOpen(false);
       }
     }
@@ -52,12 +71,15 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Close mobile drawer on route change
+  // Close drawer & menus on route navigation
   useEffect(() => {
     setMobileMenuOpen(false);
+    setDirectoryOpen(false);
+    setLangMenuOpen(false);
+    setUserMenuOpen(false);
   }, [pathname]);
 
-  // Prevent background scrolling when mobile menu is open
+  // Lock background scroll when mobile directory drawer is open
   useEffect(() => {
     if (mobileMenuOpen) {
       document.body.style.overflow = 'hidden';
@@ -69,15 +91,7 @@ export default function Navbar() {
     };
   }, [mobileMenuOpen]);
 
-  // Desktop navigation links — all discovery pages visible to all roles
-  const desktopNavLinks = [
-    { href: '/', label: t('home') },
-    { href: '/atlas', label: t('atlas') },
-    { href: '/archive', label: t('archive') },
-    { href: '/untranslatable', label: t('untranslatable') },
-    { href: '/dashboard', label: t('dashboard') },
-    ...(canVerify ? [{ href: '/verify', label: t('verify') }] : []),
-  ];
+  const currentLangOption = LANGUAGE_OPTIONS.find((opt) => opt.code === language) || LANGUAGE_OPTIONS[0];
 
   const getRoleBadge = (role: string) => {
     switch (role) {
@@ -93,210 +107,408 @@ export default function Navbar() {
     }
   };
 
-  const currentLangOption = LANGUAGE_OPTIONS.find((opt) => opt.code === language) || LANGUAGE_OPTIONS[0];
-
-  // Tab active checks for mobile bottom bar
+  // Mobile Bottom Bar active checks
   const isHomeActive = pathname === '/';
-  const isExploreActive = pathname === '/archive' || pathname.startsWith('/record/') || pathname === '/atlas' || pathname === '/untranslatable';
+  const isExploreActive = pathname === '/archive' || pathname.startsWith('/record/');
+  const isCollectionsActive = pathname === '/collections';
+  const isAtlasActive = pathname === '/atlas';
   const isCaptureActive = pathname === '/capture';
-  const isProfileActive = pathname === '/profile';
+
+  // Structured Heritage Categories in List Format
+  const HERITAGE_LIST = [
+    {
+      id: 'TRADITIONAL_MEDICINE',
+      label: 'Traditional Medicine & Wild Herbs',
+      icon: '🌿',
+      desc: 'Ancient herbal cures, forest foraging & Ayurvedic wisdom',
+      href: '/archive?category=TRADITIONAL_MEDICINE',
+      badge: 'Featured',
+    },
+    {
+      id: 'LULLABY',
+      label: 'Folk Songs & Lullabies',
+      icon: '🎵',
+      desc: 'Ancestral melodies, cradle songs & oral poetry',
+      href: '/archive?category=LULLABY',
+    },
+    {
+      id: 'STORY',
+      label: 'Oral Folktales & Ballads',
+      icon: '📖',
+      desc: 'Creation legends, heroic ballads & clan narratives',
+      href: '/archive?category=STORY',
+    },
+    {
+      id: 'CRAFT_TECHNIQUE',
+      label: 'Sacred Crafts & Handloom',
+      icon: '🏺',
+      desc: 'Silk weaving, pottery, metalwork & carving',
+      href: '/archive?category=CRAFT_TECHNIQUE',
+    },
+    {
+      id: 'RITUAL',
+      label: 'Sacred Rituals & Chants',
+      icon: '🙏',
+      desc: 'Temple rites, pastoral prayers & seasonal invocations',
+      href: '/archive?category=RITUAL',
+    },
+    {
+      id: 'RECIPE',
+      label: 'Culinary Heritage',
+      icon: '🍲',
+      desc: 'Traditional recipes, seasonal foraged cooking & nutrition',
+      href: '/archive?category=RECIPE',
+    },
+    {
+      id: 'PROVERB',
+      label: 'Vernacular Proverbs',
+      icon: '💬',
+      desc: 'Living idioms & ancestral philosophical sayings',
+      href: '/archive?category=PROVERB',
+    },
+    {
+      id: 'LIFE_SKILL',
+      label: 'Ecology & Life Skills',
+      icon: '🌾',
+      desc: 'Indigenous weather reading, tracking & woodcraft',
+      href: '/archive?category=LIFE_SKILL',
+    },
+  ];
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-[#DCE9E4] border-b border-[#B8D4CB]">
-        {/* Top Utility Strip — desktop only */}
-        <div className="hidden md:block bg-[#D2E3DD] border-b border-[#B8D4CB]/70 text-xs text-[#2A2420]/75 font-sans">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[36px] py-1 flex items-center justify-end">
-            <div className="flex items-center space-x-3 sm:space-x-5 text-[#2A2420]/75">
-              <Link href="/archive" className="hover:text-[#2F6E5D] transition-colors">
-                {t('archiveDirectory')}
-              </Link>
-
-              {/* User Profile / Sign In Dropdown */}
-              {user ? (
-                <div className="relative ml-1" ref={userMenuRef}>
-                  <button
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="inline-flex items-center space-x-1.5 sm:space-x-2 px-2.5 py-1 rounded bg-[#FFFFFF]/80 hover:bg-[#FFFFFF] border border-[#B8D4CB] hover:border-[#2F6E5D] text-left transition-colors font-sans min-h-[32px]"
-                    aria-label="User account menu"
-                  >
-                    <span className="text-xs text-[#2A2420] font-semibold leading-none max-w-[80px] sm:max-w-[140px] truncate">
-                      {user.displayName}
-                    </span>
-                    <span
-                      className={`text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded border uppercase tracking-wider font-semibold ${getRoleBadge(
-                        user.role
-                      )}`}
-                    >
-                      {user.role}
-                    </span>
-                    <ChevronDown
-                      className={`w-3 h-3 text-[#2A2420]/50 transition-transform ${
-                        userMenuOpen ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </button>
-
-                  {userMenuOpen && (
-                    <div className="absolute right-0 mt-1.5 w-48 bg-[#FAF7F1] border border-[#B8D4CB] rounded-md shadow-lg py-1 z-50 animate-in fade-in slide-in-from-top-1 duration-150 font-sans">
-                      <div className="px-3 py-2 border-b border-[#E4DDD0]">
-                        <div className="text-xs font-semibold text-[#2A2420] truncate">
-                          {user.displayName}
-                        </div>
-                        {user.email && (
-                          <div className="text-[10px] text-[#2A2420]/55 truncate font-mono mt-0.5">
-                            {user.email}
-                          </div>
-                        )}
-                      </div>
-                      <Link
-                        href="/profile"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="w-full text-left px-3 py-2 text-xs flex items-center space-x-2 text-[#2A2420]/80 hover:bg-[#E4DDD0]/50 transition-colors font-medium"
-                      >
-                        <User className="w-3.5 h-3.5 shrink-0 text-[#2F6E5D]" />
-                        <span>My Profile &amp; Records</span>
-                      </Link>
-                      <Link
-                        href="/dashboard"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="w-full text-left px-3 py-2 text-xs flex items-center space-x-2 text-[#2A2420]/80 hover:bg-[#E4DDD0]/50 transition-colors font-medium"
-                      >
-                        <LayoutDashboard className="w-3.5 h-3.5 shrink-0 text-[#C97A3D]" />
-                        <span>{t('dashboard')}</span>
-                      </Link>
-                      <button
-                        onClick={() => {
-                          setUserMenuOpen(false);
-                          logout();
-                        }}
-                        className="w-full text-left px-3 py-2 text-xs flex items-center space-x-2 text-[#B54A3A] hover:bg-[#B54A3A]/10 transition-colors font-medium min-h-[36px] border-t border-[#E4DDD0]"
-                      >
-                        <LogOut className="w-3.5 h-3.5 shrink-0" />
-                        <span>{t('signOut')}</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Link
-                  href="/login"
-                  className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded text-xs font-sans font-medium text-[#2A2420]/85 hover:text-[#2F6E5D] border border-[#B8D4CB] hover:border-[#2F6E5D] hover:bg-[#FFFFFF]/80 transition-colors ml-1 min-h-[32px]"
-                >
-                  <LogIn className="w-3.5 h-3.5" />
-                  <span>{t('signIn')}</span>
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Main Navigation Row */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-18 flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2 sm:space-x-3 group shrink-0">
-            <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg bg-[#FFFFFF] border border-[#B8D4CB] overflow-hidden flex items-center justify-center group-hover:border-[#2F6E5D] transition-colors shadow-xs shrink-0">
-              <img src="/images/logo.png" alt="Dharohar Setu Logo" className="w-full h-full object-cover" />
+      {/* ========================================================================= */}
+      {/* LUXURY HERITAGE NAVBAR (Warm Ivory • Unified Cohesion • Zero Empty Void)  */}
+      {/* ========================================================================= */}
+      <header
+        className={`sticky top-0 z-50 transition-all duration-200 bg-[#FFFCF7]/95 backdrop-blur-md border-b border-[#E4DDD0] ${
+          scrolled ? 'shadow-[0_4px_24px_rgba(42,36,32,0.08)]' : ''
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[68px] flex items-center justify-between gap-4">
+          {/* Brand Logo & Title */}
+          <Link href="/" className="flex items-center space-x-3 shrink-0 group">
+            <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center ring-1 ring-[#C5A55A]/50 group-hover:ring-[#C5A55A] shadow-sm bg-[#1A1714] shrink-0 transition-transform group-hover:scale-105">
+              <img src="/images/logo.png" alt="Dharohar Setu Emblem" className="w-full h-full object-cover" />
             </div>
             <div>
-              <span className="font-serif text-base sm:text-xl lg:text-2xl font-semibold tracking-tight text-[#2A2420] block leading-none">
+              <span className="font-serif text-lg sm:text-[21px] font-bold tracking-tight text-[#2A2420] block leading-none group-hover:text-[#C97A3D] transition-colors">
                 Dharohar Setu
               </span>
-              <span className="text-[9px] sm:text-xs text-[#2F6E5D] font-sans tracking-wide font-medium mt-0.5 inline-block">
-                {t('brandSubtitle')}
+              <span className="text-[10px] sm:text-[10.5px] text-[#C5A55A] font-sans font-semibold tracking-widest uppercase mt-1 block">
+                Living Cultural Vault
               </span>
             </div>
           </Link>
 
-          {/* Desktop Nav (>= 768px) */}
-          <div className="hidden md:flex items-center space-x-3 lg:space-x-6">
-            <nav className="flex items-center space-x-1 lg:space-x-2">
-              {desktopNavLinks.map((link) => {
-                const isActive = pathname === link.href;
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={`px-2.5 py-1.5 lg:px-3.5 lg:py-2 rounded-md text-xs lg:text-sm font-sans transition-colors ${
-                      isActive
-                        ? 'text-[#2F6E5D] bg-[#FFFFFF] font-semibold border border-[#B8D4CB]'
-                        : 'text-[#2A2420]/80 hover:text-[#2F6E5D] hover:bg-[#FFFFFF]/60'
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                );
-              })}
-            </nav>
+          {/* Desktop Navigation & Actions (Clean, Refined Typography — No Icon Clutter) */}
+          <div className="hidden lg:flex items-center space-x-1.5 xl:space-x-2.5 shrink-0">
+            {/* Navigation Links */}
+            <nav className="flex items-center space-x-1">
+              {/* 1. Home */}
+              <Link
+                href="/"
+                className={`px-3 py-1.5 rounded-lg text-[13.5px] font-sans font-medium transition-colors ${
+                  pathname === '/'
+                    ? 'text-[#2A2420] bg-[#F5F0E6] font-semibold'
+                    : 'text-[#2A2420]/75 hover:text-[#2A2420] hover:bg-[#F5F0E6]'
+                }`}
+              >
+                {t('home')}
+              </Link>
 
-            {/* Desktop Language Switcher & Capture CTA */}
-            <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
-              <div className="relative" ref={langMenuRef}>
+              {/* 2. Heritage Directory (List Format Mega-Menu) */}
+              <div className="relative" ref={directoryRef}>
                 <button
-                  onClick={() => setLangMenuOpen(!langMenuOpen)}
-                  className="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-sans font-medium text-[#2A2420]/85 hover:text-[#2F6E5D] bg-[#FFFFFF]/70 hover:bg-[#FFFFFF] border border-[#B8D4CB] transition-colors min-h-[36px]"
-                  title="Select UI Language"
-                  aria-label="Select UI Language"
+                  type="button"
+                  onClick={() => setDirectoryOpen(!directoryOpen)}
+                  className={`px-3 py-1.5 rounded-lg text-[13.5px] font-sans font-medium flex items-center space-x-1 transition-colors cursor-pointer ${
+                    directoryOpen || pathname.startsWith('/archive') || pathname.startsWith('/record/')
+                      ? 'text-[#2A2420] bg-[#F5F0E6] font-semibold'
+                      : 'text-[#2A2420]/75 hover:text-[#2A2420] hover:bg-[#F5F0E6]'
+                  }`}
+                  aria-expanded={directoryOpen}
                 >
-                  <Globe className="w-3.5 h-3.5 text-[#2F6E5D]" />
-                  <span className="font-semibold">{currentLangOption.label}</span>
-                  <ChevronDown className={`w-3 h-3 text-[#2A2420]/50 transition-transform ${langMenuOpen ? 'rotate-180' : ''}`} />
+                  <span>Heritage Directory</span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-[#2A2420]/50 transition-transform duration-200 ${
+                      directoryOpen ? 'rotate-180' : ''
+                    }`}
+                  />
                 </button>
 
-                {langMenuOpen && (
-                  <div className="absolute right-0 mt-1.5 w-40 bg-[#FAF7F1] border border-[#B8D4CB] rounded-md shadow-lg py-1 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
-                    <div className="px-3 py-1.5 border-b border-[#E4DDD0] text-[10px] uppercase tracking-wider font-semibold text-[#2A2420]/50">
-                      Select Language
-                    </div>
-                    {LANGUAGE_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.code}
-                        onClick={() => {
-                          setLanguage(opt.code);
-                          setLangMenuOpen(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors min-h-[36px] ${
-                          language === opt.code
-                            ? 'bg-[#2F6E5D]/10 text-[#2F6E5D] font-semibold'
-                            : 'text-[#2A2420]/85 hover:bg-[#EAE4D9]'
-                        }`}
+                {/* Directory Dropdown Panel (Clean 2-Column List Format) */}
+                {directoryOpen && (
+                  <div className="absolute left-0 mt-2 w-[560px] bg-[#FFFCF7] border border-[#E4DDD0] rounded-2xl shadow-xl p-4.5 z-50 animate-fadeIn">
+                    <div className="flex items-center justify-between pb-3 border-b border-[#E4DDD0] mb-3">
+                      <div>
+                        <p className="text-sm font-serif font-bold text-[#2A2420]">Living Heritage Archives</p>
+                        <p className="text-xs text-[#2A2420]/60 font-sans mt-0.5">
+                          Browse folk traditions, ancient medicine, and oral wisdom
+                        </p>
+                      </div>
+                      <Link
+                        href="/archive"
+                        onClick={() => setDirectoryOpen(false)}
+                        className="text-xs font-sans text-[#C97A3D] font-semibold hover:underline flex items-center space-x-1"
                       >
-                        <span>{opt.nativeName}</span>
-                        <span className="text-[10px] text-[#2A2420]/45 font-mono uppercase">{opt.code}</span>
-                      </button>
-                    ))}
+                        <span>All Records</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {HERITAGE_LIST.map((item) => (
+                        <Link
+                          key={item.id}
+                          href={item.href}
+                          onClick={() => setDirectoryOpen(false)}
+                          className="p-2.5 rounded-xl hover:bg-[#F5F0E6] transition-colors border border-transparent hover:border-[#E4DDD0] flex items-start space-x-2.5 group"
+                        >
+                          <span className="text-xl shrink-0 group-hover:scale-110 transition-transform">
+                            {item.icon}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center space-x-1">
+                              <span className="text-xs font-semibold text-[#2A2420] group-hover:text-[#C97A3D] transition-colors truncate">
+                                {item.label}
+                              </span>
+                              {item.badge && (
+                                <span className="text-[9px] font-sans font-bold px-1.5 py-0.2 rounded-full bg-[#2F6E5D]/15 text-[#2F6E5D] border border-[#2F6E5D]/30 font-bold">
+                                  {item.badge}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-[#2A2420]/55 line-clamp-1 mt-0.5">{item.desc}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+
+                    <div className="mt-3.5 pt-3 border-t border-[#E4DDD0] flex items-center justify-between text-xs bg-[#FAF7F1] -mx-4.5 -mb-4.5 p-3 rounded-b-2xl">
+                      <span className="text-[#2A2420]/65 text-xs">Have an ancient remedy or folk song?</span>
+                      <Link
+                        href="/capture"
+                        onClick={() => setDirectoryOpen(false)}
+                        className="font-semibold text-[#C97A3D] hover:underline flex items-center gap-1"
+                      >
+                        <span>Deposit now</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Desktop Capture Button */}
+              {/* 3. Cultural Atlas */}
               <Link
-                href="/capture"
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 lg:px-4 lg:py-2 rounded-md bg-[#C97A3D] text-[#FAF7F1] font-sans font-medium text-xs lg:text-sm hover:bg-[#B86B30] transition-colors shadow-xs whitespace-nowrap min-h-[38px]"
+                href="/atlas"
+                className={`px-3 py-1.5 rounded-lg text-[13.5px] font-sans font-medium transition-colors ${
+                  pathname === '/atlas'
+                    ? 'text-[#2F6E5D] bg-[#2F6E5D]/10 font-semibold'
+                    : 'text-[#2A2420]/75 hover:text-[#2A2420] hover:bg-[#F5F0E6]'
+                }`}
               >
-                <Mic className="w-4 h-4" />
-                <span>{t('capture')}</span>
+                Cultural Atlas
               </Link>
+
+              {/* 4. Curated Collections */}
+              <Link
+                href="/collections"
+                className={`px-3 py-1.5 rounded-lg text-[13.5px] font-sans font-medium transition-colors ${
+                  pathname === '/collections'
+                    ? 'text-[#2A2420] bg-[#F5F0E6] font-semibold'
+                    : 'text-[#2A2420]/75 hover:text-[#2A2420] hover:bg-[#F5F0E6]'
+                }`}
+              >
+                Collections
+              </Link>
+
+              {/* 5. Dashboard */}
+              <Link
+                href="/dashboard"
+                className={`px-3 py-1.5 rounded-lg text-[13.5px] font-sans font-medium transition-colors ${
+                  pathname === '/dashboard'
+                    ? 'text-[#2A2420] bg-[#F5F0E6] font-semibold'
+                    : 'text-[#2A2420]/75 hover:text-[#2A2420] hover:bg-[#F5F0E6]'
+                }`}
+              >
+                Dashboard
+              </Link>
+
+              {/* 6. Verify (Role-gated) */}
+              {canVerify && (
+                <Link
+                  href="/verify"
+                  className={`px-3 py-1.5 rounded-lg text-[13.5px] font-sans font-medium text-[#2F6E5D] transition-colors ${
+                    pathname === '/verify'
+                      ? 'bg-[#2F6E5D]/15 font-semibold'
+                      : 'hover:bg-[#2F6E5D]/10'
+                  }`}
+                >
+                  Verify
+                </Link>
+              )}
+            </nav>
+
+            {/* Subtle Divider */}
+            <div className="h-5 w-[1px] bg-[#E4DDD0] mx-0.5 shrink-0" />
+
+            {/* Language Selector */}
+            <div className="relative shrink-0" ref={langRef}>
+              <button
+                type="button"
+                onClick={() => setLangMenuOpen(!langMenuOpen)}
+                className="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-[13px] font-sans font-medium text-[#2A2420] bg-[#F5F0E6] hover:bg-[#EAE4D9] border border-[#E4DDD0] transition-colors cursor-pointer"
+                title="Select Language"
+              >
+                <Globe className="w-3.5 h-3.5 text-[#C5A55A]" />
+                <span>{currentLangOption.label}</span>
+                <ChevronDown
+                  className={`w-3 h-3 text-[#2A2420]/45 transition-transform ${
+                    langMenuOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {langMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-[#FFFCF7] border border-[#E4DDD0] rounded-xl shadow-xl py-1.5 z-50 animate-fadeIn font-sans">
+                  <div className="px-3.5 py-1.5 border-b border-[#E4DDD0] text-[10px] uppercase tracking-wider font-semibold text-[#2A2420]/50">
+                    Language / भाषा
+                  </div>
+                  {LANGUAGE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.code}
+                      onClick={() => {
+                        setLanguage(opt.code);
+                        setLangMenuOpen(false);
+                      }}
+                      className={`w-full text-left px-3.5 py-2 text-sm flex items-center justify-between transition-colors ${
+                        language === opt.code
+                          ? 'bg-[#2F6E5D]/10 text-[#2F6E5D] font-semibold'
+                          : 'text-[#2A2420]/80 hover:bg-[#F5F0E6]'
+                      }`}
+                    >
+                      <span>{opt.nativeName}</span>
+                      <span className="text-xs text-[#2A2420]/40 font-mono uppercase">{opt.code}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {/* User Account / Sign In */}
+            {user ? (
+              <div className="relative shrink-0" ref={userRef}>
+                <button
+                  type="button"
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="inline-flex items-center space-x-2 px-2.5 py-1.5 rounded-lg bg-[#F5F0E6] hover:bg-[#EAE4D9] border border-[#E4DDD0] text-left transition-colors font-sans"
+                >
+                  <span className="text-xs text-[#2A2420] font-medium max-w-[100px] truncate">
+                    {user.displayName}
+                  </span>
+                  <span
+                    className={`text-[9px] px-1.5 py-0.5 rounded border uppercase font-bold ${getRoleBadge(
+                      user.role
+                    )}`}
+                  >
+                    {user.role}
+                  </span>
+                  <ChevronDown
+                    className={`w-3 h-3 text-[#2A2420]/40 transition-transform ${
+                      userMenuOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-[#FFFCF7] border border-[#E4DDD0] rounded-xl shadow-xl py-1 z-50 animate-fadeIn font-sans">
+                    <div className="px-4 py-2.5 border-b border-[#E4DDD0] bg-[#F5F0E6]/50">
+                      <div className="text-sm font-semibold text-[#2A2420] truncate">{user.displayName}</div>
+                      {user.email && (
+                        <div className="text-xs text-[#2A2420]/55 truncate font-mono mt-0.5">
+                          {user.email}
+                        </div>
+                      )}
+                    </div>
+                    <Link
+                      href="/profile"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="w-full text-left px-4 py-2.5 text-sm flex items-center space-x-2.5 text-[#2A2420]/80 hover:bg-[#F5F0E6] transition-colors"
+                    >
+                      <User className="w-4 h-4 shrink-0 text-[#2F6E5D]" />
+                      <span>My Contributions</span>
+                    </Link>
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="w-full text-left px-4 py-2.5 text-sm flex items-center space-x-2.5 text-[#2A2420]/80 hover:bg-[#F5F0E6] transition-colors"
+                    >
+                      <LayoutDashboard className="w-4 h-4 shrink-0 text-[#C97A3D]" />
+                      <span>Dashboard</span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        logout();
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm flex items-center space-x-2.5 text-[#B54A3A] hover:bg-[#B54A3A]/5 transition-colors font-medium border-t border-[#E4DDD0]"
+                    >
+                      <LogOut className="w-4 h-4 shrink-0" />
+                      <span>{t('signOut')}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="inline-flex items-center px-3 py-1.5 rounded-lg text-[13.5px] font-sans font-medium text-[#2A2420]/80 hover:text-[#2A2420] hover:bg-[#F5F0E6] transition-colors shrink-0"
+              >
+                <span>{t('signIn')}</span>
+              </Link>
+            )}
+
+            {/* Deposit Memory CTA */}
+            <Link
+              href="/capture"
+              className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-[#C97A3D] to-[#9C4D18] hover:from-[#D98748] hover:to-[#B3581E] shadow-sm hover:shadow transition-all active:scale-95 shrink-0"
+            >
+              <Mic className="w-3.5 h-3.5" />
+              <span>Deposit Memory</span>
+            </Link>
           </div>
 
-          {/* Mobile Right Controls (< 768px): Language indicator + Hamburger Menu button */}
-          <div className="flex md:hidden items-center space-x-2">
-            {/* Quick Language Chip */}
+          {/* Mobile & Tablet Controls (< 1024px) */}
+          <div className="flex lg:hidden items-center space-x-2">
+            {/* Quick Deposit button for tablets / mobile */}
+            <Link
+              href="/capture"
+              className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-[#C97A3D] to-[#9C4D18] shadow-xs shrink-0"
+            >
+              <Mic className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Deposit</span>
+            </Link>
+
+            {/* Language Selection Pill */}
             <button
+              type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-[#FFFFFF]/80 border border-[#B8D4CB] text-xs font-semibold text-[#2F6E5D] active:bg-[#FFFFFF]"
+              className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-[#F5F0E6] border border-[#E4DDD0] text-xs font-semibold text-[#2A2420]"
               aria-label="Language selection"
             >
-              <Globe className="w-3.5 h-3.5" />
+              <Globe className="w-3.5 h-3.5 text-[#C5A55A]" />
               <span>{currentLangOption.label}</span>
             </button>
 
-            {/* Hamburger Button — accessible 44x44px touch target */}
+            {/* Directory Drawer Hamburger Button */}
             <button
+              type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="w-11 h-11 flex items-center justify-center rounded-lg text-[#2A2420] hover:text-[#2F6E5D] hover:bg-[#FFFFFF]/70 active:bg-[#B8D4CB]/40 transition-colors border border-transparent active:border-[#B8D4CB]"
-              aria-label="Toggle secondary navigation menu"
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-[#2A2420] bg-[#F5F0E6] border border-[#E4DDD0] transition-colors"
+              aria-label="Open Directory Menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -305,293 +517,216 @@ export default function Navbar() {
       </header>
 
       {/* ========================================================================= */}
-      {/* MOBILE HAMBURGER MENU DRAWER (< 768px)                                   */}
-      {/* For everything else: Atlas, Verify, Cultural Ontologies, Dashboard,      */}
-      {/* Language Switcher, and Sign In/Out.                                      */}
+      {/* MOBILE DIRECTORY DRAWER (Categorized List Format)                         */}
       {/* ========================================================================= */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-[1100] md:hidden">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-[#2A2420]/50 backdrop-blur-xs transition-opacity"
+            className="absolute inset-0 bg-[#1A1714]/60 backdrop-blur-sm transition-opacity"
             onClick={() => setMobileMenuOpen(false)}
           />
 
           {/* Drawer Panel */}
-          <div className="absolute top-0 right-0 h-full w-80 max-w-[86vw] bg-[#FAF7F1] shadow-2xl flex flex-col overflow-y-auto border-l border-[#B8D4CB] animate-in slide-in-from-right duration-200">
+          <div className="absolute top-0 right-0 h-full w-84 max-w-[88vw] bg-[#FFFCF7] shadow-2xl flex flex-col overflow-y-auto border-l border-[#E4DDD0] animate-slideInRight font-sans">
             {/* Drawer Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#B8D4CB] bg-[#DCE9E4]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#E4DDD0] bg-[#161310] text-[#FAF7F1]">
               <div className="flex items-center space-x-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[#FFFFFF] border border-[#B8D4CB] overflow-hidden flex items-center justify-center shrink-0">
-                  <img src="/images/logo.png" alt="Dharohar Setu Emblem" className="w-full h-full object-cover" />
+                <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shrink-0 ring-1 ring-[#C5A55A]/50 bg-black">
+                  <img src="/images/logo.png" alt="Emblem" className="w-full h-full object-cover" />
                 </div>
                 <div>
-                  <span className="font-serif text-base font-semibold text-[#2A2420] block leading-tight">
+                  <span className="font-serif text-base font-bold text-[#FAF7F1] block leading-tight">
                     Dharohar Setu
                   </span>
-                  <span className="text-[10px] text-[#2F6E5D] font-sans font-medium block">
-                    {t('brandSubtitle')}
+                  <span className="text-[9px] text-[#C5A55A] font-sans font-semibold tracking-widest uppercase block mt-0.5">
+                    Living Heritage Directory
                   </span>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-10 h-10 flex items-center justify-center rounded-lg text-[#2A2420]/70 hover:text-[#2A2420] hover:bg-[#E4DDD0] transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-[#FAF7F1]/70 hover:text-white"
                 aria-label="Close menu"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* User Identity / Account Banner */}
-            <div className="px-4 py-3 bg-[#EAE4D9]/40 border-b border-[#E4DDD0]">
-              {user ? (
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs font-semibold text-[#2A2420] truncate">
-                      {user.displayName}
-                    </p>
-                    <span
-                      className={`text-[9px] px-1.5 py-0.5 rounded border uppercase tracking-wider font-semibold ${getRoleBadge(
-                        user.role
-                      )}`}
+            {/* Quick Deposit Banner */}
+            <div className="p-3.5 bg-gradient-to-r from-[#C97A3D]/10 via-[#FAF7F1] to-[#C5A55A]/10 border-b border-[#E4DDD0]">
+              <Link
+                href="/capture"
+                onClick={() => setMobileMenuOpen(false)}
+                className="btn-primary w-full py-2.5 text-xs font-semibold flex items-center justify-center space-x-2"
+              >
+                <Mic className="w-4 h-4" />
+                <span>+ Deposit Cultural Memory</span>
+              </Link>
+            </div>
+
+            {/* Categorized List */}
+            <div className="flex-1 px-3.5 py-4 overflow-y-auto space-y-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider font-bold text-[#C5A55A] px-2 mb-2">
+                  Heritage Classifications
+                </p>
+                <div className="space-y-1">
+                  {HERITAGE_LIST.map((item) => (
+                    <Link
+                      key={item.id}
+                      href={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-between p-2.5 rounded-xl hover:bg-[#F5F0E6] text-xs text-[#2A2420] transition-colors"
                     >
-                      {user.role}
+                      <div className="flex items-center space-x-2.5 truncate">
+                        <span className="text-lg shrink-0">{item.icon}</span>
+                        <span className="font-medium truncate">{item.label}</span>
+                      </div>
+                      {item.badge ? (
+                        <span className="text-[9px] font-sans font-bold px-1.5 py-0.5 rounded-full bg-[#2F6E5D]/15 text-[#2F6E5D]">
+                          {item.badge}
+                        </span>
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 text-[#2A2420]/30 shrink-0" />
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {/* Portals */}
+              <div className="pt-2 border-t border-[#E4DDD0]">
+                <p className="text-[10px] uppercase tracking-wider font-bold text-[#C5A55A] px-2 mb-2">
+                  Portals &amp; Discovery
+                </p>
+                <div className="space-y-1">
+                  <Link
+                    href="/collections"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors ${
+                      pathname === '/collections'
+                        ? 'bg-[#C97A3D]/10 text-[#C97A3D] font-semibold border border-[#C97A3D]/30'
+                        : 'hover:bg-[#F5F0E6] text-[#2A2420]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <BookOpen className="w-4 h-4 text-[#C97A3D] shrink-0" />
+                      <span className="font-semibold">Collections &amp; Exhibitions</span>
+                    </div>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#C97A3D]/15 text-[#C97A3D] font-bold">
+                      8 Exhibitions
                     </span>
-                  </div>
-                  {user.email && (
-                    <p className="text-[10px] text-[#2A2420]/60 font-mono truncate">
-                      {user.email}
-                    </p>
+                  </Link>
+
+                  <Link
+                    href="/atlas"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors ${
+                      pathname === '/atlas'
+                        ? 'bg-[#2F6E5D]/10 text-[#2F6E5D] font-semibold border border-[#2F6E5D]/30'
+                        : 'hover:bg-[#F5F0E6] text-[#2A2420]'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <Map className="w-4 h-4 text-[#2F6E5D] shrink-0" />
+                      <span className="font-medium">Cultural Atlas (36 States &amp; UTs)</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-[#2A2420]/30" />
+                  </Link>
+
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center justify-between p-2.5 rounded-xl hover:bg-[#F5F0E6] text-xs text-[#2A2420]"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <LayoutDashboard className="w-4 h-4 text-[#C97A3D] shrink-0" />
+                      <span className="font-medium">Dashboard</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-[#2A2420]/30" />
+                  </Link>
+
+                  {canVerify && (
+                    <Link
+                      href="/verify"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-between p-2.5 rounded-xl hover:bg-[#2F6E5D]/10 text-xs text-[#2F6E5D] font-semibold"
+                    >
+                      <div className="flex items-center space-x-2.5">
+                        <CheckCircle2 className="w-4 h-4 text-[#2F6E5D] shrink-0" />
+                        <span>Review &amp; Verification Desk</span>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-[#2F6E5D]/50" />
+                    </Link>
                   )}
                 </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-[#2A2420]">Guest Contributor</p>
-                    <p className="text-[10px] text-[#2A2420]/60">Sign in to endorse and track records</p>
-                  </div>
-                  <Link
-                    href="/login"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="px-2.5 py-1 text-xs rounded bg-[#2F6E5D] text-white font-medium hover:bg-[#25584A]"
-                  >
-                    {t('signIn')}
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            {/* Secondary Navigation List */}
-            <div className="flex-1 px-3 py-4 space-y-1">
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-[#2A2420]/50 px-3 mb-2 font-sans">
-                Explore & Contribute
-              </p>
-
-              {/* 1. Cultural Atlas */}
-              <Link
-                href="/atlas"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-start space-x-3 px-3 py-2.5 rounded-xl text-sm font-sans transition-colors min-h-[48px] ${
-                  pathname === '/atlas'
-                    ? 'bg-[#2F6E5D]/10 text-[#2F6E5D] font-semibold border border-[#2F6E5D]/30'
-                    : 'text-[#2A2420]/85 hover:bg-[#E4DDD0]/60'
-                }`}
-              >
-                <div className="w-8 h-8 rounded-lg bg-[#2F6E5D]/10 border border-[#2F6E5D]/20 flex items-center justify-center text-[#2F6E5D] shrink-0 mt-0.5">
-                  <Map className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm leading-tight text-[#2A2420]">
-                    {t('atlas')}
-                  </div>
-                  <div className="text-[11px] text-[#2A2420]/60 mt-0.5">
-                    Interactive geo-cultural heritage map
-                  </div>
-                </div>
-              </Link>
-
-              {/* 2. Heritage Archive (M-02) */}
-              <Link
-                href="/archive"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-start space-x-3 px-3 py-2.5 rounded-xl text-sm font-sans transition-colors min-h-[48px] ${
-                  pathname === '/archive' || pathname.startsWith('/record/')
-                    ? 'bg-[#2F6E5D]/10 text-[#2F6E5D] font-semibold border border-[#2F6E5D]/30'
-                    : 'text-[#2A2420]/85 hover:bg-[#E4DDD0]/60'
-                }`}
-              >
-                <div className="w-8 h-8 rounded-lg bg-[#C97A3D]/10 border border-[#C97A3D]/20 flex items-center justify-center text-[#C97A3D] shrink-0 mt-0.5">
-                  <Compass className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm leading-tight text-[#2A2420]">
-                    {t('archive')}
-                  </div>
-                  <div className="text-[11px] text-[#2A2420]/60 mt-0.5">
-                    Search audio, songs, folktales & rituals
-                  </div>
-                </div>
-              </Link>
-
-              {/* 3. Review Desk — STRICTLY ROLE-GATED */}
-              {canVerify && (
-                <Link
-                  href="/verify"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-start space-x-3 px-3 py-2.5 rounded-xl text-sm font-sans transition-colors min-h-[48px] ${
-                    pathname === '/verify'
-                      ? 'bg-[#2F6E5D]/15 text-[#2F6E5D] font-semibold border border-[#2F6E5D]/30'
-                      : 'text-[#2A2420]/85 hover:bg-[#E4DDD0]/60'
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-lg bg-[#6B8F5E]/15 border border-[#6B8F5E]/30 flex items-center justify-center text-[#2F6E5D] shrink-0 mt-0.5">
-                    <CheckCircle2 className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-1.5">
-                      <span className="font-semibold text-sm leading-tight text-[#2A2420]">
-                        {t('verify')}
-                      </span>
-                      <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#2F6E5D]/15 text-[#2F6E5D] font-semibold border border-[#2F6E5D]/30">
-                        {user?.role}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-[#2A2420]/60 mt-0.5">
-                      Review oral records & confirm provenance
-                    </div>
-                  </div>
-                </Link>
-              )}
-
-              {/* 4. Living Concepts */}
-              <Link
-                href="/untranslatable"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-start space-x-3 px-3 py-2.5 rounded-xl text-sm font-sans transition-colors min-h-[48px] ${
-                  pathname === '/untranslatable'
-                    ? 'bg-[#2F6E5D]/10 text-[#2F6E5D] font-semibold border border-[#2F6E5D]/30'
-                    : 'text-[#2A2420]/85 hover:bg-[#E4DDD0]/60'
-                }`}
-              >
-                <div className="w-8 h-8 rounded-lg bg-[#C97A3D]/10 border border-[#C97A3D]/20 flex items-center justify-center text-[#C97A3D] shrink-0 mt-0.5">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm leading-tight text-[#2A2420]">
-                    {t('untranslatable')}
-                  </div>
-                  <div className="text-[11px] text-[#2A2420]/60 mt-0.5">
-                    Untranslatable words & indigenous concepts
-                  </div>
-                </div>
-              </Link>
-
-              {/* 5. Observatory */}
-              <Link
-                href="/dashboard"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-start space-x-3 px-3 py-2.5 rounded-xl text-sm font-sans transition-colors min-h-[48px] ${
-                  pathname === '/dashboard'
-                    ? 'bg-[#2F6E5D]/10 text-[#2F6E5D] font-semibold border border-[#2F6E5D]/30'
-                    : 'text-[#2A2420]/85 hover:bg-[#E4DDD0]/60'
-                }`}
-              >
-                <div className="w-8 h-8 rounded-lg bg-[#2A2420]/5 border border-[#2A2420]/15 flex items-center justify-center text-[#2A2420] shrink-0 mt-0.5">
-                  <LayoutDashboard className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm leading-tight text-[#2A2420]">
-                    {t('dashboard')}
-                  </div>
-                  <div className="text-[11px] text-[#2A2420]/60 mt-0.5">
-                    Telemetry, preservation gaps &amp; national charts
-                  </div>
-                </div>
-              </Link>
-
-              {/* 6. Profile */}
-              <Link
-                href="/profile"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-start space-x-3 px-3 py-2.5 rounded-xl text-sm font-sans transition-colors min-h-[48px] ${
-                  pathname === '/profile'
-                    ? 'bg-[#2F6E5D]/10 text-[#2F6E5D] font-semibold border border-[#2F6E5D]/30'
-                    : 'text-[#2A2420]/85 hover:bg-[#E4DDD0]/60'
-                }`}
-              >
-                <div className="w-8 h-8 rounded-lg bg-[#2F6E5D]/10 border border-[#2F6E5D]/20 flex items-center justify-center text-[#2F6E5D] shrink-0 mt-0.5">
-                  <User className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm leading-tight text-[#2A2420]">
-                    Profile &amp; Contributions
-                  </div>
-                  <div className="text-[11px] text-[#2A2420]/60 mt-0.5">
-                    Your records, saved items &amp; settings
-                  </div>
-                </div>
-              </Link>
-            </div>
-
-            {/* Language Switcher Section */}
-            <div className="px-4 py-3.5 border-t border-[#E4DDD0] bg-[#FAF7F1]">
-              <div className="flex items-center space-x-1.5 mb-2.5 px-0.5">
-                <Globe className="w-3.5 h-3.5 text-[#2F6E5D]" />
-                <p className="text-[10px] uppercase tracking-wider font-semibold text-[#2A2420]/60 font-sans">
-                  Display Language / भाषा
-                </p>
               </div>
-              <div className="grid grid-cols-2 gap-1.5">
-                {LANGUAGE_OPTIONS.map((opt) => {
-                  const isSelected = language === opt.code;
-                  return (
+
+              {/* Language Selection */}
+              <div className="pt-2 border-t border-[#E4DDD0]">
+                <p className="text-[10px] uppercase tracking-wider font-bold text-[#C5A55A] px-2 mb-2">
+                  Language / भाषा
+                </p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {LANGUAGE_OPTIONS.map((opt) => (
                     <button
                       key={opt.code}
                       onClick={() => {
                         setLanguage(opt.code);
                         setMobileMenuOpen(false);
                       }}
-                      className={`px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-colors min-h-[42px] border ${
-                        isSelected
-                          ? 'bg-[#2F6E5D]/15 text-[#2F6E5D] border-[#2F6E5D]/40 font-semibold'
-                          : 'bg-[#FFFFFF] text-[#2A2420]/80 border-[#E4DDD0] hover:bg-[#E4DDD0]/40'
+                      className={`p-2 rounded-lg text-xs font-medium flex items-center justify-between border ${
+                        language === opt.code
+                          ? 'bg-[#2F6E5D]/10 text-[#2F6E5D] border-[#2F6E5D]/30 font-semibold'
+                          : 'bg-[#FFFCF7] text-[#2A2420]/80 border-[#E4DDD0]'
                       }`}
                     >
-                      <span className="truncate">{opt.nativeName}</span>
-                      {isSelected ? (
-                        <Check className="w-3.5 h-3.5 text-[#2F6E5D] shrink-0 ml-1" />
-                      ) : (
-                        <span className="text-[10px] text-[#2A2420]/40 font-mono uppercase shrink-0 ml-1">
-                          {opt.code}
-                        </span>
-                      )}
+                      <span>{opt.nativeName}</span>
+                      {language === opt.code && <Check className="w-3 h-3 text-[#2F6E5D]" />}
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Drawer Footer: Sign Out / Sign In */}
-            <div className="p-4 border-t border-[#E4DDD0] bg-[#FAF7F1]">
+            {/* Drawer User Account Footer */}
+            <div className="p-3.5 border-t border-[#E4DDD0] bg-[#FAF7F1]">
               {user ? (
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    logout();
-                  }}
-                  className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-xs font-semibold text-[#B54A3A] bg-[#B54A3A]/10 border border-[#B54A3A]/30 hover:bg-[#B54A3A]/15 active:scale-[0.99] transition-all min-h-[44px]"
-                >
-                  <LogOut className="w-4 h-4 shrink-0" />
-                  <span>{t('signOut')}</span>
-                </button>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between px-1">
+                    <div>
+                      <p className="text-xs font-semibold text-[#2A2420]">{user.displayName}</p>
+                      <p className="text-[10px] text-[#2A2420]/50">{user.email}</p>
+                    </div>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.5 rounded border uppercase font-bold ${getRoleBadge(
+                        user.role
+                      )}`}
+                    >
+                      {user.role}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      logout();
+                    }}
+                    className="w-full flex items-center justify-center space-x-1.5 py-2 rounded-lg text-xs font-semibold text-[#B54A3A] bg-[#B54A3A]/8 hover:bg-[#B54A3A]/15 transition-colors"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>{t('signOut')}</span>
+                  </button>
+                </div>
               ) : (
                 <Link
                   href="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-xs font-semibold text-[#2A2420] bg-[#FFFFFF] border border-[#B8D4CB] hover:border-[#2F6E5D] active:scale-[0.99] transition-all min-h-[44px] shadow-xs"
+                  className="w-full flex items-center justify-center space-x-1.5 py-2.5 rounded-lg text-xs font-semibold text-[#2A2420] bg-white border border-[#E4DDD0] hover:bg-[#F5F0E6] shadow-xs"
                 >
-                  <LogIn className="w-4 h-4 shrink-0 text-[#2F6E5D]" />
+                  <LogIn className="w-4 h-4 text-[#C97A3D]" />
                   <span>{t('signIn')}</span>
                 </Link>
               )}
@@ -601,88 +736,107 @@ export default function Navbar() {
       )}
 
       {/* ========================================================================= */}
-      {/* 1. PERSISTENT MOBILE BOTTOM TAB BAR (< 768px)                             */}
-      {/* 4 Tabs: Home, Explore (Archive), Capture, Profile                         */}
+      {/* MOBILE BOTTOM NAVIGATION DOCK (< 768px)                                   */}
       {/* ========================================================================= */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-[1000] md:hidden bg-[#FAF7F1]/98 backdrop-blur-md border-t border-[#B8D4CB] shadow-[0_-4px_16px_rgba(42,36,32,0.06)] h-16 pt-1.5 pb-[max(env(safe-area-inset-bottom),0.6rem)] px-2 overflow-visible"
-        aria-label="Mobile Navigation"
+        className="fixed bottom-0 left-0 right-0 z-[1000] md:hidden bg-[#FFFCF7]/95 backdrop-blur-md border-t border-[#E4DDD0] shadow-[0_-4px_20px_rgba(26,23,20,0.08)] h-16 pt-1.5 pb-[max(env(safe-area-inset-bottom),0.6rem)] px-2"
+        aria-label="Mobile Navigation Dock"
       >
-        <div className="grid grid-cols-4 items-center justify-around max-w-md mx-auto h-full">
+        <div className="grid grid-cols-5 items-center justify-around max-w-md mx-auto h-full">
           {/* TAB 1: Home */}
           <Link
             href="/"
-            className={`flex flex-col items-center justify-center h-full transition-colors relative ${
-              isHomeActive ? 'text-[#2F6E5D]' : 'text-[#2A2420]/60 hover:text-[#2A2420]'
+            className={`flex flex-col items-center justify-center h-full transition-all relative ${
+              isHomeActive ? 'text-[#C97A3D]' : 'text-[#2A2420]/50 hover:text-[#2A2420]'
             }`}
-            aria-label="Home page"
           >
             <Home className="w-5 h-5 mb-0.5" strokeWidth={isHomeActive ? 2.3 : 1.8} />
-            <span className={`text-[11px] font-sans leading-tight tracking-tight ${isHomeActive ? 'font-semibold text-[#2F6E5D]' : 'font-medium'}`}>
+            <span
+              className={`text-[10px] font-sans leading-tight ${
+                isHomeActive ? 'font-bold text-[#C97A3D]' : 'font-medium'
+              }`}
+            >
               Home
             </span>
             {isHomeActive && (
-              <span className="w-1.5 h-1.5 rounded-full bg-[#2F6E5D] absolute top-0.5 right-1/2 translate-x-3" />
+              <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-[#C97A3D]" />
             )}
           </Link>
 
-          {/* TAB 2: Explore (Routes to Archive) */}
+          {/* TAB 2: Explore Archives */}
           <Link
             href="/archive"
-            className={`flex flex-col items-center justify-center h-full transition-colors relative ${
-              isExploreActive ? 'text-[#2F6E5D]' : 'text-[#2A2420]/60 hover:text-[#2A2420]'
+            className={`flex flex-col items-center justify-center h-full transition-all relative ${
+              isExploreActive ? 'text-[#C97A3D]' : 'text-[#2A2420]/50 hover:text-[#2A2420]'
             }`}
-            aria-label="Explore archive"
           >
             <Compass className="w-5 h-5 mb-0.5" strokeWidth={isExploreActive ? 2.3 : 1.8} />
-            <span className={`text-[11px] font-sans leading-tight tracking-tight ${isExploreActive ? 'font-semibold text-[#2F6E5D]' : 'font-medium'}`}>
-              Explore
+            <span
+              className={`text-[10px] font-sans leading-tight ${
+                isExploreActive ? 'font-bold text-[#C97A3D]' : 'font-medium'
+              }`}
+            >
+              Archives
             </span>
             {isExploreActive && (
-              <span className="w-1.5 h-1.5 rounded-full bg-[#2F6E5D] absolute top-0.5 right-1/2 translate-x-3.5" />
+              <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-[#C97A3D]" />
             )}
           </Link>
 
-          {/* TAB 3: Capture (Prominent elevated center action) */}
+          {/* TAB 3: Deposit (+ Capture) Center Elevated Button */}
           <Link
             href="/capture"
             className="flex flex-col items-center justify-center h-full relative group"
-            aria-label="Capture cultural heritage memory"
+            aria-label="Deposit Cultural Memory"
           >
             <div
-              className={`-mt-4 w-12 h-12 rounded-full flex items-center justify-center shadow-md border-2 border-[#FAF7F1] transition-transform active:scale-95 ${
+              className={`-mt-5 w-12 h-12 rounded-full flex items-center justify-center shadow-lg border-2 border-[#FFFCF7] transition-all active:scale-95 ${
                 isCaptureActive
-                  ? 'bg-[#B86B30] text-[#FAF7F1] ring-2 ring-[#C97A3D]/50'
-                  : 'bg-[#C97A3D] text-[#FAF7F1] group-hover:bg-[#B86B30]'
+                  ? 'bg-gradient-to-br from-[#C97A3D] to-[#9C4D18] text-white ring-2 ring-[#C97A3D]/40'
+                  : 'bg-gradient-to-br from-[#C97A3D] to-[#B86B30] text-white group-hover:scale-105'
               }`}
             >
               <Mic className="w-5 h-5" strokeWidth={2.2} />
             </div>
             <span
-              className={`text-[11px] font-sans leading-tight tracking-tight mt-0.5 ${
-                isCaptureActive ? 'font-semibold text-[#C97A3D]' : 'font-medium text-[#2A2420]/75'
+              className={`text-[10px] font-sans leading-tight mt-0.5 ${
+                isCaptureActive ? 'font-bold text-[#C97A3D]' : 'font-medium text-[#2A2420]/60'
               }`}
             >
-              Capture
+              Deposit
             </span>
           </Link>
 
-          {/* TAB 4: Profile */}
+          {/* TAB 4: Collections */}
           <Link
-            href="/profile"
-            className={`flex flex-col items-center justify-center h-full transition-colors relative ${
-              isProfileActive ? 'text-[#2F6E5D]' : 'text-[#2A2420]/60 hover:text-[#2A2420]'
+            href="/collections"
+            className={`flex flex-col items-center justify-center h-full transition-all relative ${
+              isCollectionsActive ? 'text-[#C97A3D]' : 'text-[#2A2420]/50 hover:text-[#2A2420]'
             }`}
-            aria-label="Profile"
           >
-            <User className="w-5 h-5 mb-0.5" strokeWidth={isProfileActive ? 2.3 : 1.8} />
-            <span className={`text-[11px] font-sans leading-tight tracking-tight truncate max-w-[65px] ${isProfileActive ? 'font-semibold text-[#2F6E5D]' : 'font-medium'}`}>
-              Profile
+            <BookOpen className="w-5 h-5 mb-0.5" strokeWidth={isCollectionsActive ? 2.3 : 1.8} />
+            <span
+              className={`text-[10px] font-sans leading-tight ${
+                isCollectionsActive ? 'font-bold text-[#C97A3D]' : 'font-medium'
+              }`}
+            >
+              Collections
             </span>
-            {isProfileActive && (
-              <span className="w-1.5 h-1.5 rounded-full bg-[#2F6E5D] absolute top-0.5 right-1/2 translate-x-3" />
+            {isCollectionsActive && (
+              <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-[#C97A3D]" />
             )}
           </Link>
+
+          {/* TAB 5: Menu Drawer Trigger */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="flex flex-col items-center justify-center h-full text-[#2A2420]/50 hover:text-[#2A2420]"
+            aria-label="Open Navigation Menu"
+          >
+            <Menu className="w-5 h-5 mb-0.5" strokeWidth={1.8} />
+            <span className="text-[10px] font-sans font-medium leading-tight">Menu</span>
+          </button>
         </div>
       </nav>
     </>

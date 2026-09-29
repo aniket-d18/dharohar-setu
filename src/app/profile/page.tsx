@@ -8,6 +8,7 @@ import Footer from '@/components/Footer';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage, useTranslations, LANGUAGE_OPTIONS } from '@/context/LanguageContext';
 import { getApiUrl } from '@/utils/apiUrl';
+import { cachedFetch } from '@/utils/apiCache';
 import { countQueued, flushQueue } from '@/utils/syncManager';
 import {
   User,
@@ -60,12 +61,8 @@ export default function ProfilePage() {
     if (!user) return;
     setRecordsLoading(true);
     const apiUrl = getApiUrl();
-    const token = typeof window !== 'undefined' ? localStorage.getItem('dharohar_token') : null;
 
-    fetch(`${apiUrl}/api/records/my`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((res) => (res.ok ? res.json() : []))
+    cachedFetch<MyRecord[]>(`${apiUrl}/api/records/my`, { ttl: 5 * 60 * 1000 })
       .then((data) => {
         if (Array.isArray(data)) setMyRecords(data);
       })
