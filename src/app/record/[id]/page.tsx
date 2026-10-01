@@ -360,7 +360,7 @@ export default function RecordDetailPage() {
           }).catch((err) => {
             console.warn('Playback error, trying fallback:', err);
             if (audioRef.current) {
-              audioRef.current.src = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+              audioRef.current.src = 'https://upload.wikimedia.org/wikipedia/commons/4/4b/Bagurumba.ogg';
               audioRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
             }
           });

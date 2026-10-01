@@ -7,6 +7,7 @@ import { existsSync } from 'fs';
 import { join, extname } from 'path';
 import { serverCache } from '../../common/cache.service';
 import { calculateVitalityScore, LanguageVitalityData } from '../../common/vitality.calculator';
+import { StorageService } from '../../common/storage.service';
 
 export class CreateRecordDto {
   mediaType!: MediaType;
@@ -54,6 +55,8 @@ export class RecordsService {
   constructor(
     @Inject(PrismaService)
     public readonly prisma: PrismaService,
+    @Inject(StorageService)
+    public readonly storageService: StorageService,
   ) {}
 
   // 1. Presigned upload URL generator (Stubbed / Mock direct upload)
@@ -1702,6 +1705,11 @@ If there are no distinct untranslatable words, return [].`;
           }
         }
       }
+    }
+
+    // Delete from Supabase cloud storage if applicable
+    if (record.mediaUrl && record.mediaUrl.includes('.supabase.co/storage/')) {
+      await this.storageService.deleteFile(record.mediaUrl);
     }
 
     // Cascade delete in Prisma (RecordTranslation, ConsentRecord, VerificationLog, UntranslatableEntry are all cascade)

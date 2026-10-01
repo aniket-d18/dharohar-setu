@@ -5,6 +5,7 @@ import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { RecordsService, CreateRecordDto, RecordFilterQuery } from './records.service';
+import { StorageService } from '../../common/storage.service';
 import { JwtAuthGuard, JwtUserPayload } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -15,6 +16,8 @@ export class RecordsController {
   constructor(
     @Inject(RecordsService)
     private readonly service: RecordsService,
+    @Inject(StorageService)
+    private readonly storageService: StorageService,
   ) {}
 
   @Throttle({ default: { limit: 15, ttl: 60000 } }) // Max 15 uploads per min
@@ -44,11 +47,13 @@ export class RecordsController {
     if (!file) {
       throw new BadRequestException('No file provided for upload');
     }
+    const result = await this.storageService.uploadFile(file);
     return {
-      url: `/uploads/${file.filename}`,
+      url: result.url,
+      isCloud: result.isCloud,
       originalName: file.originalname,
-      size: file.size,
-      mimetype: file.mimetype,
+      size: result.size,
+      mimetype: result.mimetype,
     };
   }
 
