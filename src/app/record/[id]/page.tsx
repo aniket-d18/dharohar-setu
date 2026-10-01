@@ -41,6 +41,7 @@ import {
   ThumbsUp,
   RefreshCw,
   Loader2,
+  Languages,
 } from 'lucide-react';
 
 interface VerificationLog {
@@ -167,6 +168,94 @@ export default function RecordDetailPage() {
   const [isUpvoting, setIsUpvoting] = useState<boolean>(false);
   const [upvoteThreshold, setUpvoteThreshold] = useState<number>(10);
   const [currentVerificationStatus, setCurrentVerificationStatus] = useState<string>('UNVERIFIED');
+
+  // Cross-Language View & Audio Readout (TTS) State
+  const [selectedTranslationLang, setSelectedTranslationLang] = useState<'original' | 'mr' | 'hi' | 'en'>(
+    language === 'mr' ? 'mr' : language === 'hi' ? 'hi' : 'original'
+  );
+  const [translationCache, setTranslationCache] = useState<Record<string, { summary?: string; text?: string; loading?: boolean }>>({});
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const fetchAndSelectLanguage = async (targetLang: 'mr' | 'hi') => {
+    setSelectedTranslationLang(targetLang);
+    if (translationCache[targetLang]?.summary || translationCache[targetLang]?.text) {
+      return;
+    }
+    try {
+      setTranslationCache((prev) => ({
+        ...prev,
+        [targetLang]: { ...prev[targetLang], loading: true },
+      }));
+      const res = await fetch(`${apiUrl}/api/records/${recordId}/translate?lang=${targetLang}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTranslationCache((prev) => ({
+          ...prev,
+          [targetLang]: {
+            summary: data.translatedSummary || data.translatedTitle,
+            text: data.translatedText,
+            loading: false,
+          },
+        }));
+      } else {
+        setTranslationCache((prev) => ({
+          ...prev,
+          [targetLang]: { ...prev[targetLang], loading: false },
+        }));
+      }
+    } catch (err) {
+      console.warn('Failed to fetch translation for', targetLang, err);
+      setTranslationCache((prev) => ({
+        ...prev,
+        [targetLang]: { ...prev[targetLang], loading: false },
+      }));
+    }
+  };
+
+  const handleSpeakTranslation = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      alert('Speech synthesis is not supported on this browser.');
+      return;
+    }
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    let textToSpeak = '';
+    let speechLang = 'en-IN';
+
+    if (selectedTranslationLang === 'mr') {
+      textToSpeak = `${translationCache.mr?.summary || record?.summaryText || ''}. ${translationCache.mr?.text || record?.translationText || ''}`;
+      speechLang = 'mr-IN';
+    } else if (selectedTranslationLang === 'hi') {
+      textToSpeak = `${translationCache.hi?.summary || record?.summaryText || ''}. ${translationCache.hi?.text || record?.translationText || ''}`;
+      speechLang = 'hi-IN';
+    } else {
+      textToSpeak = `${record?.summaryText || ''}. ${record?.translationText || ''}`;
+      speechLang = 'en-IN';
+    }
+
+    if (!textToSpeak.trim()) return;
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.lang = speechLang;
+    utterance.rate = 0.95;
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
+  };
 
   // Strictly restricted to Admin or Verifiers (Reviewer, Steward, Expert)
   const canDelete = Boolean(
@@ -805,6 +894,19 @@ export default function RecordDetailPage() {
                     .join(' ')}
               </span>
               <div>{getVerificationBadge(currentVerificationStatus)}</div>
+              {record.createdAt && (
+                <span className="inline-flex items-center px-2.5 py-1 rounded text-xs font-mono text-[#2A2420]/70 bg-[#FAF7F1] border border-[#E4DDD0] space-x-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-[#C97A3D]" />
+                  <span>
+                    Captured on{' '}
+                    {new Date(record.createdAt).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </span>
+                </span>
+              )}
             </div>
 
             {/* Artifact Title in Serif Fraunces */}
@@ -1132,6 +1234,105 @@ export default function RecordDetailPage() {
                   </div>
                 </div>
 
+                {/* Cross-Regional Language Comprehension Panel */}
+                <div className="bg-[#FAF7F1] p-4 rounded-xl border border-[#E4DDD0] shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center space-x-2">
+                      <Languages className="w-4 h-4 text-[#C97A3D]" />
+                      <div>
+                        <span className="text-xs font-serif font-semibold text-[#2A2420] block">
+                          Cross-Regional Cultural Comprehension:
+                        </span>
+                        <span className="text-[11px] text-[#2A2420]/60">
+                          Explore, translate, and listen to this {record.language?.name || 'regional'} memory in your preferred language.
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 self-start sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTranslationLang('original')}
+                        className={`px-3 py-1 rounded-full text-xs font-sans transition-all cursor-pointer ${
+                          selectedTranslationLang === 'original'
+                            ? 'bg-[#2F6E5D] text-white font-medium shadow-xs'
+                            : 'bg-white text-[#2A2420]/80 border border-[#E4DDD0] hover:border-[#C97A3D]'
+                        }`}
+                      >
+                        Original ({record.language?.name || 'Native'})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fetchAndSelectLanguage('mr')}
+                        className={`px-3 py-1 rounded-full text-xs font-sans transition-all flex items-center gap-1 cursor-pointer ${
+                          selectedTranslationLang === 'mr'
+                            ? 'bg-[#C97A3D] text-white font-medium shadow-xs'
+                            : 'bg-white text-[#2A2420]/80 border border-[#E4DDD0] hover:border-[#C97A3D]'
+                        }`}
+                      >
+                        <span>मराठी (Marathi)</span>
+                        {translationCache.mr?.loading && <Loader2 className="w-3 h-3 animate-spin" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fetchAndSelectLanguage('hi')}
+                        className={`px-3 py-1 rounded-full text-xs font-sans transition-all flex items-center gap-1 cursor-pointer ${
+                          selectedTranslationLang === 'hi'
+                            ? 'bg-[#C97A3D] text-white font-medium shadow-xs'
+                            : 'bg-white text-[#2A2420]/80 border border-[#E4DDD0] hover:border-[#C97A3D]'
+                        }`}
+                      >
+                        <span>हिंदी (Hindi)</span>
+                        {translationCache.hi?.loading && <Loader2 className="w-3 h-3 animate-spin" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTranslationLang('en')}
+                        className={`px-3 py-1 rounded-full text-xs font-sans transition-all cursor-pointer ${
+                          selectedTranslationLang === 'en'
+                            ? 'bg-[#2F6E5D] text-white font-medium shadow-xs'
+                            : 'bg-white text-[#2A2420]/80 border border-[#E4DDD0] hover:border-[#C97A3D]'
+                        }`}
+                      >
+                        English
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Audio Voice Readout Bar (TTS) */}
+                  <div className="mt-3 pt-2.5 border-t border-[#E4DDD0]/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <span className="text-[11px] text-[#2A2420]/75 font-sans flex items-center gap-1.5">
+                      <Volume2 className="w-3.5 h-3.5 text-[#C97A3D]" />
+                      <span>
+                        {selectedTranslationLang === 'mr'
+                          ? 'मराठीत ऑडिओ ऐका (Listen to story and meaning spoken in Marathi):'
+                          : selectedTranslationLang === 'hi'
+                          ? 'हिंदी में ऑडियो सुनें (Listen to story spoken in Hindi):'
+                          : 'Listen to spoken audio narration:'}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleSpeakTranslation}
+                      className={`inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all shadow-xs cursor-pointer ${
+                        isSpeaking
+                          ? 'bg-rose-600 text-white animate-pulse'
+                          : 'bg-[#C97A3D] text-[#FAF7F1] hover:bg-[#b36930]'
+                      }`}
+                    >
+                      <Volume2 className="w-3.5 h-3.5" />
+                      <span>
+                        {isSpeaking
+                          ? 'थांबवा (Stop Audio)'
+                          : selectedTranslationLang === 'mr'
+                          ? 'मराठीत ऐका (Listen in Marathi)'
+                          : selectedTranslationLang === 'hi'
+                          ? 'हिंदी में सुनें (Listen in Hindi)'
+                          : 'Read Aloud (Spoken English)'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
                 {/* Native Script Box */}
                 <div className="bg-[#FAF7F1] border border-[#E4DDD0] rounded-lg p-5">
                   <div className="flex items-center justify-between mb-3">
@@ -1163,26 +1364,57 @@ export default function RecordDetailPage() {
                   )}
                 </div>
 
-                {/* Translation Box */}
+                {/* Translation Box (Multilingual Dynamic Adaptation) */}
                 <div className="bg-[#FAF7F1] border border-[#E4DDD0] rounded-lg p-5">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xs font-sans font-medium text-[#2F6E5D] flex items-center">
                       <FileCheck className="w-3.5 h-3.5 mr-1" />
-                      {record.mediaType === 'IMAGE' ? 'Cultural Interpretation & Context' : 'English / Hindi Translation'}
+                      {selectedTranslationLang === 'mr'
+                        ? 'मराठी भावार्थ व भाषांतर (Marathi Translation)'
+                        : selectedTranslationLang === 'hi'
+                        ? 'हिंदी सांस्कृतिक भावार्थ व अनुवाद (Hindi Translation)'
+                        : record.mediaType === 'IMAGE'
+                        ? 'Cultural Interpretation & Context'
+                        : 'English Translation & Meaning'}
                     </span>
                     <span className="text-[11px] font-sans px-2 py-0.5 rounded bg-[#2F6E5D]/10 text-[#2F6E5D] border border-[#2F6E5D]/25">
-                      {record.mediaType === 'IMAGE' ? 'Ethnographic Meaning' : 'Meaning Preserved'}
+                      {selectedTranslationLang === 'mr'
+                        ? 'मराठी अनुवाद'
+                        : selectedTranslationLang === 'hi'
+                        ? 'हिंदी अनुवाद'
+                        : 'Meaning Preserved'}
                     </span>
                   </div>
-                  {isAiProcessing && (!record.translationText || record.translationText.includes('pending')) ? (
-                    <div className="py-2 flex items-center space-x-2 text-[#2F6E5D]">
+                  {selectedTranslationLang === 'mr' && translationCache.mr?.loading ? (
+                    <div className="py-2 flex items-center space-x-2 text-[#C97A3D]">
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-xs font-sans">Cultural contextual translation generating with Gemini...</span>
+                      <span className="text-xs font-sans">मराठी अनुवाद तयार होत आहे (Generating Marathi translation)...</span>
+                    </div>
+                  ) : selectedTranslationLang === 'hi' && translationCache.hi?.loading ? (
+                    <div className="py-2 flex items-center space-x-2 text-[#C97A3D]">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-xs font-sans">हिंदी अनुवाद तैयार हो रहा है (Generating Hindi translation)...</span>
                     </div>
                   ) : (
-                    <p className="font-sans text-sm sm:text-base text-[#2A2420]/90 leading-relaxed">
-                      {record.translationText || 'Translation pending community review.'}
-                    </p>
+                    <div className="space-y-2">
+                      {selectedTranslationLang === 'mr' && translationCache.mr?.summary && (
+                        <p className="font-serif text-sm font-semibold text-[#9C4D18] mb-1">
+                          {translationCache.mr.summary}
+                        </p>
+                      )}
+                      {selectedTranslationLang === 'hi' && translationCache.hi?.summary && (
+                        <p className="font-serif text-sm font-semibold text-[#9C4D18] mb-1">
+                          {translationCache.hi.summary}
+                        </p>
+                      )}
+                      <p className="font-sans text-sm sm:text-base text-[#2A2420]/90 leading-relaxed">
+                        {selectedTranslationLang === 'mr'
+                          ? (translationCache.mr?.text || record.translationText || 'मराठी भाषांतर उपलब्ध नाही.')
+                          : selectedTranslationLang === 'hi'
+                          ? (translationCache.hi?.text || record.translationText || 'हिंदी अनुवाद उपलब्ध नहीं है.')
+                          : (record.translationText || 'Translation pending community review.')}
+                      </p>
+                    </div>
                   )}
                 </div>
 

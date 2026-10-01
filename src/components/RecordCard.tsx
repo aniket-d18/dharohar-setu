@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Mic, Video, Image as ImageIcon, FileText, MapPin, Volume2, ShieldCheck, CheckCircle2, Sparkles, RefreshCw, ThumbsUp } from 'lucide-react';
+import { Mic, Video, Image as ImageIcon, FileText, MapPin, Volume2, ShieldCheck, CheckCircle2, Sparkles, RefreshCw, ThumbsUp, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
@@ -43,6 +43,7 @@ export interface RecordCardData {
     id: string;
     name: string;
   } | null;
+  createdAt?: string | Date | null;
 }
 
 export default function RecordCard({ record }: { record: RecordCardData }) {
@@ -319,17 +320,32 @@ export default function RecordCard({ record }: { record: RecordCardData }) {
           )}
 
           {/* Location and Dialect / Craft info */}
-          <div className="flex items-center justify-between text-xs text-[#2A2420]/65 mb-2">
+          <div className="flex items-center justify-between text-xs text-[#2A2420]/65 mb-1.5">
             <span className="flex items-center space-x-1 truncate max-w-[65%]">
               <MapPin className="w-3.5 h-3.5 text-[#C97A3D] shrink-0" />
               <span className="truncate">{record.region?.name || 'India'}</span>
             </span>
             {record.language?.name && (
-              <span className="text-[#9C4D18] font-medium truncate shrink-0">
+              <span className="text-[#9C4D18] font-medium truncate shrink-0 text-[11px] bg-[#FAF7F1] px-1.5 py-0.5 rounded border border-[#E4DDD0]">
                 {record.language.name}
               </span>
             )}
           </div>
+
+          {/* Captured Date Stamp */}
+          {record.createdAt && (
+            <div className="flex items-center space-x-1.5 text-[10px] font-mono text-[#2A2420]/50 mb-2">
+              <Calendar className="w-3 h-3 text-[#C97A3D]/70 shrink-0" />
+              <span>
+                Captured{' '}
+                {new Date(record.createdAt).toLocaleDateString('en-IN', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </span>
+            </div>
+          )}
 
           {/* Title / Summary */}
           <Link href={`/record/${record.id}`} className="block">
