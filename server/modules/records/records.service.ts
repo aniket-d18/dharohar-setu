@@ -667,10 +667,28 @@ export class RecordsService {
     }
 
     const targetLangNames: Record<string, string> = {
-      hi: 'Hindi (हिन्दी)',
       mr: 'Marathi (मराठी)',
-      ta: 'Tamil (தமிழ்)',
+      hi: 'Hindi (हिन्दी)',
+      en: 'English',
       bn: 'Bengali (বাংলা)',
+      ta: 'Tamil (தமிழ்)',
+      te: 'Telugu (తెలుగు)',
+      kn: 'Kannada (ಕನ್ನಡ)',
+      ml: 'Malayalam (മലയാളം)',
+      gu: 'Gujarati (ગુજરાતી)',
+      pa: 'Punjabi (ਪੰਜਾਬੀ)',
+      or: 'Odia (ଓଡ଼ିଆ)',
+      as: 'Assamese (অসমীয়া)',
+      ur: 'Urdu (اُردُو)',
+      sa: 'Sanskrit (संस्कृतम्)',
+      kok: 'Konkani (कोंकणी)',
+      ne: 'Nepali (नेपाली)',
+      mai: 'Maithili (मैथिली)',
+      sat: 'Santali (संथाली)',
+      ks: 'Kashmiri (कॉशुर)',
+      sd: 'Sindhi (सिन्धी)',
+      doi: 'Dogri (डोगरी)',
+      mni: 'Manipuri (মৈতৈলোন্)',
     };
     const targetLangName = targetLangNames[languageCode] || languageCode;
 
