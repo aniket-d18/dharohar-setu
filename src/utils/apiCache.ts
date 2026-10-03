@@ -8,7 +8,20 @@ interface CacheEntry<T> {
   timestamp: number;
 }
 
+const CACHE_VERSION = 'v4_clean';
 const memoryCache = new Map<string, CacheEntry<any>>();
+
+// Automatically purge outdated legacy cache entries on startup
+if (typeof window !== 'undefined') {
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('dharohar_cache_') && !k.startsWith(`dharohar_cache_${CACHE_VERSION}_`)) {
+        localStorage.removeItem(k);
+      }
+    }
+  } catch {}
+}
 
 export async function cachedFetch<T = any>(
   url: string,
@@ -19,7 +32,7 @@ export async function cachedFetch<T = any>(
     ? (localStorage.getItem('dharohar_token') || localStorage.getItem('dharohar_auth_token'))
     : null;
   const authScope = token ? `auth_${token.slice(-12)}` : 'anon';
-  const cacheKey = `dharohar_cache_${authScope}_${url}`;
+  const cacheKey = `dharohar_cache_${CACHE_VERSION}_${authScope}_${url}`;
 
   // 1. Try In-Memory cache first (0ms)
   const mem = memoryCache.get(cacheKey);

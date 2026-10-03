@@ -225,11 +225,11 @@ export default function HomePage() {
   const tCommon = useTranslations('common');
 
   const [counters, setCounters] = useState<LiveCounters>({
-    totalRecords: 49,
-    totalLanguages: 32,
-    verifiedRecords: 0,
-    totalContributors: 4,
-    regionsCovered: 42,
+    totalRecords: 27,
+    totalLanguages: 37,
+    verifiedRecords: 18,
+    totalContributors: 5,
+    regionsCovered: 65,
   });
   const [fadingLanguages, setFadingLanguages] = useState<FadingLanguage[]>([]);
   const [featuredRecords, setFeaturedRecords] = useState<RecordCardData[]>([]);
